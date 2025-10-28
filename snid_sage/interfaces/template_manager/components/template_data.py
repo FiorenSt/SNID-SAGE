@@ -86,7 +86,16 @@ class TemplateData:
                             self.epochs.append(epoch_info)
                             _LOGGER.debug(f"Loaded epoch {epoch_name} with age {age} and {len(flux_data)} flux points")
                         
-                        # Set default flux to first epoch
+                        # Sort epochs by age (finite first, ascending), NaNs last
+                        try:
+                            self.epochs = sorted(
+                                self.epochs,
+                                key=lambda e: (0 if np.isfinite(e.get('age', np.nan)) else 1,
+                                               float(e.get('age', np.inf)) if np.isfinite(e.get('age', np.nan)) else np.inf)
+                            )
+                        except Exception:
+                            pass
+                        # Set default flux to first (earliest) epoch
                         if self.epochs:
                             self.flux_data = self.epochs[0]['flux']
                         

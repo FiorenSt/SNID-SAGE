@@ -328,6 +328,15 @@ def process_single_spectrum_optimized(
     try:
         # STEP 1: Preprocess spectrum with grid validation/auto-clipping
         try:
+            # Resolve active profile id
+            active_profile_id = getattr(args, 'profile_id', None)
+            if not active_profile_id:
+                try:
+                    from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+                    cfg = ConfigurationManager().load_config()
+                    active_profile_id = cfg.get('processing', {}).get('active_profile_id', 'optical')
+                except Exception:
+                    active_profile_id = 'optical'
             processed_spectrum, _ = preprocess_spectrum(
                 spectrum_path=spectrum_path,
                 savgol_window=getattr(args, 'savgol_window', 0),
@@ -336,7 +345,8 @@ def process_single_spectrum_optimized(
                 skyclip=getattr(args, 'skyclip', False),
                 wavelength_masks=getattr(args, 'wavelength_masks', None),
                 verbose=False,  # Suppress preprocessing output in batch mode
-                clip_to_grid=True
+                clip_to_grid=True,
+                profile_id=active_profile_id
             )
         except SpectrumProcessingError as e:
             msg = str(e)
@@ -393,7 +403,8 @@ def process_single_spectrum_optimized(
             verbose=False,
             show_plots=False,
             save_plots=False,
-            use_weighted_gmm=getattr(args, 'weighted_gmm', False)
+            use_weighted_gmm=getattr(args, 'weighted_gmm', False),
+            profile_id=active_profile_id
         )
         
         # STEP 4: Generate outputs if requested
@@ -1018,6 +1029,13 @@ Examples:
         "--forced-redshift", 
         type=float, 
         help="Force analysis to this specific redshift for all spectra"
+    )
+    analysis_group.add_argument(
+        "--profile",
+        dest="profile_id",
+        choices=["optical", "onir"],
+        default=None,
+        help="Analysis profile to use (optical or onir). Defaults to config or optical."
     )
     analysis_group.add_argument(
         "--weighted-gmm",

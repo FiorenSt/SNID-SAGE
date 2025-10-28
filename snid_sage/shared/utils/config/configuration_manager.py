@@ -293,7 +293,8 @@ class ConfigurationManager:
                 'aband_remove': False,
                 'skyclip': False,
                 'apodize_percent': 10.0,
-                'verbose': False
+                'verbose': False,
+                'active_profile_id': 'optical'
             },
             'display': {
                 'theme': 'light',

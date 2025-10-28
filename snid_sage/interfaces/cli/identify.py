@@ -167,6 +167,14 @@ Examples:
     )
     
     # Processing modes (mutually exclusive)
+    # Profile selection
+    parser.add_argument(
+        "--profile",
+        dest="profile_id",
+        choices=["optical", "onir"],
+        default=None,
+        help="Analysis profile to use (optical or onir). Defaults to config or optical."
+    )
     mode_group = parser.add_mutually_exclusive_group()
     mode_group.add_argument(
         "--minimal", 
@@ -855,6 +863,16 @@ def main(args: argparse.Namespace) -> int:
         # Prepare savgol filter parameters  
         savgol_window = args.savgol_window if args.savgol_window > 0 else 0
         
+        # Determine active profile id: CLI flag > config default
+        active_profile_id = args.profile_id
+        if not active_profile_id:
+            try:
+                from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+                cfg = ConfigurationManager().load_config()
+                active_profile_id = cfg.get('processing', {}).get('active_profile_id', 'optical')
+            except Exception:
+                active_profile_id = 'optical'
+
         # Preprocess spectrum with grid validation/auto-clipping
         try:
             processed_spectrum, preprocessing_trace = preprocess_spectrum(
@@ -876,7 +894,8 @@ def main(args: argparse.Namespace) -> int:
                 wavelength_masks=args.wavelength_masks,
                 apodize_percent=args.apodize_percent,
                 verbose=args.verbose,
-                clip_to_grid=True
+                clip_to_grid=True,
+                profile_id=active_profile_id
             )
         except SpectrumProcessingError as e:
             print(f"[ERROR] {e}", file=sys.stderr)
@@ -954,7 +973,8 @@ def main(args: argparse.Namespace) -> int:
             save_plots=False,  # Avoid internal saving to prevent duplicates; CLI handles all plots
             plot_dir=None,
             progress_callback=progress_callback,  # Add progress callback
-            use_weighted_gmm=getattr(args, 'weighted_gmm', False)
+            use_weighted_gmm=getattr(args, 'weighted_gmm', False),
+            profile_id=active_profile_id
         )
         
         # Finish progress indicator

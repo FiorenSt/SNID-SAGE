@@ -19,11 +19,10 @@ try:
 except ImportError:
     _LOG = logging.getLogger('snid_sage.snid.integration')
 
-# Global unified storage instance
-# Global storage instance (type left un-annotated to avoid import-time issues)
-_GLOBAL_STORAGE = None
+# Global unified storage instances keyed by (template_dir, profile_id)
+_GLOBAL_STORAGE = {}
 
-def get_unified_storage(template_dir: str):
+def get_unified_storage(template_dir: str | None, profile_id: str | None = None):
     """
     Get or create unified storage instance.
     
@@ -38,16 +37,38 @@ def get_unified_storage(template_dir: str):
         Unified storage instance
     """
     global _GLOBAL_STORAGE
-    
-    if _GLOBAL_STORAGE is None or str(_GLOBAL_STORAGE.template_dir) != template_dir:
+
+    # Resolve default profile id from config if not provided
+    if profile_id is None:
+        try:
+            from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+            cfg = ConfigurationManager().load_config()
+            profile_id = cfg.get('processing', {}).get('active_profile_id', 'optical')
+        except Exception:
+            profile_id = 'optical'
+
+    # Resolve default templates_dir for ONIR automatically if not provided
+    if not template_dir:
+        try:
+            from importlib import resources
+            with resources.as_file(resources.files('snid_sage') / 'templates_onir') as onir_dir:
+                template_dir = str(onir_dir)
+        except Exception:
+            template_dir = 'templates'
+
+    key = (str(template_dir), str(profile_id))
+
+    if key not in _GLOBAL_STORAGE:
         from ..template_fft_storage import TemplateFFTStorage
-        _GLOBAL_STORAGE = TemplateFFTStorage(template_dir)
-        
+        storage = TemplateFFTStorage(template_dir, profile_id=profile_id)
+
         # Rebuild disabled; expect HDF5/index to be present
-        if not _GLOBAL_STORAGE.is_built():
+        if not storage.is_built():
             _LOG.warning("Unified storage index not found. Ensure HDF5 and index files exist in the template directory.")
+
+        _GLOBAL_STORAGE[key] = storage
     
-    return _GLOBAL_STORAGE
+    return _GLOBAL_STORAGE[key]
 
 def integrate_fft_optimization(templates: List[Dict[str, Any]],
                              k1: int, k2: int, k3: int, k4: int,
@@ -323,7 +344,8 @@ def load_templates_unified(template_dir: str,
                           type_filter: Optional[List[str]] = None,
                           template_names: Optional[List[str]] = None,
                           exclude_templates: Optional[List[str]] = None,
-                          progress_callback: Optional[Callable[[str, float], None]] = None) -> List[Dict[str, Any]]:
+                          progress_callback: Optional[Callable[[str, float], None]] = None,
+                          profile_id: str | None = None) -> List[Dict[str, Any]]:
     """
     Load templates using unified storage - OPTIMIZED VERSION.
     Templates are already rebinned to standard grid, so no rebinning needed during SNID runs.
@@ -349,7 +371,7 @@ def load_templates_unified(template_dir: str,
         import gc
         gc.collect()  # Clean up any lingering PyQtGraph widgets before template loading
         
-        storage = get_unified_storage(template_dir)
+        storage = get_unified_storage(template_dir, profile_id=profile_id)
         
     except Exception as e:
         _LOG.error(f"Error initializing unified storage: {e}")

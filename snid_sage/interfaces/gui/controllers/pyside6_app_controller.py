@@ -189,9 +189,32 @@ class PySide6AppController(QtCore.QObject):
                         f"wavelength range {self.original_wave[0]:.1f}-{self.original_wave[-1]:.1f} Å")
             _LOGGER.info(f"✅ Flux range: {np.min(self.original_flux):.2e} to {np.max(self.original_flux):.2e}")
             
-            # Early optical grid range check
+            # Early grid range check based on active profile (optical or onir)
             try:
-                gmin, gmax = 2500.0, 10000.0
+                # Resolve active profile id: env override > config default
+                try:
+                    env_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
+                except Exception:
+                    env_pid = None
+                try:
+                    from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+                    cfg = ConfigurationManager().load_config()
+                    cfg_pid = (cfg.get('processing', {}) or {}).get('active_profile_id', 'optical')
+                except Exception:
+                    cfg_pid = 'optical'
+                active_pid = (env_pid or cfg_pid or 'optical')
+
+                # Get profile grid
+                try:
+                    from snid_sage.shared.profiles.builtins import register_builtins
+                    from snid_sage.shared.profiles.registry import get_profile
+                    register_builtins()
+                    prof = get_profile(active_pid)
+                    gmin = float(getattr(prof.grid, 'min_wave_A', 2500.0))
+                    gmax = float(getattr(prof.grid, 'max_wave_A', 10000.0))
+                except Exception:
+                    gmin, gmax = 2500.0, 10000.0
+
                 wmin = float(np.min(self.original_wave))
                 wmax = float(np.max(self.original_wave))
                 has_overlap = (wmax >= gmin) and (wmin <= gmax)
@@ -201,18 +224,18 @@ class PySide6AppController(QtCore.QObject):
                         "Spectrum Out of Range",
                         (
                             f"The loaded spectrum range {wmin:.1f}-{wmax:.1f} Å is outside "
-                            f"the optical grid {gmin:.0f}-{gmax:.0f} Å."
+                            f"the active grid {gmin:.0f}-{gmax:.0f} Å (profile: {active_pid})."
                         ),
                     )
                     return False
-                # Enforce minimum overlap of 2000 Å with optical grid
+                # Enforce minimum overlap of 2000 Å with active grid
                 overlap_angstrom = max(0.0, min(wmax, gmax) - max(wmin, gmin))
                 if overlap_angstrom < 2000.0:
                     QtWidgets.QMessageBox.critical(
                         self.main_window,
                         "Insufficient Overlap",
                         (
-                            f"The spectrum overlaps the optical grid by only {overlap_angstrom:.1f} Å, "
+                            f"The spectrum overlaps the active grid by only {overlap_angstrom:.1f} Å, "
                             f"which is insufficient (< 2000 Å)."
                         ),
                     )
@@ -222,7 +245,7 @@ class PySide6AppController(QtCore.QObject):
                         self.main_window,
                         "Spectrum Will Be Clipped",
                         (
-                            f"The spectrum extends beyond the optical grid {gmin:.0f}-{gmax:.0f} Å.\n"
+                            f"The spectrum extends beyond the active grid {gmin:.0f}-{gmax:.0f} Å (profile: {active_pid}).\n"
                             f"It will be clipped to the grid during preprocessing."
                         ),
                     )
@@ -766,11 +789,34 @@ class PySide6AppController(QtCore.QObject):
             
             else:
                 # Pure automatic redshift determination
+                # Align displayed range with profile-aware extension used in the engine (e.g., ONIR uses zmax=2.5)
+                try:
+                    # Resolve active profile id from env > config
+                    env_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
+                except Exception:
+                    env_pid = None
+                try:
+                    from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+                    cfg = ConfigurationManager().load_config()
+                    cfg_pid = (cfg.get('processing', {}) or {}).get('active_profile_id', 'optical')
+                except Exception:
+                    cfg_pid = 'optical'
+                active_pid_for_msg = (env_pid or cfg_pid or 'optical')
+                if str(active_pid_for_msg).lower() == 'onir' and zmax < 2.5:
+                    zmax = 2.5
                 progress_callback(f"Automatic redshift search (range: {zmin:.6f} to {zmax:.6f})", 45)
                 _LOGGER.info(f"Using automatic redshift determination (range {zmin:.4f} to {zmax:.4f})")
             
             progress_callback("Running template correlation analysis...", 50)
             
+            # Resolve active profile from config
+            try:
+                # Prefer environment override for this process (set by GUI launcher)
+                env_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
+                active_profile_id = (env_pid or (self.current_config.get('processing', {}) or {}).get('active_profile_id', 'optical'))
+            except Exception:
+                active_profile_id = 'optical'
+
             self.snid_results, self.analysis_trace = run_snid_analysis(
                 processed_spectrum=self.processed_spectrum,
                 templates_dir=templates_dir,
@@ -792,7 +838,8 @@ class PySide6AppController(QtCore.QObject):
                 save_plots=False,
                 plot_dir=None,
                 # REMOVED: output_plots parameter (doesn't exist in run_snid_analysis function)
-                progress_callback=progress_callback  # Pass progress callback (enforces cancellation)
+                progress_callback=progress_callback,  # Pass progress callback (enforces cancellation)
+                profile_id=active_profile_id
             )
             
             progress_callback("Processing analysis results...", 90)

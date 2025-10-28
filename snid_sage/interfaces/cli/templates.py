@@ -23,6 +23,7 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
     imp.add_argument("file", help="Path to CSV/TSV file with spectra list")
     imp.add_argument("--dest", help="Destination templates directory (defaults to configured user folder)")
     imp.add_argument("--delimiter", choices=[",", "\t", ";"], help="Explicit delimiter (auto-detect if omitted)")
+    imp.add_argument("--profile", choices=["optical", "onir"], help="Profile for rebinned storage (optical|onir)")
     imp.add_argument("--name-column", default="object_name")
     imp.add_argument("--path-column", default="spectrum_file_path")
     imp.add_argument("--age-column", default="age")
@@ -97,6 +98,14 @@ def main(args: argparse.Namespace) -> int:
         print(f"[ERROR] Failed to initialize services: {e}")
         return 1
 
+    # Apply CLI-selected profile if provided
+    cli_profile = getattr(args, 'profile', None)
+    if cli_profile:
+        try:
+            svc.set_active_profile(cli_profile)
+        except Exception as e:
+            print(f"[WARN] Failed to set profile '{cli_profile}': {e}")
+
     total = sum(len(v) for v in groups.values())
     processed = 0
     errors: List[str] = []
@@ -137,6 +146,7 @@ def main(args: argparse.Namespace) -> int:
                     combine_only=(idx > 0),
                     target_dir=dest_dir,
                     sim_flag=sim_flag,
+                    profile_id=getattr(svc, 'get_active_profile', lambda: None)(),
                 )
                 if not ok:
                     raise RuntimeError("Service rejected template append/create")

@@ -288,6 +288,7 @@ class BatchImportDialog(QtWidgets.QDialog):
                             flux=np.asarray(flux, dtype=float),
                             combine_only=(idx > 0),
                             sim_flag=sim_flag_val,
+                            profile_id=getattr(svc, 'get_active_profile', lambda: None)(),
                         )
                     else:
                         ok = svc.add_template_from_arrays(
@@ -301,6 +302,7 @@ class BatchImportDialog(QtWidgets.QDialog):
                             combine_only=(idx > 0),
                             target_dir=self._dest_dir,
                             sim_flag=sim_flag_val,
+                            profile_id=getattr(svc, 'get_active_profile', lambda: None)(),
                         )
                     if not ok:
                         raise RuntimeError("Service rejected template append/create")

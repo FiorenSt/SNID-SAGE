@@ -73,6 +73,8 @@ def parse_arguments():
     parser.add_argument("--debug", "-d", action="store_true", help="Debug output")
     parser.add_argument("--quiet", "-q", action="store_true", help="Quiet mode")
     parser.add_argument("--silent", "-s", action="store_true", help="Silent mode")
+    # Allow selecting processing profile at launch (e.g., onir, optical)
+    parser.add_argument("--profile", dest="profile_id", type=str, default=None, help="Active processing profile id (e.g. 'onir' or 'optical')")
     
     # Check environment variables for defaults
     args = parser.parse_args()

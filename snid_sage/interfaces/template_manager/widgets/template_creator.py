@@ -400,6 +400,11 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
 
             # Persist via HDF5-only service
             svc = get_template_service()
+            # Honor active profile from service
+            try:
+                active_pid = svc.get_active_profile()
+            except Exception:
+                active_pid = None
             success = svc.add_template_from_arrays(
                 name=template_info['name'],
                 ttype=template_info['type'],
@@ -408,6 +413,7 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
                 redshift=float(template_info['redshift']),
                 wave=wave,
                 flux=flux,
+                profile_id=active_pid,
             )
             
             if success:

@@ -87,6 +87,19 @@ class SNIDTemplateManagerGUI(QtWidgets.QMainWindow):
         # Right panel - Tabbed interface
         right_panel = self.create_right_panel()
         splitter.addWidget(right_panel)
+        # Ensure right panel stretches and apply sizes after widgets are added
+        try:
+            splitter.setStretchFactor(0, 0)
+            splitter.setStretchFactor(1, 1)
+            # Apply desired initial sizes now that children exist
+            try:
+                sizes = self.layout_manager.settings.main_splitter_sizes
+            except Exception:
+                sizes = [220, 680]
+            splitter.setSizes(sizes)
+            QtCore.QTimer.singleShot(0, lambda s=sizes: splitter.setSizes(s))
+        except Exception:
+            pass
         
         
     def create_left_panel(self) -> QtWidgets.QWidget:
@@ -163,16 +176,45 @@ class SNIDTemplateManagerGUI(QtWidgets.QMainWindow):
         source_row.addWidget(self.source_filter)
         search_layout.addLayout(source_row)
 
+        # Profile selector: Optical / ONIR (local toggle for Template Manager)
+        profile_row = QtWidgets.QHBoxLayout()
+        profile_label = QtWidgets.QLabel("Profile:")
+        self.profile_optical = QtWidgets.QRadioButton("Optical")
+        self.profile_onir = QtWidgets.QRadioButton("ONIR")
+        self.profile_optical.setChecked(True)
+        try:
+            from .services.template_service import get_template_service
+            svc = get_template_service()
+            pid = (svc.get_active_profile() or 'optical').lower()
+            if pid == 'onir':
+                self.profile_onir.setChecked(True)
+                self.profile_optical.setChecked(False)
+        except Exception:
+            pass
+        self.profile_optical.toggled.connect(lambda checked: self._on_profile_changed('optical' if checked else None))
+        self.profile_onir.toggled.connect(lambda checked: self._on_profile_changed('onir' if checked else None))
+        profile_row.addWidget(profile_label)
+        profile_row.addWidget(self.profile_optical)
+        profile_row.addWidget(self.profile_onir)
+        profile_row.addStretch()
+        search_layout.addLayout(profile_row)
+
         self.search_edit = QtWidgets.QLineEdit()
         self.search_edit.setPlaceholderText("Search templates...")
         self.search_edit.textChanged.connect(self._filter_templates)
         search_layout.addWidget(self.search_edit)
         
         self.type_filter = QtWidgets.QComboBox()
-        # Populate dynamically from merged index
+        # Populate dynamically from merged index for active profile
         try:
             from .services.template_service import get_template_service
-            by_type = get_template_service().get_merged_index().get('by_type', {})
+            svc = get_template_service()
+            pid = None
+            try:
+                pid = svc.get_active_profile()
+            except Exception:
+                pid = None
+            by_type = svc.get_merged_index(profile_id=pid).get('by_type', {})
             dynamic_types = sorted(list(by_type.keys()))
             self.type_filter.addItem("All Types")
             self.type_filter.addItems(dynamic_types)
@@ -231,11 +273,11 @@ class SNIDTemplateManagerGUI(QtWidgets.QMainWindow):
                 from .services.template_service import get_template_service
                 svc = get_template_service()
                 if (mode or "").strip().title() == "Default":
-                    idx = svc.get_builtin_index()
+                    idx = svc.get_builtin_index(profile_id=svc.get_active_profile())
                 elif (mode or "").strip().title() == "User":
-                    idx = svc.get_user_index()
+                    idx = svc.get_user_index(profile_id=svc.get_active_profile())
                 else:
-                    idx = svc.get_merged_index()
+                    idx = svc.get_merged_index(profile_id=svc.get_active_profile())
                 types = sorted(list((idx.get('by_type') or {}).keys())) if isinstance(idx, dict) else []
                 # Preserve current selection if possible
                 current = self.type_filter.currentText() if hasattr(self, 'type_filter') else None
@@ -265,6 +307,52 @@ class SNIDTemplateManagerGUI(QtWidgets.QMainWindow):
                 pass
         except Exception as e:
             _LOGGER.warning(f"Source change failed: {e}")
+
+    def _on_profile_changed(self, profile_id: Optional[str]) -> None:
+        """Switch active profile in the service and reload lists."""
+        try:
+            if not profile_id:
+                return
+            from .services.template_service import get_template_service
+            svc = get_template_service()
+            svc.set_active_profile(profile_id)
+            # Reload indices and filters immediately
+            self.template_tree.load_templates()
+            # Repopulate type filter for the active profile and current source
+            try:
+                mode = (self.source_filter.currentText() or "Combined").strip().title()
+                if mode == "Default":
+                    idx = svc.get_builtin_index(profile_id=svc.get_active_profile())
+                elif mode == "User":
+                    idx = svc.get_user_index(profile_id=svc.get_active_profile())
+                else:
+                    idx = svc.get_merged_index(profile_id=svc.get_active_profile())
+                types = sorted(list((idx.get('by_type') or {}).keys())) if isinstance(idx, dict) else []
+                current = self.type_filter.currentText() if hasattr(self, 'type_filter') else None
+                self.type_filter.blockSignals(True)
+                self.type_filter.clear()
+                self.type_filter.addItem("All Types")
+                for t in types:
+                    self.type_filter.addItem(t)
+                if current and current in [self.type_filter.itemText(i) for i in range(self.type_filter.count())]:
+                    self.type_filter.setCurrentText(current)
+                else:
+                    self.type_filter.setCurrentText("All Types")
+            finally:
+                try:
+                    self.type_filter.blockSignals(False)
+                except Exception:
+                    pass
+            # Re-apply current search filter
+            self._filter_templates()
+            # Refresh creator/manager widgets if they rely on service state
+            try:
+                if hasattr(self, 'manager_widget') and hasattr(self.manager_widget, 'update_empty_state'):
+                    self.manager_widget.update_empty_state()
+            except Exception:
+                pass
+        except Exception as e:
+            _LOGGER.warning(f"Profile change failed: {e}")
         
     def _on_tab_changed(self, index: int) -> None:
         """When switching tabs, force the library to 'User' for Create/Manage."""

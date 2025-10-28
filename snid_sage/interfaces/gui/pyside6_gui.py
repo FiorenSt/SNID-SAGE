@@ -2299,6 +2299,24 @@ def main(verbosity_args=None):
     # Suppress Qt warnings before creating application
     os.environ['QT_LOGGING_RULES'] = '*.debug=false;qt.qpa.windows.debug=false'
     
+    # If a profile is provided via CLI (launcher args), set it for this process only via env var
+    try:
+        profile_id = None
+        if verbosity_args is not None:
+            profile_id = getattr(verbosity_args, 'profile_id', None)
+        if profile_id:
+            os.environ['SNID_SAGE_ACTIVE_PROFILE'] = str(profile_id).strip().lower()
+            if logger:
+                logger.info(f"GUI startup: Using active profile from CLI (non-persistent): {os.environ['SNID_SAGE_ACTIVE_PROFILE']}")
+        else:
+            # Default to optical if no explicit profile and no env override present
+            if not os.environ.get('SNID_SAGE_ACTIVE_PROFILE') and not os.environ.get('SNID_SAGE_PROFILE'):
+                os.environ['SNID_SAGE_ACTIVE_PROFILE'] = 'optical'
+                if logger:
+                    logger.debug("GUI startup: Defaulting active profile to 'optical' for this session")
+    except Exception:
+        pass
+
     # Create Qt application
     app = QtWidgets.QApplication(sys.argv)
     # Set a default application icon for all windows/dialogs

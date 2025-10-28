@@ -52,13 +52,13 @@ class TemplateLayoutSettings:
     
     def __init__(self):
         # === Template Manager Specific Dimensions ===
-        self.template_browser_width = 250
+        self.template_browser_width = 220
         self.template_viewer_height = 350
         self.template_info_panel_height = 150
         self.template_control_panel_height = 60
         
         # === Splitter Settings ===
-        self.main_splitter_sizes = [250, 650]  # browser : content
+        self.main_splitter_sizes = [220, 680]  # browser : content
         self.vertical_splitter_sizes = [350, 200]  # viewer : info
         
         # === Tab Settings ===

@@ -69,7 +69,7 @@ class TemplateFFTStorage:
     5. Pre-computed FFTs stored alongside data
     """
     
-    def __init__(self, template_dir: str, output_dir: str = None):
+    def __init__(self, template_dir: str, output_dir: str = None, profile_id: str | None = None):
         """
         Initialize unified template storage.
         
@@ -85,14 +85,45 @@ class TemplateFFTStorage:
         self.storage_files = {}  # Will be populated with type -> file mapping
         self.index_file = self.output_dir / 'template_index.json'
         
-        # Load index if available
+        # Load index if available (profile-aware)
         self._index: Optional[Dict] = None
-        self._load_index()
+        # Pass through the requested profile id so we can filter incompatible user indices (e.g., ONIR vs optical)
+        self._load_index(profile_id)
         
-        # Standard grid parameters (same as SNID uses)
-        self.NW = 1024
-        self.W0 = 2500.0
-        self.W1 = 10000.0
+        # Determine effective profile/grid: prefer index metadata if present
+        idx_prof = None
+        idx_grid = None
+        if self._index and isinstance(self._index, dict):
+            idx_prof = self._index.get('profile_id')
+            idx_grid = self._index.get('grid_params')
+
+        effective_profile_id = profile_id or idx_prof
+
+        if idx_grid:
+            # Adopt grid from index to guarantee consistency with bank
+            try:
+                self.NW = int(idx_grid.get('NW', 1024))
+                self.W0 = float(idx_grid.get('W0', 2500.0))
+                self.W1 = float(idx_grid.get('W1', 10000.0))
+            except Exception:
+                # Fallback to profile if index grid is malformed
+                idx_grid = None
+
+        if not idx_grid:
+            # Profile-aware grid fallback
+            try:
+                from snid_sage.shared.profiles.builtins import register_builtins
+                from snid_sage.shared.profiles.registry import get_profile
+                register_builtins()
+                profile_obj = get_profile(effective_profile_id or 'optical')
+                self.NW = int(profile_obj.grid.nw)
+                self.W0 = float(profile_obj.grid.min_wave_A)
+                self.W1 = float(profile_obj.grid.max_wave_A)
+            except Exception:
+                # Fallback to optical defaults
+                self.NW = 1024
+                self.W0 = 2500.0
+                self.W1 = 10000.0
         self.DWLOG = np.log(self.W1 / self.W0) / self.NW
         
         # Precompute standard wavelength grid
@@ -103,6 +134,32 @@ class TemplateFFTStorage:
         self._prefetch_cache = {}
         self._prefetch_lock = threading.Lock()
         
+        # Validate index grid/profile if present
+        try:
+            if self._index and isinstance(self._index, dict):
+                idx_grid = self._index.get('grid_params') or {}
+                idx_prof = self._index.get('profile_id')
+                if idx_grid:
+                    iNW = int(idx_grid.get('NW', self.NW))
+                    iW0 = float(idx_grid.get('W0', self.W0))
+                    iW1 = float(idx_grid.get('W1', self.W1))
+                    iDW = float(idx_grid.get('DWLOG', self.DWLOG))
+                    # Compare with tolerance for DWLOG
+                    if not (iNW == self.NW and abs(iW0 - self.W0) < 1e-6 and abs(iW1 - self.W1) < 1e-6):
+                        raise RuntimeError(
+                            f"Template index grid mismatch: index (NW={iNW}, W0={iW0}, W1={iW1}) vs active profile (NW={self.NW}, W0={self.W0}, W1={self.W1})"
+                        )
+                    # DWLOG derived; check relative tolerance
+                    if not (abs(iDW - self.DWLOG) / max(self.DWLOG, 1e-20) < 1e-6):
+                        raise RuntimeError("Template index DWLOG mismatch with active profile")
+                # If profile_id present, require exact match
+                if idx_prof is not None and str(idx_prof).lower() != str(profile_id or 'optical').lower():
+                    raise RuntimeError(f"Template index profile_id '{idx_prof}' does not match active profile '{profile_id or 'optical'}'")
+        except Exception as e:
+            _LOG.error(f"Template index validation failed: {e}")
+            # Leave storage initialized but marked as not built to force caller to handle
+            self._index = None
+
         _LOG.info(f"Initialized TemplateFFTStorage: {template_dir}")
         _LOG.debug(f"Standard grid: NW={self.NW}, W0={self.W0:.1f}, W1={self.W1:.1f}, DWLOG={self.DWLOG:.6f}")
         
@@ -295,7 +352,7 @@ class TemplateFFTStorage:
         
         return stats
     
-    def _load_index(self):
+    def _load_index(self, effective_profile_id: Optional[str] = None):
         """Load the template index file and union-merge with user index from config dir.
 
         Behavior:
@@ -347,26 +404,65 @@ class TemplateFFTStorage:
             'by_type': {}
         }
 
-        # Union-merge with user index if present
+        # Helper: determine if a given index header is compatible with an active profile
+        def _index_compatible_with_profile(idx: Dict[str, Any], active_profile: Optional[str]) -> bool:
+            if not idx:
+                return False
+            if not active_profile:
+                return True
+            try:
+                from snid_sage.shared.profiles.builtins import register_builtins
+                from snid_sage.shared.profiles.registry import get_profile
+                register_builtins()
+                prof = get_profile(active_profile)
+                target_nw = int(prof.grid.nw)
+                target_w0 = float(prof.grid.min_wave_A)
+                target_w1 = float(prof.grid.max_wave_A)
+                # If the index declares a profile id, require exact match (case-insensitive)
+                idx_prof = (idx or {}).get('profile_id')
+                if idx_prof is not None and str(idx_prof).lower() != str(active_profile).lower():
+                    return False
+                # If grid_params exist, require grid match within tight tolerance
+                g = (idx or {}).get('grid_params') or {}
+                if g:
+                    iNW = int(g.get('NW', target_nw))
+                    iW0 = float(g.get('W0', target_w0))
+                    iW1 = float(g.get('W1', target_w1))
+                    if not (iNW == target_nw and abs(iW0 - target_w0) < 1e-6 and abs(iW1 - target_w1) < 1e-6):
+                        return False
+                return True
+            except Exception:
+                # If anything goes wrong, be conservative when ONIR is active
+                if str(active_profile).lower() == 'onir':
+                    return False
+                return True
+
+        # Union-merge with user index if present and compatible with the active profile
         if user_index:
-            merged_templates = merged.setdefault('templates', {})
-            for name, meta in (user_index.get('templates') or {}).items():
-                # Shallow copy to avoid mutating original
-                merged_templates[name] = dict(meta)
-            # Recompute by_type summary from merged templates
-            by_type: Dict[str, Any] = {}
-            for name, meta in merged_templates.items():
-                ttype = (meta or {}).get('type', 'Unknown')
-                bucket = by_type.setdefault(ttype, { 'count': 0, 'storage_file': (meta or {}).get('storage_file', ''), 'template_names': [] })
-                bucket['count'] += 1
-                bucket['template_names'].append(name)
-                if not bucket.get('storage_file') and (meta or {}).get('storage_file'):
-                    bucket['storage_file'] = (meta or {}).get('storage_file')
-            merged['by_type'] = by_type
-            merged['template_count'] = len(merged_templates)
-            # Prefer user index version if present
-            if user_index.get('version'):
-                merged['version'] = user_index.get('version')
+            if _index_compatible_with_profile(user_index, effective_profile_id):
+                merged_templates = merged.setdefault('templates', {})
+                for name, meta in (user_index.get('templates') or {}).items():
+                    # Shallow copy to avoid mutating original
+                    merged_templates[name] = dict(meta)
+                # Recompute by_type summary from merged templates
+                by_type: Dict[str, Any] = {}
+                for name, meta in merged_templates.items():
+                    ttype = (meta or {}).get('type', 'Unknown')
+                    bucket = by_type.setdefault(ttype, { 'count': 0, 'storage_file': (meta or {}).get('storage_file', ''), 'template_names': [] })
+                    bucket['count'] += 1
+                    bucket['template_names'].append(name)
+                    if not bucket.get('storage_file') and (meta or {}).get('storage_file'):
+                        bucket['storage_file'] = (meta or {}).get('storage_file')
+                merged['by_type'] = by_type
+                merged['template_count'] = len(merged_templates)
+                # Prefer user index version if present
+                if user_index.get('version'):
+                    merged['version'] = user_index.get('version')
+            else:
+                try:
+                    _LOG.info(f"Skipping merge of user template index at '{user_index_path}' due to incompatibility with active profile '{effective_profile_id}'.")
+                except Exception:
+                    pass
 
         self._index = merged
     
@@ -528,6 +624,10 @@ class TemplateFFTStorage:
             meta_group.attrs['W0'] = self.W0
             meta_group.attrs['W1'] = self.W1
             meta_group.attrs['DWLOG'] = self.DWLOG
+            try:
+                meta_group.attrs['profile_id'] = effective_profile_id or 'optical'
+            except Exception:
+                pass
             
             # Store single wavelength array for all templates (they're all on same grid now)
             meta_group.create_dataset('standard_wavelength', data=self.standard_log_wave)
@@ -586,6 +686,7 @@ class TemplateFFTStorage:
                 'W1': self.W1,
                 'DWLOG': self.DWLOG
             },
+            'profile_id': effective_profile_id or 'optical',
             'templates': {},
             'by_type': {}
         }
@@ -783,6 +884,28 @@ class TemplateFFTStorage:
                 # Check if this is a rebinned storage file
                 metadata = f.get('metadata', {})
                 is_rebinned = metadata.attrs.get('grid_rebinned', False)
+                # Validate grid/profile compatibility when metadata is present
+                try:
+                    hNW = int(metadata.attrs.get('NW', self.NW))
+                    hW0 = float(metadata.attrs.get('W0', self.W0))
+                    hW1 = float(metadata.attrs.get('W1', self.W1))
+                    hDW = float(metadata.attrs.get('DWLOG', self.DWLOG))
+                    hProf = metadata.attrs.get('profile_id', None)
+                    if not (hNW == self.NW and abs(hW0 - self.W0) < 1e-6 and abs(hW1 - self.W1) < 1e-6):
+                        raise RuntimeError(
+                            f"Storage file grid mismatch: file (NW={hNW}, W0={hW0}, W1={hW1}) vs active profile (NW={self.NW}, W0={self.W0}, W1={self.W1})"
+                        )
+                    if not (abs(hDW - self.DWLOG) / max(self.DWLOG, 1e-20) < 1e-6):
+                        raise RuntimeError("Storage file DWLOG mismatch with active profile")
+                    if hProf is not None:
+                        # If file declares a profile, require exact match
+                        # Note: we do not have self.profile_id attribute; infer from grid equivalence above if missing
+                        pass
+                except RuntimeError:
+                    raise
+                except Exception:
+                    # If metadata missing, allow only when grids match implicitly (already ensured by NW/W0/W1 above)
+                    pass
                 
                 # Get the standard wavelength grid
                 if 'standard_wavelength' in metadata:
@@ -790,6 +913,15 @@ class TemplateFFTStorage:
                 else:
                     # Fall back to our computed grid
                     wavelength_grid = self.standard_log_wave
+                # Validate wavelength grid length matches expected NW
+                try:
+                    if wavelength_grid.shape[0] != self.NW:
+                        raise RuntimeError(
+                            f"Wavelength grid length mismatch in storage file {storage_file_path}: "
+                            f"len={wavelength_grid.shape[0]} expected {self.NW}"
+                        )
+                except Exception:
+                    raise
                 
                 templates_group = f['templates']
                 
@@ -805,6 +937,16 @@ class TemplateFFTStorage:
                     fft_real = group['fft_real'][:]
                     fft_imag = group['fft_imag'][:]
                     fft = fft_real + 1j * fft_imag
+
+                    # Strict validation: dataset lengths must match active grid (NW)
+                    if flux.shape[0] != self.NW:
+                        raise RuntimeError(
+                            f"Template '{name}' flux length {flux.shape[0]} does not match expected NW={self.NW}"
+                        )
+                    if fft.shape[0] != self.NW:
+                        raise RuntimeError(
+                            f"Template '{name}' FFT length {fft.shape[0]} does not match expected NW={self.NW}"
+                        )
                     
                     # Load metadata
                     attrs = dict(group.attrs)
@@ -819,6 +961,18 @@ class TemplateFFTStorage:
                             epoch_fft_real = epoch_group['fft_real'][:]
                             epoch_fft_imag = epoch_group['fft_imag'][:]
                             epoch_fft = epoch_fft_real + 1j * epoch_fft_imag
+
+                            # Strict validation for epoch datasets
+                            if epoch_flux.shape[0] != self.NW:
+                                raise RuntimeError(
+                                    f"Template '{name}' epoch '{epoch_name}' flux length {epoch_flux.shape[0]} "
+                                    f"does not match expected NW={self.NW}"
+                                )
+                            if epoch_fft.shape[0] != self.NW:
+                                raise RuntimeError(
+                                    f"Template '{name}' epoch '{epoch_name}' FFT length {epoch_fft.shape[0]} "
+                                    f"does not match expected NW={self.NW}"
+                                )
                             
                             epoch_info = {
                                 'flux': epoch_flux,  # Already rebinned

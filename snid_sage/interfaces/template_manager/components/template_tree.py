@@ -53,12 +53,17 @@ class TemplateTreeWidget(QtWidgets.QTreeWidget):
             try:
                 from snid_sage.interfaces.template_manager.services.template_service import get_template_service
                 svc = get_template_service()
+                active_pid = None
+                try:
+                    active_pid = svc.get_active_profile()
+                except Exception:
+                    active_pid = None
                 if self._source_mode == 'Default':
-                    index_data = svc.get_builtin_index()
+                    index_data = svc.get_builtin_index(profile_id=active_pid)
                 elif self._source_mode == 'User':
-                    index_data = svc.get_user_index()
+                    index_data = svc.get_user_index(profile_id=active_pid)
                 else:
-                    index_data = svc.get_merged_index()
+                    index_data = svc.get_merged_index(profile_id=active_pid)
             except Exception as e:
                 _LOGGER.warning(f"Falling back to legacy index loading: {e}")
                 template_index_path = self._find_template_index()

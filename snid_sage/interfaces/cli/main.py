@@ -126,22 +126,54 @@ def main(argv: Optional[List[str]] = None) -> int:
         parser.print_help()
         return 0
     
-    # Special case: if first argument looks like a spectrum file,
-    # treat it as the default "identify" command for convenience
-    if len(argv) >= 1 and not argv[0].startswith('-') and argv[0] not in ['identify', 'batch', 'config']:
-        # Implicit identify mode: sage <spectrum> [templates/]
-        # Show a brief interactive tip only in verbose/debug to avoid default noise
+    # Convenience: default to 'identify' when user omits COMMAND.
+    # Supports both:
+    #   - sage <file>
+    #   - sage --profile onir <file>
+    # We insert 'identify' just before the first non-option token,
+    # so global options (e.g. verbosity) remain in the global scope.
+    known_commands = {'identify', 'batch', 'config'}
+    has_command = any(tok in known_commands for tok in argv)
+    if not has_command:
+        # Partition argv into known global options vs the rest, then insert 'identify'
+        # after globals so subcommand-specific options (e.g. --profile) follow 'identify'.
+        global_flags = {
+            '-h', '--help', '--version',
+            '-v', '--verbose', '--debug', '-vv', '--quiet', '--silent',
+            '--log-file', '--log-dir'
+        }
+        flags_with_values = {'--log-file', '--log-dir'}
+
+        globals_part: list[str] = []
+        rest_part: list[str] = []
+
+        i = 0
+        while i < len(argv):
+            tok = argv[i]
+            if tok in global_flags:
+                globals_part.append(tok)
+                if tok in flags_with_values and i + 1 < len(argv):
+                    nxt = argv[i + 1]
+                    # Accept next token as value even if it starts with '-'
+                    globals_part.append(nxt)
+                    i += 2
+                    continue
+                i += 1
+            else:
+                rest_part.append(tok)
+                i += 1
+
         try:
             wants_verbose = any(f in argv for f in ['-v', '--verbose', '-d', '--debug'])
             if sys.stderr.isatty() and wants_verbose:
                 print(
-                    "Tip: 'sage <file>' runs 'sage identify <file>'. Use 'sage identify' for clarity.",
+                    "Tip: defaulting to 'identify' subcommand.",
                     file=sys.stderr
                 )
         except Exception:
-            # Never let optional tips interfere with CLI behavior
             pass
-        argv = ['identify'] + argv
+
+        argv = globals_part + ['identify'] + rest_part
     
     args = parser.parse_args(argv)
     

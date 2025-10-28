@@ -30,6 +30,11 @@ import os
 import numpy as np
 import h5py
 
+try:
+    # Profile registry is available in core
+    from snid_sage.shared.profiles.registry import get_profile
+except Exception:  # pragma: no cover - defensive import
+    get_profile = None  # type: ignore
 
 def _compute_builtin_dir() -> Path:
     """Resolve the packaged templates directory robustly (installed or dev)."""
@@ -84,28 +89,55 @@ class TemplateService:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         # Do not auto-create user template directories; user must select a valid folder
-        # Lazy cache
+        # Active profile and derived standard grid
+        self._active_profile_id: str = 'optical'
         self._standard_grid = StandardGrid()
         self._standard_wave = self._standard_grid.wavelength()
+        try:
+            self._apply_profile(self._active_profile_id)
+        except Exception:
+            # Fall back to default optical-like grid if registry not available
+            self._standard_grid = StandardGrid()
+            self._standard_wave = self._standard_grid.wavelength()
+
+    # ---- Profile selection ----
+    def set_active_profile(self, profile_id: str) -> None:
+        pid = (profile_id or 'optical').strip().lower()
+        if pid == self._active_profile_id:
+            return
+        self._apply_profile(pid)
+
+    def get_active_profile(self) -> str:
+        return self._active_profile_id
+
+    def _apply_profile(self, profile_id: str) -> None:
+        """Apply profile by updating the standard grid and wavelength vector."""
+        if get_profile is None:
+            # Registry unavailable; keep defaults
+            self._active_profile_id = (profile_id or 'optical')
+            return
+        prof = get_profile(profile_id)
+        # Derive grid from profile
+        self._standard_grid = StandardGrid(
+            num_points=int(getattr(prof.grid, 'nw', 1024)),
+            min_wave=float(getattr(prof.grid, 'min_wave_A', 2500.0)),
+            max_wave=float(getattr(prof.grid, 'max_wave_A', 10000.0)),
+        )
+        self._standard_wave = self._standard_grid.wavelength()
+        self._active_profile_id = prof.id
 
     # ---- Public API ----
-    def get_merged_index(self) -> Dict[str, Any]:
-        """Return the merged built-in + user index for the GUI browser."""
-        builtin = self._read_json(_BUILTIN_INDEX) or {
-            "templates": {},
-            "by_type": {},
-            "template_count": 0,
-        }
-        idx_path = _user_index_path()
-        user = self._read_json(idx_path) or {
-            "templates": {},
-            "by_type": {},
-            "template_count": 0,
-        }
+    def get_merged_index(self, profile_id: Optional[str] = None) -> Dict[str, Any]:
+        """Return the merged built-in + user index for the GUI browser.
+
+        If profile_id is provided, filter entries to that profile.
+        """
+        builtin = self.get_builtin_index(profile_id=profile_id)
+        user = self.get_user_index(profile_id=profile_id)
 
         merged_templates: Dict[str, Any] = {}
-        merged_templates.update(builtin.get("templates", {}))
-        merged_templates.update(user.get("templates", {}))
+        merged_templates.update((builtin.get("templates") or {}))
+        merged_templates.update((user.get("templates") or {}))
 
         # Recompute by_type from merged templates
         by_type: Dict[str, Any] = {}
@@ -114,7 +146,6 @@ class TemplateService:
             bucket = by_type.setdefault(ttype, {"count": 0, "storage_file": meta.get("storage_file", ""), "template_names": []})
             bucket["count"] += 1
             bucket["template_names"].append(name)
-            # Prefer an existing storage_file reference; do not overwrite with empty
             if not bucket.get("storage_file") and meta.get("storage_file"):
                 bucket["storage_file"] = meta["storage_file"]
 
@@ -130,25 +161,61 @@ class TemplateService:
         p = get_user_templates_dir(strict=True)
         return str(p) if p else None
 
-    def get_builtin_index(self) -> Dict[str, Any]:
-        """Return only the built-in index (no user templates)."""
-        data = self._read_json(_BUILTIN_INDEX) or {
+    def get_builtin_index(self, profile_id: Optional[str] = None) -> Dict[str, Any]:
+        """Return built-in index from packaged optical and ONIR banks, merged.
+
+        When profile_id is provided, filter entries to that profile.
+        """
+        # Load optical index
+        optical = self._read_json(_BUILTIN_INDEX) or {
             "version": "2.0",
             "template_count": 0,
             "templates": {},
             "by_type": {},
         }
-        # Ensure counts if missing
-        if "by_type" not in data or not isinstance(data.get("by_type"), dict):
-            data["by_type"] = {}
-        if "templates" not in data or not isinstance(data.get("templates"), dict):
-            data["templates"] = {}
-        if not data.get("template_count"):
-            data["template_count"] = len(data.get("templates", {}))
-        return data
+        # Load ONIR index if present
+        onir_idx_path = self._compute_onir_index_path()
+        onir = self._read_json(onir_idx_path) if onir_idx_path is not None else None
+        if not isinstance(onir, dict):
+            onir = {"templates": {}, "by_type": {}, "template_count": 0}
 
-    def get_user_index(self) -> Dict[str, Any]:
-        """Return only the user index (no built-in templates)."""
+        # Tag entries with profile_id if missing
+        def _tag(templates: Dict[str, Any], pid: str) -> Dict[str, Any]:
+            out: Dict[str, Any] = {}
+            for k, v in (templates or {}).items():
+                meta = dict(v or {})
+                if not meta.get('profile_id'):
+                    meta['profile_id'] = pid
+                out[k] = meta
+            return out
+
+        optical_templates = _tag(optical.get('templates', {}), 'optical')
+        onir_templates = _tag(onir.get('templates', {}), 'onir')
+
+        merged_templates: Dict[str, Any] = {}
+        merged_templates.update(optical_templates)
+        merged_templates.update(onir_templates)
+
+        # Optional filtering by profile
+        if profile_id is not None:
+            req = (profile_id or '').strip().lower()
+            merged_templates = {k: v for k, v in merged_templates.items() if (v or {}).get('profile_id', '').lower() == req}
+
+        # Recompute by_type summary
+        by_type = self._compute_by_type(merged_templates)
+
+        return {
+            "version": optical.get("version") or onir.get("version") or "2.0",
+            "template_count": len(merged_templates),
+            "templates": merged_templates,
+            "by_type": by_type,
+        }
+
+    def get_user_index(self, profile_id: Optional[str] = None) -> Dict[str, Any]:
+        """Return only the user index; optionally filtered by profile.
+
+        For legacy entries missing profile_id, infer by HDF5 grid metadata.
+        """
         idx_path = _user_index_path()
         data = self._read_json(idx_path) or {
             "version": "2.0",
@@ -156,13 +223,44 @@ class TemplateService:
             "templates": {},
             "by_type": {},
         }
-        if "by_type" not in data or not isinstance(data.get("by_type"), dict):
-            data["by_type"] = {}
-        if "templates" not in data or not isinstance(data.get("templates"), dict):
-            data["templates"] = {}
-        if not data.get("template_count"):
-            data["template_count"] = len(data.get("templates", {}))
-        return data
+        templates: Dict[str, Any] = dict((data.get('templates') or {}))
+
+        # If filtering by profile, include only matching entries (using inference when missing)
+        if profile_id is not None:
+            req = (profile_id or '').strip().lower()
+            # Cache storage_file -> inferred_profile
+            storage_to_profile: Dict[str, Optional[str]] = {}
+            def infer(nm: str, meta: Dict[str, Any]) -> Optional[str]:
+                if not isinstance(meta, dict):
+                    return None
+                pid = (meta.get('profile_id') or '').strip().lower()
+                if pid:
+                    return pid
+                sf = str(meta.get('storage_file', '')).strip()
+                if not sf:
+                    return None
+                if sf in storage_to_profile:
+                    return storage_to_profile[sf]
+                storage_to_profile[sf] = self._infer_profile_from_h5(Path(sf))
+                return storage_to_profile[sf]
+
+            filtered: Dict[str, Any] = {}
+            for name, meta in templates.items():
+                ipid = infer(name, meta)
+                if (ipid or '') == req:
+                    # ensure the returned meta includes profile_id
+                    mm = dict(meta or {})
+                    mm['profile_id'] = ipid
+                    filtered[name] = mm
+            templates = filtered
+
+        by_type = self._compute_by_type(templates)
+        return {
+            "version": data.get("version") or "2.0",
+            "template_count": len(templates),
+            "templates": templates,
+            "by_type": by_type,
+        }
 
     def has_user_templates(self) -> bool:
         """Return True if any user templates exist."""
@@ -184,6 +282,7 @@ class TemplateService:
         combine_only: bool = False,
         target_dir: Optional[Path] = None,
         sim_flag: Optional[int] = None,
+        profile_id: Optional[str] = None,
     ) -> bool:
         """
         Append a template to the per-type user HDF5 and update the user index.
@@ -194,11 +293,15 @@ class TemplateService:
         if wave.size == 0 or flux.size == 0:
             return False
         try:
-            with self._lock:
-                h5_abs_path = self._ensure_user_h5_for_type(ttype, target_dir=target_dir)
+            # Resolve target profile/grid without mutating global state
+            target_profile_id = (profile_id or self._active_profile_id or 'optical')
+            target_grid = self._grid_for_profile(target_profile_id)
 
-                # Rebin to the standard grid
-                rebinned_flux = self._rebin_to_standard_grid(wave, flux)
+            with self._lock:
+                h5_abs_path = self._ensure_user_h5_for_type(ttype, target_dir=target_dir, profile_id=target_profile_id, grid=target_grid)
+
+                # Rebin to the target grid
+                rebinned_flux = self._rebin_to_standard_grid(wave, flux, grid=target_grid)
                 fft = np.fft.fft(rebinned_flux)
 
                 # Write (append/combine or create) to HDF5
@@ -242,6 +345,7 @@ class TemplateService:
                         "redshift": float(redshift),
                         "epochs": 1 if not combined else int(epochs_count),
                         "storage_file": str(h5_abs_path).replace("\\", "/"),
+                        "profile_id": target_profile_id,
                     }
                     if sim_flag is not None:
                         index_templates[final_name]["sim_flag"] = int(sim_flag)
@@ -468,8 +572,8 @@ class TemplateService:
             return False
 
     # ---- Internals ----
-    def _rebin_to_standard_grid(self, wave: np.ndarray, flux: np.ndarray) -> np.ndarray:
-        """Rebin flux onto the standard logarithmic grid by interpolation in log space."""
+    def _rebin_to_standard_grid(self, wave: np.ndarray, flux: np.ndarray, *, grid: Optional[StandardGrid] = None) -> np.ndarray:
+        """Rebin flux onto the (optionally provided) standard logarithmic grid by interpolation in log space."""
         # Guard inputs
         wave = np.asarray(wave, dtype=float)
         flux = np.asarray(flux, dtype=float)
@@ -482,7 +586,9 @@ class TemplateService:
             return out
         # Interpolate flux in log-lambda domain
         logw = np.log(wave)
-        target_logw = np.log(self._standard_wave)
+        g = grid or self._standard_grid
+        target_wave = StandardGrid(g.num_points, g.min_wave, g.max_wave).wavelength()
+        target_logw = np.log(target_wave)
         # Use linear interpolation in log space; out-of-bounds filled with nearest value
         rebinned = np.interp(target_logw, logw, flux, left=float(flux[0]), right=float(flux[-1]))
         # Normalize by median to emulate flattened spectra expectation
@@ -491,8 +597,11 @@ class TemplateService:
             rebinned = rebinned / med
         return rebinned.astype(float, copy=False)
 
-    def _ensure_user_h5_for_type(self, ttype: str, *, target_dir: Optional[Path] = None) -> Path:
-        """Ensure the per-type HDF5 exists in the selected target or user config dir; return absolute path."""
+    def _ensure_user_h5_for_type(self, ttype: str, *, target_dir: Optional[Path] = None, profile_id: Optional[str] = None, grid: Optional[StandardGrid] = None) -> Path:
+        """Ensure the per-type HDF5 exists in the selected target or user config dir; return absolute path.
+
+        Writes profile/grid metadata when creating a new file.
+        """
         safe_type = ttype.replace("/", "_").replace("-", "_").replace(" ", "_")
         base_dir: Optional[Path] = None
         if target_dir is not None:
@@ -506,17 +615,22 @@ class TemplateService:
             abs_path.parent.mkdir(parents=True, exist_ok=True)
             with h5py.File(abs_path, "w") as f:
                 meta = f.create_group("metadata")
-                grid = self._standard_grid
+                # Use provided grid if any, otherwise current standard grid
+                g = grid or self._standard_grid
                 meta.attrs["version"] = "2.0"
                 meta.attrs["created_date"] = float(np.floor(np.datetime64("now").astype("datetime64[s]").astype(int)))
                 meta.attrs["template_count"] = 0
                 meta.attrs["supernova_type"] = ttype
                 meta.attrs["grid_rebinned"] = True
-                meta.attrs["NW"] = grid.num_points
-                meta.attrs["W0"] = grid.min_wave
-                meta.attrs["W1"] = grid.max_wave
-                meta.attrs["DWLOG"] = grid.dlog
-                meta.create_dataset("standard_wavelength", data=self._standard_wave)
+                meta.attrs["NW"] = g.num_points
+                meta.attrs["W0"] = g.min_wave
+                meta.attrs["W1"] = g.max_wave
+                meta.attrs["DWLOG"] = g.dlog
+                # Persist profile id for the storage file
+                meta.attrs["profile_id"] = (profile_id or self._active_profile_id or 'optical')
+                # Create standard wavelength array for this grid
+                wave = StandardGrid(g.num_points, g.min_wave, g.max_wave).wavelength()
+                meta.create_dataset("standard_wavelength", data=wave)
                 f.create_group("templates")
         return abs_path
 
@@ -636,6 +750,10 @@ class TemplateService:
             g.attrs["redshift"] = float(redshift)
             g.attrs["epochs"] = 1
             g.attrs["rebinned"] = True
+            try:
+                g.attrs["profile_id"] = self._active_profile_id
+            except Exception:
+                pass
             if sim_flag is not None:
                 try:
                     g.attrs["sim_flag"] = int(sim_flag)
@@ -669,6 +787,67 @@ class TemplateService:
             if not bucket.get("storage_file") and meta.get("storage_file"):
                 bucket["storage_file"] = meta["storage_file"]
         return by_type
+
+    # ---- Helpers for profile-aware operations ----
+    def _grid_for_profile(self, profile_id: str) -> StandardGrid:
+        if get_profile is None:
+            return self._standard_grid
+        prof = get_profile(profile_id)
+        return StandardGrid(
+            num_points=int(getattr(prof.grid, 'nw', self._standard_grid.num_points)),
+            min_wave=float(getattr(prof.grid, 'min_wave_A', self._standard_grid.min_wave)),
+            max_wave=float(getattr(prof.grid, 'max_wave_A', self._standard_grid.max_wave)),
+        )
+
+    def _compute_onir_index_path(self) -> Optional[Path]:
+        """Return path to packaged ONIR index if available."""
+        try:
+            with resources.as_file(resources.files('snid_sage') / 'templates_onir') as tpl_dir:
+                idx = tpl_dir / 'template_index.json'
+                if idx.exists():
+                    return idx
+        except Exception:
+            pass
+        # Fallback to repo-relative path
+        try:
+            p = Path(__file__).resolve().parents[3] / 'templates_onir' / 'template_index.json'
+            return p if p.exists() else None
+        except Exception:
+            return None
+
+    def _infer_profile_from_h5(self, h5_path: Path) -> Optional[str]:
+        """Infer profile id by comparing grid metadata to known profiles."""
+        try:
+            if not h5_path.exists():
+                return None
+            with h5py.File(h5_path, 'r') as f:
+                meta = f.get('metadata')
+                if meta is None:
+                    return None
+                # Prefer explicit attribute
+                try:
+                    pid = meta.attrs.get('profile_id')
+                    if isinstance(pid, (str, bytes)):
+                        return (pid.decode() if isinstance(pid, bytes) else pid)
+                except Exception:
+                    pass
+                nw = int(meta.attrs.get('NW', self._standard_grid.num_points))
+                w0 = float(meta.attrs.get('W0', self._standard_grid.min_wave))
+                w1 = float(meta.attrs.get('W1', self._standard_grid.max_wave))
+            # Compare against optical and onir grids
+            def eq(a: float, b: float) -> bool:
+                return abs(a - b) <= max(1e-6, 1e-6 * max(abs(a), abs(b)))
+            candidates = ['optical', 'onir']
+            for pid in candidates:
+                try:
+                    g = self._grid_for_profile(pid)
+                except Exception:
+                    continue
+                if nw == g.num_points and eq(w0, g.min_wave) and eq(w1, g.max_wave):
+                    return pid
+            return None
+        except Exception:
+            return None
 
     @staticmethod
     def _read_json(path: Path) -> Optional[Dict[str, Any]]:

@@ -657,25 +657,37 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
     
     def _on_cluster_changed(self, index):
         """Handle cluster dropdown selection change"""
+        # Avoid reprocessing if the same index is selected again (prevents duplicate logs)
+        if index == self.selected_index:
+            return
         if 0 <= index < len(self.all_candidates):
             self._select_cluster(index)
     
     def _select_cluster(self, cluster_index):
         """Select a cluster and update UI"""
         if 0 <= cluster_index < len(self.all_candidates):
+            # If already selected, do nothing (prevents double logging on programmatic changes)
+            if self.selected_index == cluster_index and self.selected_cluster is not None:
+                return
+
             self.selected_cluster = self.all_candidates[cluster_index]
             self.selected_index = cluster_index
-            
-            # Update dropdown
-            self.cluster_dropdown.setCurrentIndex(cluster_index)
-            
-            # Clear and add highlights  
+
+            # Update dropdown without emitting signals to avoid recursive selection
+            if self.cluster_dropdown is not None and self.cluster_dropdown.currentIndex() != cluster_index:
+                was_blocked = self.cluster_dropdown.blockSignals(True)
+                try:
+                    self.cluster_dropdown.setCurrentIndex(cluster_index)
+                finally:
+                    self.cluster_dropdown.blockSignals(was_blocked)
+
+            # Clear and add highlights
             if MATPLOTLIB_AVAILABLE:
                 self._plot_clusters()  # Redraw plot with selection
-            
+
             # Update matches panel
             self._update_matches_panel()
-            
+
             _LOGGER.info(f"🎯 Selected cluster {cluster_index + 1}: {self.selected_cluster.get('type', 'Unknown')}")
     
     def _update_matches_panel(self):

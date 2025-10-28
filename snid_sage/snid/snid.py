@@ -53,13 +53,83 @@ from .plotting import (
     plot_type_fractions
 )
 from snid_sage.shared.exceptions.core_exceptions import SpectrumProcessingError
+from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+from snid_sage.shared.profiles.registry import get_profile
+from snid_sage.shared.profiles.builtins import register_builtins
+from snid_sage.shared.profiles.bandpass import k_indices
 
-# Constants
-NW = 1024  # Standard number of wavelength bins
-MINW = 2500  # Minimum wavelength in Angstroms
-MAXW = 10000  # Maximum wavelength in Angstroms
+# Constants (legacy defaults preserved for optical profile when no profile provided)
+NW = 1024
+MINW = 2500
+MAXW = 10000
 
 Trace = Dict[str, Any]
+
+# Ensure built-in profiles are registered at import
+try:
+    register_builtins()
+except Exception:
+    pass
+
+def _resolve_active_profile(profile_id: Optional[str] = None):
+    try:
+        # Highest priority: environment override for this process (e.g. GUI launcher)
+        try:
+            env_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
+        except Exception:
+            env_pid = None
+
+        if not profile_id:
+            profile_id = (env_pid or None)
+
+        if not profile_id:
+            cfg = ConfigurationManager().load_config()
+            profile_id = (
+                cfg.get('processing', {}).get('active_profile_id')
+                if isinstance(cfg, dict) else None
+            )
+
+        return get_profile((profile_id or 'optical'))
+    except Exception:
+        return get_profile('optical')
+
+def _apply_feathered_masks_on_loggrid(log_wave: np.ndarray,
+                                      log_flux: np.ndarray,
+                                      masks: List[Dict[str, float]]) -> np.ndarray:
+    """Apply symmetric cosine feather masks on rebinned data (weights multiply flux)."""
+    if log_wave.size == 0 or log_flux.size == 0 or not masks:
+        return log_flux
+    w = log_wave.astype(float)
+    out = log_flux.copy()
+    weights = np.ones_like(out, dtype=float)
+    pi = np.pi
+    for m in masks:
+        try:
+            a = float(m.get('start_A'))
+            b = float(m.get('end_A'))
+            feather = float(m.get('feather_A', 0.0))
+        except Exception:
+            continue
+        if b <= a:
+            continue
+        # Core masked region weight = 0
+        core = (w >= a) & (w <= b)
+        weights[core] *= 0.0
+        if feather > 0:
+            # Left feather [a-feather, a]
+            left_lo = a - feather
+            left_mask = (w >= left_lo) & (w < a)
+            if np.any(left_mask):
+                x = (w[left_mask] - left_lo) / feather  # 0..1
+                weights[left_mask] *= 0.5 * (1 - np.cos(pi * x))
+            # Right feather [b, b+feather]
+            right_hi = b + feather
+            right_mask = (w > b) & (w <= right_hi)
+            if np.any(right_mask):
+                x = (right_hi - w[right_mask]) / feather  # 1..0
+                weights[right_mask] *= 0.5 * (1 - np.cos(pi * x))
+    out *= weights
+    return out
 
 # Use centralized logging system if available, fallback to standard logging
 try:
@@ -129,6 +199,8 @@ def preprocess_spectrum(
     grid_min_wave: Optional[float] = None,
     grid_max_wave: Optional[float] = None,
     min_overlap_angstrom: float = 2000.0,
+    # Profile selection (None -> resolve from config)
+    profile_id: Optional[str] = None,
 ) -> Tuple[Dict[str, np.ndarray], Dict[str, Any]]:
     """
     Preprocess a spectrum for SNID analysis.
@@ -216,9 +288,12 @@ def preprocess_spectrum(
     # ------------------------------------------------------------------------
     # STEP 0b: VALIDATE/CLIP TO GRID RANGE BEFORE FURTHER PROCESSING
     # ------------------------------------------------------------------------
-    # Determine grid bounds to use for validation
-    gmin = float(grid_min_wave) if grid_min_wave is not None else float(MINW)
-    gmax = float(grid_max_wave) if grid_max_wave is not None else float(MAXW)
+    # Determine grid bounds to use for validation (prefer active profile)
+    _profile_for_bounds = _resolve_active_profile(profile_id)
+    _grid_bounds_min = float(_profile_for_bounds.grid.min_wave_A)
+    _grid_bounds_max = float(_profile_for_bounds.grid.max_wave_A)
+    gmin = float(grid_min_wave) if grid_min_wave is not None else _grid_bounds_min
+    gmax = float(grid_max_wave) if grid_max_wave is not None else _grid_bounds_max
 
     wmin = float(np.min(wave)) if len(wave) else np.nan
     wmax = float(np.max(wave)) if len(wave) else np.nan
@@ -226,12 +301,12 @@ def preprocess_spectrum(
     if not np.isfinite(wmin) or not np.isfinite(wmax):
         raise SpectrumProcessingError("Input spectrum has invalid wavelength bounds")
 
-    # Check overlap with the optical grid
+    # Check overlap with the active profile grid
     has_overlap = (wmax >= gmin) and (wmin <= gmax)
     if not has_overlap:
         msg = (
             f"Spectrum wavelength range {wmin:.1f}-{wmax:.1f} Å is completely outside "
-            f"the optical grid {gmin:.0f}-{gmax:.0f} Å."
+            f"the active grid {gmin:.0f}-{gmax:.0f} Å."
         )
         _LOG.error(msg)
         raise SpectrumProcessingError(msg)
@@ -240,7 +315,7 @@ def preprocess_spectrum(
     overlap_angstrom = max(0.0, min(wmax, gmax) - max(wmin, gmin))
     if overlap_angstrom < float(min_overlap_angstrom):
         msg = (
-            f"Insufficient overlap with optical grid: only {overlap_angstrom:.1f} Å "
+            f"Insufficient overlap with active grid: only {overlap_angstrom:.1f} Å "
             f"(< {float(min_overlap_angstrom):.0f} Å required)."
         )
         _LOG.error(msg)
@@ -335,15 +410,27 @@ def preprocess_spectrum(
     # STEP 3: LOG-WAVELENGTH REBINNING
     # ============================================================================
     if "log_rebinning" not in skip_steps:
-        init_wavelength_grid(num_points=NW, min_wave=MINW, max_wave=MAXW)
+        # Resolve active profile and initialize grid from it
+        profile = _resolve_active_profile(profile_id)
+        grid_spec = profile.grid
+        init_wavelength_grid(num_points=grid_spec.nw, min_wave=grid_spec.min_wave_A, max_wave=grid_spec.max_wave_A)
         NW_grid, W0, W1, DWLOG_grid = get_grid_params()
         log_wave, log_flux = log_rebin(wave, flux)
+        # Apply feathered masks only if user didn't supply masks and profile has defaults
+        if not wavelength_masks and profile.masks:
+            masks_dicts = [
+                {'start_A': m.start_A, 'end_A': m.end_A, 'feather_A': m.feather_A}
+                for m in profile.masks
+            ]
+            log_flux = _apply_feathered_masks_on_loggrid(log_wave, log_flux, masks_dicts)
         _LOG.info("Step 3: Performed log-wavelength rebinning")
         if verbose:
             _LOG.info(f"    Grid parameters: NW={NW_grid}, W0={W0:.1f}, W1={W1:.1f}, DWLOG={DWLOG_grid:.6f}")
     else:
         # Assume input is already log-rebinned, but still initialize grid
-        init_wavelength_grid(num_points=NW, min_wave=MINW, max_wave=MAXW)
+        profile = _resolve_active_profile(profile_id)
+        grid_spec = profile.grid
+        init_wavelength_grid(num_points=grid_spec.nw, min_wave=grid_spec.min_wave_A, max_wave=grid_spec.max_wave_A)
         NW_grid, W0, W1, DWLOG_grid = get_grid_params()
         log_wave, log_flux = wave.copy(), flux.copy()
         _LOG.info("Step 3: Skipped log-wavelength rebinning (assuming input is pre-rebinned)")
@@ -790,7 +877,15 @@ def _run_forced_redshift_analysis_optimized(
                 # Include all known main types except Galaxy/NotSN flat galaxy aliases
                 'Ia', 'Ib', 'Ic', 'II', 'SLSN', 'LFBOT', 'TDE', 'KN', 'GAP', 'Star', 'AGN'
             ]
-        templates = load_templates_unified(templates_dir, type_filter=effective_type_filter, template_names=template_filter, exclude_templates=exclude_templates)
+        # Use the same profile as current analysis for template loading
+        profile = _resolve_active_profile(profile_id=None)
+        templates = load_templates_unified(
+            templates_dir,
+            type_filter=effective_type_filter,
+            template_names=template_filter,
+            exclude_templates=exclude_templates,
+            profile_id=profile.id
+        )
         _LOG.info(f"✅ Loaded {len(templates)} templates using UNIFIED STORAGE for forced redshift analysis")
     except Exception as e:
         _LOG.warning(f"Unified storage failed in forced analysis, falling back to legacy loader: {e}")
@@ -1267,7 +1362,9 @@ def run_snid_analysis(
     # Progress callback
     progress_callback: Optional[Callable[[str, float], None]] = None,
     # Hidden/advanced: toggle weighted GMM (default False; surfaced via CLI flags)
-    use_weighted_gmm: bool = False
+    use_weighted_gmm: bool = False,
+    # Profile selection (None -> resolve from config)
+    profile_id: Optional[str] = None
 ) -> Tuple[SNIDResult, Dict[str, Any]]:
     """
     Run SNID correlation analysis on preprocessed spectrum.
@@ -1409,19 +1506,33 @@ def run_snid_analysis(
         # Start template loading phase (will drive overall progress from ~25% to 100%)
         report_progress("Loading template library", 25)
         
+        # Resolve active profile early for template loading (avoid UnboundLocalError)
+        profile = _resolve_active_profile(profile_id)
+
         # Use unified storage for loading templates
         try:
             # Wire progress through to GUI: template loading will report incremental percentages
             # Scale template-loading progress to fit within overall analysis range (~50–75%)
+            # For ONIR: if auto-discovery picked the optical bank (templates), ignore it
+            effective_templates_dir = templates_dir
+            if profile.id == 'onir':
+                if not templates_dir:
+                    effective_templates_dir = None
+                else:
+                    td_str = str(templates_dir)
+                    if ('templates_onir' not in td_str) and td_str.lower().endswith('templates'):
+                        effective_templates_dir = None
+
             templates = load_templates_unified(
-                templates_dir,
+                effective_templates_dir,
                 type_filter=type_filter,
                 template_names=template_filter,
                 exclude_templates=exclude_templates,
                 progress_callback=lambda msg, pct: report_progress(
                     f"{msg}",
                     25 + (0.75 * float(pct or 0.0))
-                )
+                ),
+                profile_id=profile.id
             )
             _LOG.info(f"✅ Loaded {len(templates)} templates using UNIFIED STORAGE")
         except Exception as e:
@@ -1484,8 +1595,15 @@ def run_snid_analysis(
     # ============================================================================
     # STEP 8: PREPARE K-GRID & HELPERS
     # ============================================================================
-    k1, k2 = 1, 4
-    k3, k4 = NW_grid//12, NW_grid//10
+    # Resolve profile and compute band-pass indices from fractions
+    profile = _resolve_active_profile(profile_id)
+    # Profile-aware redshift range: extend ONIR to higher z by default
+    try:
+        if getattr(profile, 'id', '').lower() == 'onir' and zmax < 2.5:
+            zmax = 2.5
+    except Exception:
+        pass
+    k1, k2, k3, k4 = k_indices(NW_grid, profile.bandpass)
     _LOG.debug(f"Step 8: Frequency band limits k1,k2,k3,k4 = {k1},{k2},{k3},{k4}")
 
     # Calculate the bin offsets needed to cover the full redshift range
@@ -2629,6 +2747,8 @@ def run_snid(
     _LOG.info("="*80)
     
     full_trace = {}
+    # Resolve active profile early; used for template loading and band-pass indices
+    profile = _resolve_active_profile(profile_id)
     
     # ============================================================================
     # PHASE I: PREPROCESSING
@@ -2639,9 +2759,12 @@ def run_snid(
         
         # Create a minimal processed_spectrum dict from the input
         wave, flux = preprocessed_spectrum
-        # Use standard grid parameters for consistency with the rest of the codebase
-        # Calculate DWLOG using the standard formula: log(W1/W0) / NW
-        DWLOG_calculated = np.log(MAXW / MINW) / NW
+        # Use active profile grid parameters for consistency
+        _profile = _resolve_active_profile(profile_id)
+        _NW = int(_profile.grid.nw)
+        _W0 = float(_profile.grid.min_wave_A)
+        _W1 = float(_profile.grid.max_wave_A)
+        DWLOG_calculated = np.log(_W1 / _W0) / _NW
         
         processed_spectrum = {
             'input_spectrum': {'wave': wave.copy(), 'flux': flux.copy()},
@@ -2654,9 +2777,9 @@ def run_snid(
             'left_edge': 0,
             'right_edge': len(flux) - 1,
             'grid_params': {
-                'NW': NW,
-                'W0': MINW,
-                'W1': MAXW, 
+                'NW': _NW,
+                'W0': _W0,
+                'W1': _W1, 
                 'DWLOG': DWLOG_calculated
             }
         }

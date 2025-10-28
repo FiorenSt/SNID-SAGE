@@ -267,7 +267,7 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
             
             if storage_file:
                 # Find the full path to the storage file
-                storage_path = self._find_storage_file(storage_file)
+                storage_path = self._find_storage_file(storage_file, template_info)
                 if storage_path:
                     self.template_data = TemplateData(self.current_template['name'], template_info)
                     self.template_data.load_data(storage_path)
@@ -295,39 +295,50 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                 self.template_data = TemplateData(self.current_template['name'], self.current_template['info'])
                 self.template_data._create_mock_data()
             
-    def _find_storage_file(self, storage_file: str) -> Optional[str]:
-        """Find the full path to a storage file (packaged or user)."""
+    def _find_storage_file(self, storage_file: str, template_info: Dict[str, Any]) -> Optional[str]:
+        """Find the full path to a storage file (packaged or user), honoring profile.
+
+        Prefers templates_onir for ONIR entries; falls back to optical templates.
+        """
+        profile_id = ((template_info or {}).get('profile_id') or '').strip().lower()
+        pkg_folder_order = ['templates_onir', 'templates'] if profile_id == 'onir' else ['templates', 'templates_onir']
+
         # 1) Packaged templates directory via importlib.resources
         try:
             from importlib import resources
-            with resources.as_file(resources.files('snid_sage') / 'templates' / storage_file) as p:
-                if p.exists():
-                    _LOGGER.info(f"Found storage file at: {p}")
-                    return str(p)
+            for folder in pkg_folder_order:
+                with resources.as_file(resources.files('snid_sage') / folder / storage_file) as p:
+                    if p.exists():
+                        _LOGGER.info(f"Found storage file at: {p}")
+                        return str(p)
         except Exception:
             pass
 
-        # 2) User templates directory resolved by TemplateService
+        # 2) User templates directory resolved by TemplateService (configured path)
         try:
-            from snid_sage.interfaces.template_manager.services.template_service import _USER_DIR  # type: ignore
-            candidate = _USER_DIR / storage_file
-            if candidate.exists():
-                _LOGGER.info(f"Found storage file at: {candidate}")
-                return str(candidate)
+            from snid_sage.interfaces.template_manager.services.template_service import get_template_service
+            svc = get_template_service()
+            user_dir = svc.get_user_templates_dir()
+            if user_dir:
+                candidate = Path(user_dir) / storage_file
+                if candidate.exists():
+                    _LOGGER.info(f"Found storage file at: {candidate}")
+                    return str(candidate)
         except Exception:
             pass
 
-        # 3) Legacy fallbacks
-        for path in [
-            os.path.join("snid_sage", "templates", storage_file),
-            os.path.join("templates", storage_file),
-            storage_file,
-        ]:
-            if os.path.exists(path):
-                _LOGGER.info(f"Found storage file at: {path}")
-                return path
+        # 3) Legacy fallbacks (repo-relative)
+        for folder in pkg_folder_order:
+            for path in [
+                os.path.join("snid_sage", folder, storage_file),
+                os.path.join(folder, storage_file),
+                storage_file,
+            ]:
+                if os.path.exists(path):
+                    _LOGGER.info(f"Found storage file at: {path}")
+                    return path
 
-        _LOGGER.warning(f"Storage file {storage_file} not found in any of the expected locations")
+        _LOGGER.warning(f"Storage file {storage_file} not found in any of the expected locations (profile={profile_id or 'optical'})")
         return None
         
     def update_plot(self):
