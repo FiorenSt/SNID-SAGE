@@ -266,7 +266,9 @@ class LineDetectionController:
                         max_output_templates=15,
                         verbose=False,
                         show_plots=False,
-                        save_plots=False
+                    save_plots=False,
+                    # Use active profile from config/env if available to keep grid consistent
+                    profile_id=self._resolve_active_profile_id()
                     )
                     
                     if progress_callback:
@@ -383,6 +385,22 @@ class LineDetectionController:
             if progress_callback:
                 progress_callback(f"Search failed: {str(e)}")
             return {'success': False, 'error': f'Automatic redshift search failed: {str(e)}'}
+
+    def _resolve_active_profile_id(self) -> str:
+        """Resolve active profile id from env/config; default to 'optical'."""
+        try:
+            import os
+            pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
+            if pid:
+                return str(pid)
+            try:
+                from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+                cfg = ConfigurationManager().load_config()
+                return str((cfg.get('processing', {}) or {}).get('active_profile_id', 'optical') or 'optical')
+            except Exception:
+                return 'optical'
+        except Exception:
+            return 'optical'
     
     def _get_current_spectrum_data(self):
         """Get the current spectrum data for manual redshift determination"""

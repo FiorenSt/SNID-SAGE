@@ -352,14 +352,55 @@ class PySide6PreviewCalculator(QtCore.QObject):
             temp_flux = self.current_flux.copy()
             
             if SNID_AVAILABLE:
-                # Ensure wavelength grid is initialized before rebinning
+                # Ensure wavelength grid is initialized before rebinning using active profile when available
                 from snid_sage.snid.preprocessing import init_wavelength_grid
-                init_wavelength_grid(num_points=NW, min_wave=MINW, max_wave=MAXW)
+                try:
+                    # Resolve active profile id from env → config; GUI parent not available here
+                    import os
+                    active_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
+                    if active_pid is None:
+                        try:
+                            from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+                            cfg = ConfigurationManager().load_config()
+                            active_pid = (cfg.get('processing', {}) or {}).get('active_profile_id', None)
+                        except Exception:
+                            active_pid = None
+                    from snid_sage.shared.profiles.builtins import register_builtins
+                    from snid_sage.shared.profiles.registry import get_profile
+                    register_builtins()
+                    prof = get_profile(active_pid or 'optical')
+                    grid = prof.grid
+                    nlog = int(getattr(grid, 'nw', NW))
+                    w0 = float(getattr(grid, 'min_wave_A', MINW))
+                    w1 = float(getattr(grid, 'max_wave_A', MAXW))
+                except Exception:
+                    # Fallback to legacy constants
+                    nlog, w0, w1 = int(NW), float(MINW), float(MAXW)
+                init_wavelength_grid(num_points=nlog, min_wave=w0, max_wave=w1)
                 rebinned_wave, rebinned_flux = log_rebin(temp_wave, temp_flux)
             else:
                 # Fallback: preview by interpolating onto a log grid
-                w0, w1 = float(MINW), float(MAXW)
-                nlog = int(NW)
+                try:
+                    import os
+                    active_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
+                    if active_pid is None:
+                        try:
+                            from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+                            cfg = ConfigurationManager().load_config()
+                            active_pid = (cfg.get('processing', {}) or {}).get('active_profile_id', None)
+                        except Exception:
+                            active_pid = None
+                    from snid_sage.shared.profiles.builtins import register_builtins
+                    from snid_sage.shared.profiles.registry import get_profile
+                    register_builtins()
+                    prof = get_profile(active_pid or 'optical')
+                    grid = prof.grid
+                    nlog = int(getattr(grid, 'nw', NW))
+                    w0 = float(getattr(grid, 'min_wave_A', MINW))
+                    w1 = float(getattr(grid, 'max_wave_A', MAXW))
+                except Exception:
+                    w0, w1 = float(MINW), float(MAXW)
+                    nlog = int(NW)
                 dwlog = np.log(w1 / w0) / nlog
                 rebinned_wave = w0 * np.exp((np.arange(nlog) + 0.5) * dwlog)
                 rebinned_flux = np.interp(rebinned_wave, temp_wave, temp_flux, left=0.0, right=0.0)

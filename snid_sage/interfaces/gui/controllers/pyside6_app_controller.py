@@ -781,18 +781,8 @@ class PySide6AppController(QtCore.QObject):
                     zmin = max(-0.01, redshift_value - search_range)
                     # Profile-aware cap: ONIR allows higher z (2.5) than optical (1.0)
                     try:
-                        # Resolve active profile id from env > config
-                        try:
-                            env_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
-                        except Exception:
-                            env_pid = None
-                        try:
-                            from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
-                            cfg = ConfigurationManager().load_config()
-                            cfg_pid = (cfg.get('processing', {}) or {}).get('active_profile_id', 'optical')
-                        except Exception:
-                            cfg_pid = 'optical'
-                        active_pid_for_cap = (env_pid or cfg_pid or 'optical')
+                        # Use the GUI session's active profile directly
+                        active_pid_for_cap = getattr(self, 'active_profile_id', None) or 'optical'
                         cap_zmax = 2.5 if str(active_pid_for_cap).lower() == 'onir' else 1.0
                     except Exception:
                         cap_zmax = 1.0

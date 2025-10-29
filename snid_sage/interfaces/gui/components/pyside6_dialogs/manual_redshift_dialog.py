@@ -917,6 +917,13 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                 # Run minimal preprocessing for galaxy analysis
                 # CRITICAL FIX: Use isolated preprocessing that doesn't affect main GUI state
                 try:
+                    # Resolve active profile from parent GUI when available
+                    try:
+                        active_pid = None
+                        if hasattr(self.parent_gui, 'app_controller') and hasattr(self.parent_gui.app_controller, 'active_profile_id'):
+                            active_pid = getattr(self.parent_gui.app_controller, 'active_profile_id', None)
+                    except Exception:
+                        active_pid = None
                     processed_spectrum, trace = preprocess_spectrum(
                         spectrum_path=file_path,
                         # Use minimal preprocessing suitable for galaxies
@@ -926,7 +933,8 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                         emclip_z=-1.0,  # No emission clipping
                         wavelength_masks=None,  # No masking
                         apodize_percent=5.0,  # Minimal apodization
-                        verbose=False
+                        verbose=False,
+                        profile_id=active_pid or 'optical'
                     )
                     
                     # IMPORTANT: Do NOT store in main GUI to prevent contamination
@@ -984,7 +992,10 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                 verbose=False,
                 show_plots=False,
                 save_plots=False,
-                progress_callback=lambda msg, pct=None: progress_callback(msg, 40 + (pct or 0) * 0.5 if pct else None)
+                progress_callback=lambda msg, pct=None: progress_callback(msg, 40 + (pct or 0) * 0.5 if pct else None),
+                # Use the same active profile as preprocessing/GUI
+                profile_id=(getattr(self.parent_gui.app_controller, 'active_profile_id', None)
+                            if hasattr(self, 'parent_gui') and hasattr(self.parent_gui, 'app_controller') else None)
             )
             
             progress_callback("Processing results...", 95)

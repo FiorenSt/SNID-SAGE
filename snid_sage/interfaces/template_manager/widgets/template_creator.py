@@ -286,9 +286,16 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
                 z_input = 0.0
             if z_input != 0.0 and wave.size > 0:
                 wave = wave / (1.0 + z_input)
+            # Resolve active profile from the template service when available
+            try:
+                svc = get_template_service()
+                active_pid = svc.get_active_profile()
+            except Exception:
+                active_pid = None
             processed_spectrum, trace = preprocess_spectrum(
                 input_spectrum=(wave, flux),
-                verbose=True
+                verbose=True,
+                profile_id=active_pid or 'optical'
             )
             
             # Tag as rest-frame
@@ -347,9 +354,16 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
                 wave, flux = self._load_spectrum(self.file_path_edit.text())
                 
                 if SNID_AVAILABLE:
+                    # Resolve active profile from the template service when available
+                    try:
+                        svc = get_template_service()
+                        active_pid = svc.get_active_profile()
+                    except Exception:
+                        active_pid = None
                     processed_spectrum, trace = preprocess_spectrum(
                         input_spectrum=(wave, flux),
-                        verbose=False
+                        verbose=False,
+                        profile_id=active_pid or 'optical'
                     )
                     spectrum_data = processed_spectrum
                 else:

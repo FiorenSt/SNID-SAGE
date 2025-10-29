@@ -125,9 +125,38 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
         # Theme colors
         self.colors = self._get_theme_colors()
         
-        # Initialize wavelength grid for preprocessing
+        # Initialize wavelength grid for preprocessing using active profile when available
         if SNID_AVAILABLE:
-            init_wavelength_grid()
+            try:
+                # Resolve profile id: prefer parent GUI's controller → env → config → optical
+                active_pid = None
+                try:
+                    if hasattr(parent, 'app_controller') and hasattr(parent.app_controller, 'active_profile_id'):
+                        active_pid = getattr(parent.app_controller, 'active_profile_id', None)
+                except Exception:
+                    active_pid = None
+                if active_pid is None:
+                    try:
+                        import os
+                        active_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
+                    except Exception:
+                        active_pid = None
+                if active_pid is None:
+                    try:
+                        from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+                        cfg = ConfigurationManager().load_config()
+                        active_pid = (cfg.get('processing', {}) or {}).get('active_profile_id', None)
+                    except Exception:
+                        active_pid = None
+                from snid_sage.shared.profiles.builtins import register_builtins
+                from snid_sage.shared.profiles.registry import get_profile
+                register_builtins()
+                prof = get_profile(active_pid or 'optical')
+                grid = prof.grid
+                init_wavelength_grid(num_points=int(grid.nw), min_wave=float(grid.min_wave_A), max_wave=float(grid.max_wave_A))
+            except Exception:
+                # Safe fallback to defaults
+                init_wavelength_grid()
         
         # Load spectrum data if provided
         if spectrum_data:

@@ -837,7 +837,9 @@ def _run_forced_redshift_analysis_optimized(
     zmax: float,
     log_wave: np.ndarray,
     cont: np.ndarray,
-    report_progress: Callable[[str, Optional[float]], None]
+    report_progress: Callable[[str, Optional[float]], None],
+    *,
+    profile_id: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
     OPTIMIZED forced redshift analysis using vectorized FFT correlation.
@@ -888,6 +890,19 @@ def _run_forced_redshift_analysis_optimized(
             ]
         # Use the same profile as current analysis for template loading
         profile = _resolve_active_profile(profile_id)
+        # Resolve effective templates directory by profile when possible
+        try:
+            import os
+            from pathlib import Path
+            td = Path(templates_dir)
+            if str(getattr(profile, 'id', '')).lower() == 'onir':
+                # If caller passed base 'templates', prefer sibling 'templates_onir' when present
+                if td.name.lower() == 'templates':
+                    alt = td.parent / 'templates_onir'
+                    if alt.exists():
+                        templates_dir = str(alt)
+        except Exception:
+            pass
         templates = load_templates_unified(
             templates_dir,
             type_filter=effective_type_filter,
@@ -1023,6 +1038,13 @@ def _run_forced_redshift_analysis_optimized(
                         _LOG.warning(f"Vectorized correlation returned no results for {sn_type} batch {batch_idx}")
                         raise RuntimeError("No correlation results from vectorized method")
                     
+                    # Profile-aware R scaling (match normal analysis behavior)
+                    try:
+                        pid = str(getattr(profile, 'id', '')).lower()
+                        r_scale = 0.75 if pid == 'onir' else 1.0
+                    except Exception:
+                        r_scale = 1.0
+
                     # Process correlation results for forced redshift
                     for template_name, corr_result in correlation_results.items():
                         template_data = corr_result['template']
@@ -1614,10 +1636,15 @@ def run_snid_analysis(
     # ============================================================================
     # Resolve profile and compute band-pass indices from fractions
     profile = _resolve_active_profile(profile_id)
-    # Profile-aware redshift range: extend ONIR to higher z by default
+    # Profile-aware redshift range: respect caller's range, clamp only to profile cap
     try:
-        if getattr(profile, 'id', '').lower() == 'onir' and zmax < 2.5:
-            zmax = 2.5
+        pid = str(getattr(profile, 'id', '')).lower()
+        cap = 2.5 if pid == 'onir' else 1.0
+        # Optional lower bound consistent with engine assumptions
+        if zmin < -0.01:
+            zmin = -0.01
+        if zmax > cap:
+            zmax = cap
     except Exception:
         pass
     k1, k2, k3, k4 = k_indices(NW_grid, profile.bandpass)
@@ -1695,7 +1722,8 @@ def run_snid_analysis(
                 templates_dir, type_filter, template_filter, exclude_templates, age_range,
                 tapered_flux, dtft, drms, left_edge, right_edge, 
                 forced_redshift, NW_grid, DWLOG_grid, k1, k2, k3, k4, 
-                lapmin, rlapmin, zmin, zmax, log_wave, cont, report_progress
+                lapmin, rlapmin, zmin, zmax, log_wave, cont, report_progress,
+                profile_id=profile_id
             )
             
             _LOG.info(f"Phase 1 complete: Forced redshift analysis found {len(matches)} matches with rlap >= {rlapmin}")

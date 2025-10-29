@@ -597,6 +597,19 @@ class SNIDLineManagerGUI(QtWidgets.QMainWindow):
 
         try:
             # Run with heavy steps skipped: no log rebinning, rescaling, or apodization
+            # Resolve active profile id from env/config; default to optical
+            try:
+                import os
+                _pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
+                if not _pid:
+                    try:
+                        from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+                        _cfg = ConfigurationManager().load_config()
+                        _pid = (_cfg.get('processing', {}) or {}).get('active_profile_id', None)
+                    except Exception:
+                        _pid = None
+            except Exception:
+                _pid = None
             processed_spectrum, _trace = preprocess_spectrum(
                 spectrum_path=spectrum_file,
                 skip_steps=[
@@ -606,6 +619,7 @@ class SNIDLineManagerGUI(QtWidgets.QMainWindow):
                     'continuum_fitting'
                 ],
                 verbose=False,
+                profile_id=_pid or 'optical'
             )
             # Prefer raw input spectrum for plotting in this tool
             input_spec = processed_spectrum.get('input_spectrum', {})

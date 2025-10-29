@@ -102,10 +102,16 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
     
     def _get_default_params(self) -> Dict[str, Any]:
         """Get default SNID parameters"""
+        # Profile-aware defaults: ONIR allows searches up to z=2.5 by default
+        try:
+            active_pid = (getattr(self.app_controller, 'active_profile_id', None) or '').strip().lower()
+        except Exception:
+            active_pid = ''
+        default_zmax = 2.5 if active_pid == 'onir' else 1.0
         return {
             # Basic parameters
             'zmin': -0.01,
-            'zmax': 1.0,
+            'zmax': default_zmax,
             'age_range': None,
             'age_min': -9999,  # Default minimum age (shows "No minimum")
             'age_max': 9999,   # Default maximum age (shows "No maximum") 
@@ -329,7 +335,8 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
         self.widgets['zmin'].setToolTip("Minimum redshift for analysis (enter any precision)")
         redshift_layout.addRow("Minimum Redshift (zmin):", self.widgets['zmin'])
         
-        self.widgets['zmax'] = create_flexible_double_input(min_val=-0.1, max_val=3.0, default=1.0)
+        # Use profile-aware default for zmax (2.5 for ONIR, 1.0 for optical)
+        self.widgets['zmax'] = create_flexible_double_input(min_val=-0.1, max_val=3.0, default=self.default_params.get('zmax', 1.0))
         self.widgets['zmax'].setToolTip("Maximum redshift for analysis (enter any precision)")
         redshift_layout.addRow("Maximum Redshift (zmax):", self.widgets['zmax'])
         
