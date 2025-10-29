@@ -863,15 +863,8 @@ def main(args: argparse.Namespace) -> int:
         # Prepare savgol filter parameters  
         savgol_window = args.savgol_window if args.savgol_window > 0 else 0
         
-        # Determine active profile id: CLI flag > config default
-        active_profile_id = args.profile_id
-        if not active_profile_id:
-            try:
-                from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
-                cfg = ConfigurationManager().load_config()
-                active_profile_id = cfg.get('processing', {}).get('active_profile_id', 'optical')
-            except Exception:
-                active_profile_id = 'optical'
+        # Determine active profile id: CLI only (ignore config/env)
+        active_profile_id = args.profile_id or 'optical'
 
         # Preprocess spectrum with grid validation/auto-clipping
         try:

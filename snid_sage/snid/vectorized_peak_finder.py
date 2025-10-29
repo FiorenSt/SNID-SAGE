@@ -26,7 +26,8 @@ class VectorizedPeakFinder:
     """
     
     def __init__(self, NW_grid: int, DWLOG_grid: float, 
-                 lz1: int, lz2: int, k1: int, k2: int, k3: int, k4: int):
+                 lz1: int, lz2: int, k1: int, k2: int, k3: int, k4: int,
+                 r_scale: float = 1.0):
         """
         Initialize vectorized peak finder.
         
@@ -47,6 +48,11 @@ class VectorizedPeakFinder:
         self.lz2 = lz2
         self.k1, self.k2, self.k3, self.k4 = k1, k2, k3, k4
         self.mid = NW_grid // 2
+        # Optional profile-aware scaling for Tonry-Davis R (ONIR only use-case)
+        try:
+            self.r_scale = float(r_scale)
+        except Exception:
+            self.r_scale = 1.0
         
     def find_peaks_batch(self, correlation_matrix: np.ndarray, 
                         template_names: List[str],
@@ -362,6 +368,8 @@ class VectorizedPeakFinder:
                 r_value = hgt_p / (2 * arms_norm)
             else:
                 r_value = 0.0
+            # Apply optional profile-aware scaling to R
+            r_value *= self.r_scale
             
             rlap = r_value * lpeak
             

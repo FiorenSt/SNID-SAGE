@@ -92,9 +92,14 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
     PySide6-based GUI for SNID SAGE.
     """
     
-    def __init__(self):
+    def __init__(self, profile_id: Optional[str] = None):
         """Initialize the PySide6 SNID SAGE GUI"""
         super().__init__()
+        # Persist launcher-provided profile for this GUI session (CLI-only; ignore config/env)
+        try:
+            self.launch_profile_id = (str(profile_id).strip().lower() if profile_id else 'optical')
+        except Exception:
+            self.launch_profile_id = 'optical'
         
         # Initialize controllers and managers first
         self._init_controllers_and_managers()
@@ -167,8 +172,8 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
         from snid_sage.interfaces.gui.controllers.pyside6_app_controller import PySide6AppController
         from snid_sage.interfaces.gui.utils.pyside6_workflow_manager import PySide6WorkflowManager
         
-        # Initialize application controller
-        self.app_controller = PySide6AppController(self)
+        # Initialize application controller with the active profile for this session
+        self.app_controller = PySide6AppController(self, profile_id=self.launch_profile_id)
         
         # Connect app controller signals for GUI updates
         self.app_controller.analysis_completed.connect(self._on_analysis_completed)
@@ -2299,23 +2304,14 @@ def main(verbosity_args=None):
     # Suppress Qt warnings before creating application
     os.environ['QT_LOGGING_RULES'] = '*.debug=false;qt.qpa.windows.debug=false'
     
-    # If a profile is provided via CLI (launcher args), set it for this process only via env var
+    # Determine active profile strictly from CLI flag (ignore config/env); pass down explicitly
     try:
-        profile_id = None
+        launch_profile_id = None
         if verbosity_args is not None:
-            profile_id = getattr(verbosity_args, 'profile_id', None)
-        if profile_id:
-            os.environ['SNID_SAGE_ACTIVE_PROFILE'] = str(profile_id).strip().lower()
-            if logger:
-                logger.info(f"GUI startup: Using active profile from CLI (non-persistent): {os.environ['SNID_SAGE_ACTIVE_PROFILE']}")
-        else:
-            # Default to optical if no explicit profile and no env override present
-            if not os.environ.get('SNID_SAGE_ACTIVE_PROFILE') and not os.environ.get('SNID_SAGE_PROFILE'):
-                os.environ['SNID_SAGE_ACTIVE_PROFILE'] = 'optical'
-                if logger:
-                    logger.debug("GUI startup: Defaulting active profile to 'optical' for this session")
+            launch_profile_id = getattr(verbosity_args, 'profile_id', None)
+        launch_profile_id = (str(launch_profile_id).strip().lower() if launch_profile_id else 'optical')
     except Exception:
-        pass
+        launch_profile_id = 'optical'
 
     # Create Qt application
     app = QtWidgets.QApplication(sys.argv)
@@ -2392,7 +2388,7 @@ def main(verbosity_args=None):
         # Create main window
         if logger:
             logger.debug("Creating main window...")
-        window = PySide6SNIDSageGUI()
+        window = PySide6SNIDSageGUI(launch_profile_id)
         
         # Show window
         window.show()

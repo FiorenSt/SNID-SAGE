@@ -122,6 +122,8 @@ exclude = [
 "snid_sage" = [
     "templates/*.hdf5", 
     "templates/*.json",
+    "templates_onir/*.hdf5",
+    "templates_onir/*.json",
     "data/*.fits", 
     "data/*.dat", 
     "data/*.txt", 

@@ -82,7 +82,7 @@ class PySide6AppController(QtCore.QObject):
     ordered_progress_updated = QtCore.Signal(int, str, float)
     cluster_selection_needed = QtCore.Signal(object)  # SNID result with clustering
     
-    def __init__(self, main_window):
+    def __init__(self, main_window, profile_id: Optional[str] = None):
         """Initialize the application controller"""
         super().__init__()
         self.main_window = main_window
@@ -126,6 +126,12 @@ class PySide6AppController(QtCore.QObject):
 
         # Remember params used for the last analysis run (e.g., max_output_templates)
         self.last_analysis_kwargs = {}
+
+        # Active processing profile for this GUI session (CLI-only; ignore config/env)
+        try:
+            self.active_profile_id = (str(profile_id).strip().lower() if profile_id else 'optical')
+        except Exception:
+            self.active_profile_id = 'optical'
         
         # Initialize configuration
         self._init_configuration()
@@ -443,7 +449,8 @@ class PySide6AppController(QtCore.QObject):
                         apodize_percent=kwargs.get('apodize_percent', 10.0),
                         skip_steps=kwargs.get('skip_steps', []),
                         verbose=kwargs.get('verbose', False),
-                        clip_to_grid=True
+                        clip_to_grid=True,
+                        profile_id=self.active_profile_id
                     )
                 except SpectrumProcessingError as e:
                     QtWidgets.QMessageBox.critical(self.main_window, "Preprocessing Error", str(e))
@@ -455,7 +462,8 @@ class PySide6AppController(QtCore.QObject):
                         input_spectrum=(self.original_wave, self.original_flux),
                         skip_steps=kwargs.get('skip_steps', []),
                         verbose=kwargs.get('verbose', False),
-                        clip_to_grid=True
+                        clip_to_grid=True,
+                        profile_id=self.active_profile_id
                     )
                 except SpectrumProcessingError as e:
                     QtWidgets.QMessageBox.critical(self.main_window, "Preprocessing Error", str(e))
@@ -699,10 +707,10 @@ class PySide6AppController(QtCore.QObject):
                 
                 # Basic preprocessing with default parameters
                 self.processed_spectrum, preprocessing_trace = preprocess_spectrum(
-                    wave=self.original_wave,
-                    flux=self.original_flux,
+                    input_spectrum=(self.original_wave, self.original_flux),
                     skip_steps=[],  # Include all preprocessing steps
-                    verbose=False
+                    verbose=False,
+                    profile_id=self.active_profile_id
                 )
                 progress_callback("Preprocessing completed", 10)
                 _LOGGER.info("Preprocessing completed")
@@ -771,7 +779,24 @@ class PySide6AppController(QtCore.QObject):
                     # Search around redshift mode
                     search_range = mode_config.get('search_range', 0.001)
                     zmin = max(-0.01, redshift_value - search_range)
-                    zmax = min(1.0, redshift_value + search_range)
+                    # Profile-aware cap: ONIR allows higher z (2.5) than optical (1.0)
+                    try:
+                        # Resolve active profile id from env > config
+                        try:
+                            env_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
+                        except Exception:
+                            env_pid = None
+                        try:
+                            from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+                            cfg = ConfigurationManager().load_config()
+                            cfg_pid = (cfg.get('processing', {}) or {}).get('active_profile_id', 'optical')
+                        except Exception:
+                            cfg_pid = 'optical'
+                        active_pid_for_cap = (env_pid or cfg_pid or 'optical')
+                        cap_zmax = 2.5 if str(active_pid_for_cap).lower() == 'onir' else 1.0
+                    except Exception:
+                        cap_zmax = 1.0
+                    zmax = min(cap_zmax, redshift_value + search_range)
                     progress_callback(f"Searching around z = {redshift_value:.6f} ± {search_range:.6f}", 45)
                     _LOGGER.info(f"Using SEARCH MODE around z = {redshift_value:.6f} (range: {zmin:.4f} to {zmax:.4f})")
             
@@ -790,18 +815,7 @@ class PySide6AppController(QtCore.QObject):
             else:
                 # Pure automatic redshift determination
                 # Align displayed range with profile-aware extension used in the engine (e.g., ONIR uses zmax=2.5)
-                try:
-                    # Resolve active profile id from env > config
-                    env_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
-                except Exception:
-                    env_pid = None
-                try:
-                    from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
-                    cfg = ConfigurationManager().load_config()
-                    cfg_pid = (cfg.get('processing', {}) or {}).get('active_profile_id', 'optical')
-                except Exception:
-                    cfg_pid = 'optical'
-                active_pid_for_msg = (env_pid or cfg_pid or 'optical')
+                active_pid_for_msg = (self.active_profile_id or 'optical')
                 if str(active_pid_for_msg).lower() == 'onir' and zmax < 2.5:
                     zmax = 2.5
                 progress_callback(f"Automatic redshift search (range: {zmin:.6f} to {zmax:.6f})", 45)
@@ -809,13 +823,8 @@ class PySide6AppController(QtCore.QObject):
             
             progress_callback("Running template correlation analysis...", 50)
             
-            # Resolve active profile from config
-            try:
-                # Prefer environment override for this process (set by GUI launcher)
-                env_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
-                active_profile_id = (env_pid or (self.current_config.get('processing', {}) or {}).get('active_profile_id', 'optical'))
-            except Exception:
-                active_profile_id = 'optical'
+            # Resolve active profile strictly from GUI session (CLI-only; ignore config/env)
+            active_profile_id = self.active_profile_id
 
             self.snid_results, self.analysis_trace = run_snid_analysis(
                 processed_spectrum=self.processed_spectrum,

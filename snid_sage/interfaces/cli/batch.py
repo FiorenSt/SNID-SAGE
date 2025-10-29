@@ -328,15 +328,8 @@ def process_single_spectrum_optimized(
     try:
         # STEP 1: Preprocess spectrum with grid validation/auto-clipping
         try:
-            # Resolve active profile id
-            active_profile_id = getattr(args, 'profile_id', None)
-            if not active_profile_id:
-                try:
-                    from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
-                    cfg = ConfigurationManager().load_config()
-                    active_profile_id = cfg.get('processing', {}).get('active_profile_id', 'optical')
-                except Exception:
-                    active_profile_id = 'optical'
+            # Resolve active profile id: CLI only (ignore config/env)
+            active_profile_id = getattr(args, 'profile_id', None) or 'optical'
             processed_spectrum, _ = preprocess_spectrum(
                 spectrum_path=spectrum_path,
                 savgol_window=getattr(args, 'savgol_window', 0),

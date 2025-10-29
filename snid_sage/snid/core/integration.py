@@ -47,14 +47,18 @@ def get_unified_storage(template_dir: str | None, profile_id: str | None = None)
         except Exception:
             profile_id = 'optical'
 
-    # Resolve default templates_dir for ONIR automatically if not provided
+    # Resolve default templates_dir automatically based on profile if not provided
     if not template_dir:
         try:
             from importlib import resources
-            with resources.as_file(resources.files('snid_sage') / 'templates_onir') as onir_dir:
-                template_dir = str(onir_dir)
+            if str(profile_id).lower() == 'onir':
+                with resources.as_file(resources.files('snid_sage') / 'templates_onir') as _dir:
+                    template_dir = str(_dir)
+            else:
+                with resources.as_file(resources.files('snid_sage') / 'templates') as _dir:
+                    template_dir = str(_dir)
         except Exception:
-            template_dir = 'templates'
+            template_dir = 'templates_onir' if str(profile_id).lower() == 'onir' else 'templates'
 
     key = (str(template_dir), str(profile_id))
 

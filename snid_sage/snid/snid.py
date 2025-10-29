@@ -460,9 +460,12 @@ def preprocess_spectrum(
     # STEP 5: CONTINUUM FITTING -> FLATTENED SPECTRUM
     # ============================================================================
     if "continuum_fitting" not in skip_steps:
+        # Use a higher knot count for ONIR to keep bins-per-knot similar to optical
+        knotnum_for_profile = 26 if getattr(profile, "id", None) == "onir" else 13
         flat_flux, cont = fit_continuum(
             log_flux,
-            method="spline"
+            method="spline",
+            knotnum=int(knotnum_for_profile)
         )
         _LOG.info("Step 5: Fitted and removed continuum")
         if verbose:
@@ -560,7 +563,8 @@ def _process_template_peaks(
     right_edge: int,
     # NEW: Optional pre-computed template data for optimization
     template_fft: Optional[np.ndarray] = None,
-    template_rms: Optional[float] = None
+    template_rms: Optional[float] = None,
+    r_scale: float = 1.0
 ) -> List[Dict[str, Any]]:
     """
     Process peaks found in correlation for a single template.
@@ -732,6 +736,11 @@ def _process_template_peaks(
                     r_value = hgt_p / (2 * arms_norm)
                 else:
                     r_value = 0.0
+                # Apply optional profile-aware scaling to R
+                try:
+                    r_value *= float(r_scale)
+                except Exception:
+                    pass
 
                 rlap = r_value * lpeak
                 
@@ -878,7 +887,7 @@ def _run_forced_redshift_analysis_optimized(
                 'Ia', 'Ib', 'Ic', 'II', 'SLSN', 'LFBOT', 'TDE', 'KN', 'GAP', 'Star', 'AGN'
             ]
         # Use the same profile as current analysis for template loading
-        profile = _resolve_active_profile(profile_id=None)
+        profile = _resolve_active_profile(profile_id)
         templates = load_templates_unified(
             templates_dir,
             type_filter=effective_type_filter,
@@ -1050,7 +1059,8 @@ def _run_forced_redshift_analysis_optimized(
                                 forced_redshift, forced_lag, dtft, drms, 
                                 NW_grid, DWLOG_grid, k1, k2, k3, k4,
                                 lapmin, rlapmin, left_edge, right_edge,
-                                lap, lpeak, corr_result['correlation']
+                                lap, lpeak, corr_result['correlation'],
+                                r_scale=r_scale
                             )
                             
                             if match_info is not None:
@@ -1114,7 +1124,8 @@ def _run_forced_redshift_analysis_optimized(
                             forced_redshift, forced_lag, dtft, drms, 
                             NW_grid, DWLOG_grid, k1, k2, k3, k4,
                             lapmin, rlapmin, left_edge, right_edge,
-                            lap, lpeak, correlation
+                            lap, lpeak, correlation,
+                            r_scale=r_scale
                         )
                         
                         if match_info is not None:
@@ -1167,7 +1178,8 @@ def _process_forced_redshift_match(
     right_edge: int,
     lap: float,
     lpeak: float,
-    correlation: Optional[np.ndarray] = None
+    correlation: Optional[np.ndarray] = None,
+    r_scale: float = 1.0
 ) -> Optional[Dict[str, Any]]:
     """
     Process a single forced redshift match with optimized correlation handling.
@@ -1272,6 +1284,11 @@ def _process_forced_redshift_match(
             r_value = hgt_p / (2 * arms_norm)
         else:
             r_value = 0.0
+        # Apply optional profile-aware scaling
+        try:
+            r_value *= float(r_scale)
+        except Exception:
+            pass
 
         rlap = r_value * lpeak
 
@@ -1606,6 +1623,25 @@ def run_snid_analysis(
     k1, k2, k3, k4 = k_indices(NW_grid, profile.bandpass)
     _LOG.debug(f"Step 8: Frequency band limits k1,k2,k3,k4 = {k1},{k2},{k3},{k4}")
 
+    # Profile-aware LAP threshold: scale ONIR lapmin to optical-equivalent
+    try:
+        pid = getattr(profile, 'id', '').lower()
+        if pid == 'onir':
+            # Effective log span for active grid
+            ln_span_active = float(DWLOG_grid) * float(NW_grid)
+            # Reference optical span from built-in profile (fallback to legacy bounds)
+            try:
+                opt = get_profile('optical')
+                ln_span_opt = math.log(float(opt.grid.max_wave_A) / float(opt.grid.min_wave_A))
+            except Exception:
+                ln_span_opt = math.log(float(MAXW) / float(MINW))
+            if ln_span_active > 0 and ln_span_opt > 0:
+                corr = ln_span_opt / ln_span_active
+                lapmin = max(0.0, min(1.0, lapmin * corr))
+                _LOG.info(f"Profile-aware lapmin for ONIR: applying correction factor {corr:.3f} → effective lapmin {lapmin:.3f}")
+    except Exception:
+        pass
+
     # Calculate the bin offsets needed to cover the full redshift range
     mid = NW_grid // 2
     lz1 = int(round(np.log(1 + zmin) / DWLOG_grid)) + mid
@@ -1782,7 +1818,13 @@ def run_snid_analysis(
 
                         try:
                             from .vectorized_peak_finder import VectorizedPeakFinder
-                            peak_finder = VectorizedPeakFinder(NW_grid, DWLOG_grid, lz1, lz2, k1, k2, k3, k4)
+                            # Profile-aware R scaling (ONIR only) – fixed starter value c_onir ≈ 0.71
+                            try:
+                                pid = getattr(profile, 'id', '').lower()
+                                r_scale = 0.75 if pid == 'onir' else 1.0
+                            except Exception:
+                                r_scale = 1.0
+                            peak_finder = VectorizedPeakFinder(NW_grid, DWLOG_grid, lz1, lz2, k1, k2, k3, k4, r_scale=r_scale)
 
                             correlation_matrix = []
                             template_names = []
@@ -1816,7 +1858,8 @@ def run_snid_analysis(
                                         peaks.tolist(), correlation, template_flux, template_meta,
                                         tapered_flux, log_wave, NW_grid, DWLOG_grid, k1, k2, k3, k4,
                                         lapmin, rlapmin, zmin, zmax, peak_window_size, cont, left_edge, right_edge,
-                                        template_fft=correlation_results[template_name]['template_fft'], template_rms=template_rms
+                                        template_fft=correlation_results[template_name]['template_fft'], template_rms=template_rms,
+                                        r_scale=r_scale
                                     )
                                     matches.extend(template_matches)
                                     type_matches += len(template_matches)
@@ -1841,7 +1884,8 @@ def run_snid_analysis(
                                 template_matches = _process_template_peaks(
                                     valid_peaks_indices, Rz, template_data.flux, template_meta, tapered_flux, log_wave,
                                     NW_grid, DWLOG_grid, k1, k2, k3, k4, lapmin, rlapmin, zmin, zmax, peak_window_size,
-                                    cont, left_edge, right_edge, template_fft=corr_result['template_fft'], template_rms=template_rms)
+                                    cont, left_edge, right_edge, template_fft=corr_result['template_fft'], template_rms=template_rms,
+                                    r_scale=r_scale)
                                 matches.extend(template_matches)
                                 type_matches += len(template_matches)
 
@@ -1938,7 +1982,8 @@ def run_snid_analysis(
                 template_matches = _process_template_peaks(
                     valid_peaks_indices, Rz, tplate, tpl, tapered_flux, log_wave,
                     NW_grid, DWLOG_grid, k1, k2, k3, k4, lapmin, rlapmin,
-                    zmin, zmax, peak_window_size, cont, left_edge, right_edge
+                    zmin, zmax, peak_window_size, cont, left_edge, right_edge,
+                    r_scale=r_scale
                 )
                 
                 matches.extend(template_matches)

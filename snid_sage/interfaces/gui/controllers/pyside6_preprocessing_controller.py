@@ -139,13 +139,14 @@ class PySide6PreprocessingController:
                     wavelength_masks=[],  # No wavelength masks by default
                     apodize_percent=10.0,  # Default apodization
                     skip_steps=skip_steps or [],
-                    verbose=False
+                    verbose=False,
+                    # Ensure preprocessing uses the active GUI profile (e.g., 'onir' vs 'optical')
+                    profile_id=getattr(self.gui.app_controller, 'active_profile_id', 'optical')
                 )
             else:
                 # Use spectrum arrays directly if no file path available
                 processed_spectrum, trace = preprocess_spectrum(
-                    wave=wave,
-                    flux=flux,
+                    input_spectrum=(wave, flux),
                     # Default parameters for quick preprocessing
                     savgol_window=0,  # No Savitzky-Golay filtering by default
                     savgol_order=3,
@@ -156,7 +157,9 @@ class PySide6PreprocessingController:
                     wavelength_masks=[],  # No wavelength masks by default
                     apodize_percent=10.0,  # Default apodization
                     skip_steps=skip_steps or [],
-                    verbose=False
+                    verbose=False,
+                    # Ensure preprocessing uses the active GUI profile (e.g., 'onir' vs 'optical')
+                    profile_id=getattr(self.gui.app_controller, 'active_profile_id', 'optical')
                 )
             
             # Store the processed spectrum in the app controller
