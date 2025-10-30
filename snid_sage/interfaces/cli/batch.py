@@ -345,7 +345,10 @@ def process_single_spectrum_optimized(
                 savgol_order=getattr(args, 'savgol_order', 3),
                 aband_remove=getattr(args, 'aband_remove', False),
                 skyclip=getattr(args, 'skyclip', False),
+                emclip_z=getattr(args, 'emclip_z', -1.0),
+                emwidth=getattr(args, 'emwidth', 40.0),
                 wavelength_masks=getattr(args, 'wavelength_masks', None),
+                apodize_percent=getattr(args, 'apodize_percent', 10.0),
                 verbose=False,  # Suppress preprocessing output in batch mode
                 clip_to_grid=True,
                 profile_id=active_profile_id
@@ -1057,6 +1060,55 @@ Examples:
     )
 
     # Display options
+    # Preprocessing options
+    preproc_group = parser.add_argument_group("Preprocessing Options")
+    preproc_group.add_argument(
+        "--savgol-window",
+        type=int,
+        default=0,
+        help="Savitzky-Golay filter window size in pixels (0 = no filtering)"
+    )
+    preproc_group.add_argument(
+        "--savgol-order",
+        type=int,
+        default=3,
+        help="Savitzky-Golay filter polynomial order"
+    )
+    preproc_group.add_argument(
+        "--aband-remove",
+        action="store_true",
+        help="Remove telluric O2 A-band (7550–7700 Å) via mask-aware interpolation"
+    )
+    preproc_group.add_argument(
+        "--skyclip",
+        action="store_true",
+        help="Add masks around common sky emission lines (±emwidth Å)"
+    )
+    preproc_group.add_argument(
+        "--emclip-z",
+        type=float,
+        default=-1.0,
+        help="Redshift at which to clip host emission lines (-1 to disable)"
+    )
+    preproc_group.add_argument(
+        "--emwidth",
+        type=float,
+        default=40.0,
+        help="Width in Angstroms for emission/sky line masks"
+    )
+    preproc_group.add_argument(
+        "--wavelength-masks",
+        nargs="+",
+        metavar="WMIN:WMAX",
+        help="Additional wavelength ranges to mask (format: 6550:6600 7600:7700)"
+    )
+    preproc_group.add_argument(
+        "--apodize-percent",
+        type=float,
+        default=10.0,
+        help="Percentage of spectrum ends to apodize (default: 10)"
+    )
+
     display_group = parser.add_argument_group("Display Options")
     display_group.add_argument(
         "--brief",
