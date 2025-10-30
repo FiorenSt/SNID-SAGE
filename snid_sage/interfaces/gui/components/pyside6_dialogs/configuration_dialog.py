@@ -612,11 +612,19 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
     def _load_available_templates(self):
         """Load available templates from the templates directory"""
         try:
-            # Get templates directory from configuration
-            from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
-            config_manager = ConfigurationManager()
-            config = config_manager.load_config()
-            templates_dir = config['paths']['templates_dir']
+            # Resolve templates directory using app controller when available (avoids stale/partial config)
+            templates_dir = None
+            try:
+                if hasattr(self, 'app_controller') and self.app_controller and hasattr(self.app_controller, '_resolve_templates_directory'):
+                    templates_dir = self.app_controller._resolve_templates_directory(getattr(self.app_controller, 'active_profile_id', None))
+            except Exception:
+                templates_dir = None
+            if not templates_dir:
+                # Fallback to configuration manager
+                from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+                config_manager = ConfigurationManager()
+                config = config_manager.load_config()
+                templates_dir = config['paths']['templates_dir']
             
             if not os.path.exists(templates_dir):
                 _LOGGER.warning(f"Templates directory not found: {templates_dir}")

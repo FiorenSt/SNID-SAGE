@@ -54,13 +54,15 @@ class BatchTemplateManager:
     template loading and FFT computation.
     """
     
-    def __init__(self, templates_dir: Optional[str], verbose: bool = False):
+    def __init__(self, templates_dir: Optional[str], verbose: bool = False, profile_id: Optional[str] = None):
         # Initialize logging early so helper methods can use it
         self._log = logging.getLogger('snid_sage.snid.batch.template_manager')
 
         # Validate and auto-correct templates directory
         self.templates_dir = self._validate_and_fix_templates_dir(templates_dir)
         self.verbose = verbose
+        # Remember intended profile for unified storage consistency
+        self._profile_id = (profile_id or 'optical')
         self._templates = None
         self._templates_metadata = None
         self._load_time = None
@@ -123,7 +125,7 @@ class BatchTemplateManager:
             # Use unified storage system (for HDF5 templates) - this is already optimized
             try:
                 from snid_sage.snid.core.integration import load_templates_unified
-                self._templates = load_templates_unified(self.templates_dir)
+                self._templates = load_templates_unified(self.templates_dir, profile_id=self._profile_id)
                 self._templates_metadata = {}
                 self._log.info(f"✅ Loaded {len(self._templates)} templates using UNIFIED STORAGE")
             except ImportError:
@@ -225,7 +227,8 @@ _WORKER_ARGS_CACHE: Optional[Dict[str, Any]] = None
 
 def _mp_worker_initializer(templates_dir: str,
                            type_filter: Optional[List[str]],
-                           template_filter: Optional[List[str]]) -> None:
+                           template_filter: Optional[List[str]],
+                           profile_id: Optional[str]) -> None:
     """Per-process initializer: load all templates once for this worker process."""
     global _WORKER_TM, _WORKER_ARGS_CACHE
     try:
@@ -243,13 +246,18 @@ def _mp_worker_initializer(templates_dir: str,
         pass
 
     # Build a per-process template manager and pre-load templates (all relevant HDF5 files)
-    _WORKER_TM = BatchTemplateManager(templates_dir, verbose=False)
+    _WORKER_TM = BatchTemplateManager(templates_dir, verbose=False, profile_id=profile_id)
     _WORKER_TM.load_templates_once()
 
     # Pre-warm unified storage path so subsequent analysis calls are fast
     try:
         from snid_sage.snid.core.integration import load_templates_unified
-        _ = load_templates_unified(templates_dir, type_filter=type_filter, template_names=template_filter)
+        _ = load_templates_unified(
+            templates_dir,
+            type_filter=type_filter,
+            template_names=template_filter,
+            profile_id=profile_id
+        )
     except Exception:
         # Non-fatal; run_snid_analysis will still load via unified storage
         pass
@@ -258,6 +266,7 @@ def _mp_worker_initializer(templates_dir: str,
         'type_filter': type_filter,
         'template_filter': template_filter,
         'templates_dir': templates_dir,
+        'profile_id': profile_id,
     }
 
 
@@ -1680,12 +1689,32 @@ def main(args: argparse.Namespace) -> int:
         
         # ============================================================================
         # OPTIMIZATION: Load templates ONCE for the entire batch
+        # Also: adapt templates directory to profile when not explicitly provided
         # ============================================================================
         if not is_quiet and not brief_mode:
             print("Loading templates once for entire batch...")
         # Start wall-clock timer before heavy work (template load + processing)
         start_time = time.time()
-        template_manager = BatchTemplateManager(args.templates_dir, verbose=args.verbose)
+        # Resolve effective templates directory based on profile if none provided
+        effective_templates_dir = getattr(args, 'templates_dir', None)
+        active_profile_id = getattr(args, 'profile_id', None)
+        if not effective_templates_dir:
+            try:
+                from importlib import resources
+                if str(active_profile_id or 'optical').lower() == 'onir':
+                    with resources.as_file(resources.files('snid_sage') / 'templates_onir') as _dir:
+                        effective_templates_dir = str(_dir)
+                else:
+                    with resources.as_file(resources.files('snid_sage') / 'templates') as _dir:
+                        effective_templates_dir = str(_dir)
+            except Exception:
+                # Fallback to relative paths
+                effective_templates_dir = 'templates_onir' if str(active_profile_id or 'optical').lower() == 'onir' else 'templates'
+
+        # Reflect resolved path back into args for downstream consumers and reporting
+        args.templates_dir = effective_templates_dir
+
+        template_manager = BatchTemplateManager(effective_templates_dir, verbose=args.verbose, profile_id=active_profile_id)
         
         if not template_manager.load_templates_once():
             print("[ERROR] Failed to load templates", file=sys.stderr)
@@ -1728,6 +1757,7 @@ def main(args: argparse.Namespace) -> int:
                 'template_filter': getattr(args, 'template_filter', None),
                 'no_plots': bool(getattr(args, 'no_plots', False)),
                 'templates_dir': template_manager.templates_dir,
+                'profile_id': getattr(args, 'profile_id', None),
             }
 
             # Submit all tasks at once; each task is ~30s so overhead is negligible
@@ -1739,7 +1769,8 @@ def main(args: argparse.Namespace) -> int:
                                          initializer=_mp_worker_initializer,
                                          initargs=(template_manager.templates_dir,
                                                    getattr(args, 'type_filter', None),
-                                                   getattr(args, 'template_filter', None))) as ex:
+                                                   getattr(args, 'template_filter', None),
+                                                   getattr(args, 'profile_id', None))) as ex:
                     collected: List[Tuple[int, Tuple[str, bool, str, Dict[str, Any]]]] = []
                     futures = []
                     for idx, item in enumerate(items):

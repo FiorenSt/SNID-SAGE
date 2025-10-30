@@ -116,12 +116,26 @@ def medfilt(data: NDArray[np.floating], medlen: int) -> NDArray[np.floating]:
 # medwfilt removed (wavelength-based filtering no longer supported)
 
 # --- clipping helpers --------------------------------------------------------
-def clip_aband(w: np.ndarray, f: np.ndarray,
-               band: Tuple[float,float] = (7575.0, 7675.0)
-              ) -> Tuple[np.ndarray, np.ndarray]:
-    """Remove telluric A-band."""
-    a, b = band
-    keep = ~((w >= a) & (w <= b))
+def clip_aband(
+    w: np.ndarray,
+    f: np.ndarray,
+    band: Tuple[float, float] | Tuple[Tuple[float, float], ...] | list = (7550.0, 7700.0),
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Remove telluric O2 A-band.
+
+    Default removes the O2 A-band (≈7550–7700 Å). Accepts either a single
+    (start, end) tuple to remove one region or an iterable of (start, end)
+    tuples to remove multiple regions if desired.
+    """
+    # Normalize "band" to an iterable of (a, b) windows
+    if isinstance(band, tuple) and len(band) == 2 and all(isinstance(x, (int, float)) for x in band):
+        bands: list[tuple[float, float]] = [tuple(float(x) for x in band)]  # type: ignore
+    else:
+        bands = [(float(a), float(b)) for (a, b) in band]  # type: ignore[arg-type]
+
+    keep = np.ones_like(w, dtype=bool)
+    for a, b in bands:
+        keep &= ~((w >= a) & (w <= b))
     return w[keep], f[keep]
 
 def clip_sky_lines(w: np.ndarray, f: np.ndarray,
@@ -156,6 +170,109 @@ def apply_wavelength_mask(w: np.ndarray, f: np.ndarray,
             raise ValueError(f"mask ({a},{b}) has b < a")
         keep &= ~((w >= a) & (w <= b))
     return w[keep], f[keep]
+
+# ------------------------------------------------------------------
+# interpolation-based log rebin helpers (mask-aware)
+# ------------------------------------------------------------------
+def compute_mask_on_loggrid(log_wave: np.ndarray,
+                            ranges: List[Tuple[float, float]]) -> np.ndarray:
+    """
+    Return a boolean mask over log_wave where bins fall inside any masked range.
+    """
+    if log_wave is None or len(log_wave) == 0 or not ranges:
+        return np.zeros(0, dtype=bool) if log_wave is None else np.zeros_like(log_wave, dtype=bool)
+    w = np.asarray(log_wave, dtype=float)
+    mask = np.zeros_like(w, dtype=bool)
+    for a, b in ranges:
+        a_f = float(a)
+        b_f = float(b)
+        if b_f < a_f:
+            a_f, b_f = b_f, a_f
+        mask |= ((w >= a_f) & (w <= b_f))
+    return mask
+
+
+def log_rebin_interpolate(
+    wave: NDArray[np.floating],
+    flux: NDArray[np.floating],
+    masks: Optional[List[Tuple[float, float]]] = None,
+) -> Tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.bool_]]:
+    """
+    Rebin by interpolating flux in log-λ onto the standard grid, dropping masked samples.
+
+    Returns (log_wave, log_flux, masked_bins_log), where masked_bins_log is a boolean
+    array marking bins within masked wavelength ranges on the log grid.
+    """
+    _ensure_grid()
+    NW_g, W0_g, _, DWLOG_g = get_grid_params()
+    target_wave = W0_g * np.exp((np.arange(NW_g) + 0.5) * DWLOG_g)
+
+    # Keep only finite inputs; optionally drop masked samples
+    w = np.asarray(wave, dtype=float)
+    f = np.asarray(flux, dtype=float)
+    base_keep = np.isfinite(w) & np.isfinite(f) & (w > 0)
+    if masks:
+        drop = np.zeros_like(base_keep, dtype=bool)
+        for a, b in masks:
+            aa = float(min(a, b))
+            bb = float(max(a, b))
+            drop |= ((w >= aa) & (w <= bb))
+        keep = base_keep & (~drop)
+    else:
+        keep = base_keep
+
+    if not np.any(keep):
+        # No samples to interpolate; return zeros
+        return target_wave, np.zeros_like(target_wave, dtype=float), compute_mask_on_loggrid(target_wave, masks or [])
+
+    w_keep = w[keep]
+    f_keep = f[keep]
+    # Ensure strictly increasing order for interpolation
+    order = np.argsort(w_keep)
+    w_keep = w_keep[order]
+    f_keep = f_keep[order]
+    # Guard: minimum of two points for interp
+    if w_keep.size < 2:
+        out_flux = np.full_like(target_wave, float(f_keep[0]), dtype=float)
+    else:
+        # Interpolate in log-λ domain
+        log_w_src = np.log(w_keep)
+        log_w_tgt = np.log(target_wave)
+        out_flux = np.interp(log_w_tgt, log_w_src, f_keep,
+                             left=float(f_keep[0]), right=float(f_keep[-1]))
+
+    masked_bins = compute_mask_on_loggrid(target_wave, masks or [])
+    return target_wave.astype(float, copy=False), out_flux.astype(float, copy=False), masked_bins.astype(bool, copy=False)
+
+
+def log_rebin_interpolate_masked_only(
+    wave: NDArray[np.floating],
+    flux: NDArray[np.floating],
+    masks: Optional[List[Tuple[float, float]]] = None,
+) -> Tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.bool_]]:
+    """
+    Hybrid method: compute standard integrate-based rebin as baseline and
+    replace ONLY the bins inside masked ranges with interpolation-based values.
+    This preserves fidelity elsewhere (including true edges) while smoothing masked gaps.
+    """
+    # Baseline via integration
+    log_wave_base, log_flux_base = log_rebin(wave, flux)
+    if not masks:
+        return log_wave_base, log_flux_base, np.zeros_like(log_flux_base, dtype=bool)
+
+    # Interpolation result and masked bins on the log grid
+    log_wave_int, log_flux_int, mask_logbins = log_rebin_interpolate(wave, flux, masks)
+    # Guard: grids should match; if not, fall back to interpolation result
+    if log_wave_int.shape != log_wave_base.shape or not np.allclose(log_wave_int, log_wave_base, rtol=0, atol=0):
+        return log_wave_int, log_flux_int, mask_logbins
+
+    out = log_flux_base.copy()
+    try:
+        out[mask_logbins] = log_flux_int[mask_logbins]
+    except Exception:
+        # Fallback to interpolation result if indexing fails
+        out = log_flux_int
+    return log_wave_base, out.astype(float, copy=False), mask_logbins.astype(bool, copy=False)
 
 # ------------------------------------------------------------------
 # cosine bell taper
@@ -648,7 +765,8 @@ def fit_continuum_spline(
           + b * yknot[idx+1]
           + ((a**3 - a)*y2[idx] + (b**3 - b)*y2[idx+1]) * (h_i**2) / 6.0
         )
-        cont[j] = 10.0**logc
+        with np.errstate(over='ignore'):
+            cont[j] = float(np.power(10.0, logc))
 
 
     # --- 5) form normalized residuals ---
@@ -765,4 +883,5 @@ __all__ = [
     "clip_aband", "clip_sky_lines", "clip_host_emission_lines",
     "apply_wavelength_mask",
     "log_rebin", "fit_continuum", "fit_continuum_spline", "apodize", "unflatten_on_loggrid", "prep_template", "flatten_spectrum",
+    "log_rebin_interpolate", "compute_mask_on_loggrid", "log_rebin_interpolate_masked_only",
 ]

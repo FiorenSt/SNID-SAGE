@@ -368,19 +368,30 @@ def preprocess_spectrum(
     # STEP 1: CLIPPING IN LINEAR WAVELENGTH
     # ============================================================================
     if "clipping" not in skip_steps:
+        # Accumulate mask ranges to apply on the log grid (interpolation-based rebin)
+        pending_masks: list[tuple[float, float]] = []
         if aband_remove:
-            wave, flux = clip_aband(wave, flux)
-            _LOG.debug("    Applied A-band removal")
+            pending_masks.append((7550.0, 7700.0))
+            _LOG.debug("    Queued telluric O2 A-band mask (7550–7700 Å) for log-grid masking")
         if skyclip:
-            wave, flux = clip_sky_lines(wave, flux, emwidth)
-            _LOG.debug("    Applied sky line clipping")
+            try:
+                _lines = (5577.0, 6300.2, 6364.0)
+                w = float(emwidth)
+                for l in _lines:
+                    pending_masks.append((l - w, l + w))
+                _LOG.debug(f"    Queued sky line masks (±{w:.1f} Å) for log-grid masking")
+            except Exception:
+                pass
         if emclip_z >= 0:
+            # Keep current behavior for host emission clipping (narrow features)
             wave, flux = clip_host_emission_lines(wave, flux, emclip_z, emwidth)
             _LOG.debug(f"    Applied emission line clipping at z={emclip_z}")
         if wavelength_masks:
-            wave, flux = apply_wavelength_mask(wave, flux, wavelength_masks)
-            _LOG.debug(f"    Applied {len(wavelength_masks)} wavelength masks")
-        _LOG.info("Step 1: Applied clipping operations")
+            _LOG.debug(f"    Detected {len(wavelength_masks)} user masks")
+        # Merge all masks for later log-grid masking
+        all_masks = list(wavelength_masks or []) + pending_masks
+        trace["pending_mask_ranges"] = all_masks
+        _LOG.info("Step 1: Applied clipping setup (masks queued for log-grid)")
     else:
         _LOG.info("Step 1: Skipped clipping operations")
     
@@ -415,15 +426,23 @@ def preprocess_spectrum(
         grid_spec = profile.grid
         init_wavelength_grid(num_points=grid_spec.nw, min_wave=grid_spec.min_wave_A, max_wave=grid_spec.max_wave_A)
         NW_grid, W0, W1, DWLOG_grid = get_grid_params()
-        log_wave, log_flux = log_rebin(wave, flux)
-        # Apply feathered masks only if user didn't supply masks and profile has defaults
-        if not wavelength_masks and profile.masks:
-            masks_dicts = [
-                {'start_A': m.start_A, 'end_A': m.end_A, 'feather_A': m.feather_A}
-                for m in profile.masks
-            ]
-            log_flux = _apply_feathered_masks_on_loggrid(log_wave, log_flux, masks_dicts)
-        _LOG.info("Step 3: Performed log-wavelength rebinning")
+        # Use combined masks from Step 1 if present
+        combined_masks = trace.get("pending_mask_ranges") or wavelength_masks
+        if combined_masks:
+            from .preprocessing import log_rebin_interpolate_masked_only
+            log_wave, log_flux, mask_logbins = log_rebin_interpolate_masked_only(wave, flux, combined_masks)
+            trace["mask_logbins"] = mask_logbins.copy()
+        else:
+            log_wave, log_flux = log_rebin(wave, flux)
+            # Apply feathered masks only if profile has defaults
+            if profile.masks:
+                masks_dicts = [
+                    {'start_A': m.start_A, 'end_A': m.end_A, 'feather_A': m.feather_A}
+                    for m in profile.masks
+                ]
+                log_flux = _apply_feathered_masks_on_loggrid(log_wave, log_flux, masks_dicts)
+            trace["mask_logbins"] = np.zeros_like(log_flux, dtype=bool)
+        _LOG.info("Step 3: Performed log-wavelength rebinning (%s)", "interpolate" if (combined_masks is not None and len(combined_masks) > 0) else "integrate")
         if verbose:
             _LOG.info(f"    Grid parameters: NW={NW_grid}, W0={W0:.1f}, W1={W1:.1f}, DWLOG={DWLOG_grid:.6f}")
     else:
@@ -511,6 +530,14 @@ def preprocess_spectrum(
     
     trace["step6_flux"] = tapered_flux.copy()
 
+    # After apodization, ensure masked bins (if any) do not contribute to correlation
+    try:
+        mask_logbins = trace.get("mask_logbins")
+        if mask_logbins is not None and mask_logbins.size == tapered_flux.size and np.any(mask_logbins):
+            tapered_flux[mask_logbins] = 0.0
+    except Exception:
+        pass
+
     # ============================================================================
     # PREPARE OUTPUT
     # ============================================================================
@@ -522,6 +549,7 @@ def preprocess_spectrum(
         'tapered_flux': tapered_flux,  # Final flux ready for FFT
         'continuum': cont,
         'nonzero_mask': slice(left_edge, right_edge + 1),
+        'mask_logbins': trace.get('mask_logbins'),
         'left_edge': left_edge,
         'right_edge': right_edge,
         'grid_params': {

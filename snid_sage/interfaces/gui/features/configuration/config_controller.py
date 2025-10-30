@@ -240,9 +240,9 @@ class ConfigController:
                     'tooltip': 'Length of fixed-width median filter in pixels'
                 },
                 'aband_remove': {
-                    'label': 'Remove A-band',
+                    'label': 'Remove O₂ A-band',
                     'widget_type': 'checkbox',
-                    'tooltip': 'Remove telluric A-band absorption (7600-7650 Å)'
+                    'tooltip': 'Remove telluric O₂ A-band (7550–7700 Å)'
                 },
                 'skyclip': {
                     'label': 'Remove Sky Lines',

@@ -32,7 +32,7 @@ def create_options(dialog, layout: QtWidgets.QVBoxLayout) -> None:
     clipping_group = QtWidgets.QGroupBox("Clipping Operations")
     clipping_layout = QtWidgets.QVBoxLayout(clipping_group)
 
-    dialog.aband_cb = QtWidgets.QCheckBox("Remove telluric A-band (7575-7675Å)")
+    dialog.aband_cb = QtWidgets.QCheckBox("Remove telluric O₂ A-band")
     dialog.aband_cb.setChecked(dialog.processing_params['clip_aband'])
     dialog.aband_cb.toggled.connect(lambda *_: _on_clip_aband_toggled(dialog))
     clipping_layout.addWidget(dialog.aband_cb)

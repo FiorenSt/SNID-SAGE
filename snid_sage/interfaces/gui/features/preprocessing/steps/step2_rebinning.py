@@ -59,12 +59,54 @@ def apply_step(dialog) -> None:
             scale_flux = bool(dialog.flux_scaling_cb.isChecked())
     except Exception:
         pass
-    dialog.preview_calculator.apply_step("log_rebin_with_scaling", scale_to_mean=scale_flux, step_index=2)
+    # Collect mask regions to force interpolation-based rebin (no steps)
+    mask_regions = []
+    try:
+        if hasattr(dialog, 'masking_widget') and dialog.masking_widget is not None:
+            mask_regions = dialog.masking_widget.get_mask_regions() or []
+    except Exception:
+        mask_regions = []
+    # Include telluric A-band if toggled
+    try:
+        if hasattr(dialog, 'aband_cb') and dialog.aband_cb is not None and bool(dialog.aband_cb.isChecked()):
+            mask_regions = list(mask_regions) + [(7550.0, 7700.0)]
+    except Exception:
+        pass
+    # Include sky-line masks if toggled
+    try:
+        if hasattr(dialog, 'sky_cb') and dialog.sky_cb is not None and bool(dialog.sky_cb.isChecked()):
+            width = float(dialog.sky_width_spin.value()) if hasattr(dialog, 'sky_width_spin') and dialog.sky_width_spin is not None else 40.0
+            for l in (5577.0, 6300.2, 6364.0):
+                mask_regions.append((l - width, l + width))
+    except Exception:
+        pass
+    dialog.preview_calculator.apply_step("log_rebin_with_scaling", scale_to_mean=scale_flux, mask_regions=mask_regions, step_index=2)
 
 
 def calculate_preview(dialog):
     scale_to_mean = bool(dialog.processing_params.get('flux_scaling', True))
-    return dialog.preview_calculator.preview_step("log_rebin_with_scaling", scale_to_mean=scale_to_mean)
+    # Pass mask regions forward so rebin preview can use interpolation-based method
+    mask_regions = []
+    try:
+        if hasattr(dialog, 'masking_widget') and dialog.masking_widget is not None:
+            mask_regions = dialog.masking_widget.get_mask_regions() or []
+    except Exception:
+        mask_regions = []
+    # Include A-band if toggled
+    try:
+        if hasattr(dialog, 'aband_cb') and dialog.aband_cb is not None and bool(dialog.aband_cb.isChecked()):
+            mask_regions = list(mask_regions) + [(7550.0, 7700.0)]
+    except Exception:
+        pass
+    # Include common sky lines if toggled
+    try:
+        if hasattr(dialog, 'sky_cb') and dialog.sky_cb is not None and bool(dialog.sky_cb.isChecked()):
+            width = float(dialog.sky_width_spin.value()) if hasattr(dialog, 'sky_width_spin') and dialog.sky_width_spin is not None else 40.0
+            for l in (5577.0, 6300.2, 6364.0):
+                mask_regions.append((l - width, l + width))
+    except Exception:
+        pass
+    return dialog.preview_calculator.preview_step("log_rebin_with_scaling", scale_to_mean=scale_to_mean, mask_regions=mask_regions)
 
 
 def _on_flux_scaling_changed(dialog):

@@ -192,14 +192,26 @@ class TemplateService:
         optical_templates = _tag(optical.get('templates', {}), 'optical')
         onir_templates = _tag(onir.get('templates', {}), 'onir')
 
-        merged_templates: Dict[str, Any] = {}
-        merged_templates.update(optical_templates)
-        merged_templates.update(onir_templates)
-
-        # Optional filtering by profile
+        # Build merged set with collision-safe behavior
+        # If a specific profile is requested, do NOT merge banks first to avoid
+        # name-collisions (e.g., same SN present in both banks) causing the
+        # requested profile's entries to be overwritten by the other.
         if profile_id is not None:
             req = (profile_id or '').strip().lower()
-            merged_templates = {k: v for k, v in merged_templates.items() if (v or {}).get('profile_id', '').lower() == req}
+            if req == 'optical':
+                merged_templates: Dict[str, Any] = dict(optical_templates)
+            elif req == 'onir':
+                merged_templates = dict(onir_templates)
+            else:
+                # Fallback: merge then filter (should rarely happen)
+                merged_templates = dict(optical_templates)
+                merged_templates.update(onir_templates)
+                merged_templates = {k: v for k, v in merged_templates.items() if (v or {}).get('profile_id', '').lower() == req}
+        else:
+            # No profile filter: merge both banks; ONIR can overwrite identical names
+            # which is acceptable when showing the combined view
+            merged_templates = dict(optical_templates)
+            merged_templates.update(onir_templates)
 
         # Recompute by_type summary
         by_type = self._compute_by_type(merged_templates)

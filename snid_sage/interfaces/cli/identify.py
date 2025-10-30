@@ -288,7 +288,7 @@ Examples:
     preproc_group.add_argument(
         "--aband-remove", 
         action="store_true", 
-        help="Remove telluric A-band"
+        help="Remove telluric O2 A-band (7550–7700 Å)"
     )
     preproc_group.add_argument(
         "--skyclip", 

@@ -152,6 +152,87 @@ class PySide6AppController(QtCore.QObject):
             self.current_config = {'paths': {'templates_dir': Path(__file__).parent.parent.parent.parent / 'templates'}}
             self.templates_dir = self.current_config['paths']['templates_dir']
             self.platform_config = None
+
+    def _resolve_templates_directory(self, profile_id: Optional[str] = None) -> str:
+        """Resolve a reliable templates directory, preferring packaged banks when config is missing or incomplete.
+
+        Strategy:
+        - Try configured templates_dir when it exists and appears complete (multiple types in index or multiple HDF5 files)
+        - Otherwise, return packaged directory based on the active profile (optical → snid_sage/templates; onir → snid_sage/templates_onir)
+        - Final fallback: simple_template_finder
+        """
+        try:
+            active_pid = (profile_id or getattr(self, 'active_profile_id', None) or 'optical')
+            active_pid = str(active_pid).strip().lower() or 'optical'
+
+            # 1) Check configured directory for completeness
+            try:
+                cfg_dir = None
+                try:
+                    cfg_dir = self.current_config['paths']['templates_dir'] if (hasattr(self, 'current_config') and self.current_config) else None
+                except Exception:
+                    cfg_dir = None
+                if cfg_dir:
+                    cfg_path = Path(cfg_dir)
+                    if cfg_path.exists() and cfg_path.is_dir():
+                        idx_path = cfg_path / 'template_index.json'
+                        # Quick completeness check: prefer index when present; else count HDF5 files
+                        complete = False
+                        if idx_path.exists():
+                            try:
+                                with open(idx_path, 'r', encoding='utf-8') as f:
+                                    idx = json.load(f)
+                                by_type = (idx or {}).get('by_type') or {}
+                                # Consider complete if more than one type is present (optical should have many)
+                                # For ONIR, also accept when at least one non-Ia type exists
+                                if isinstance(by_type, dict) and len(by_type.keys()) >= (1 if active_pid == 'onir' else 2):
+                                    complete = True
+                            except Exception:
+                                complete = False
+                        else:
+                            try:
+                                h5_count = sum(1 for _ in cfg_path.glob('templates_*.hdf5'))
+                                # Treat as complete if multiple type files exist (heuristic)
+                                if h5_count >= (1 if active_pid == 'onir' else 3):
+                                    complete = True
+                            except Exception:
+                                complete = False
+                        if complete:
+                            return str(cfg_path)
+            except Exception:
+                pass
+
+            # 2) Use packaged resources based on profile
+            try:
+                from importlib import resources
+                pkg_folder = 'templates_onir' if active_pid == 'onir' else 'templates'
+                with resources.as_file(resources.files('snid_sage') / pkg_folder) as p:
+                    if p.exists():
+                        _LOGGER.info(f"Using packaged templates directory: {p}")
+                        return str(p)
+            except Exception:
+                pass
+
+            # 3) Fallback: simple template finder (optical)
+            try:
+                from snid_sage.shared.utils.simple_template_finder import find_templates_directory
+                found = find_templates_directory()
+                if found:
+                    _LOGGER.info(f"Using discovered templates directory: {found}")
+                    return str(found)
+            except Exception:
+                pass
+
+            # 4) Last resort: repo-relative defaults by profile
+            repo_fallback = (Path(__file__).resolve().parents[3] / ('templates_onir' if active_pid == 'onir' else 'templates'))
+            return str(repo_fallback)
+        except Exception as e:
+            _LOGGER.warning(f"Failed to resolve templates directory robustly: {e}")
+            # Preserve previous behavior if resolution fails entirely
+            try:
+                return str(self.current_config['paths']['templates_dir'])
+            except Exception:
+                return 'templates'
     
     # Workflow state management
     def update_workflow_state(self, new_state: WorkflowState):
@@ -730,16 +811,17 @@ class PySide6AppController(QtCore.QObject):
                     from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
                     config_manager = ConfigurationManager()
                     self.current_config = config_manager.load_config()
-                
-                templates_dir = self.current_config['paths']['templates_dir']
+
+                # Resolve a robust templates directory (avoids partial/incorrect config paths)
+                templates_dir = self._resolve_templates_directory(profile_id=self.active_profile_id)
                 if not os.path.exists(templates_dir):
                     raise ValueError(f"Templates directory not found: {templates_dir}")
-                
-                # Ensure template directory is accessible
+                # Ensure directory looks valid at a glance
                 try:
-                    test_files = os.listdir(templates_dir)
-                    if not any(f.endswith('.hdf5') for f in test_files):
-                        _LOGGER.warning(f"No HDF5 template files found in {templates_dir}")
+                    idx_ok = os.path.exists(os.path.join(templates_dir, 'template_index.json'))
+                    any_h5 = any(fname.endswith('.hdf5') for fname in os.listdir(templates_dir))
+                    if not (idx_ok or any_h5):
+                        _LOGGER.warning(f"Templates directory appears incomplete: {templates_dir}")
                 except PermissionError:
                     raise ValueError(f"Permission denied accessing templates directory: {templates_dir}")
                 

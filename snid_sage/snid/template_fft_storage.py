@@ -418,12 +418,21 @@ class TemplateFFTStorage:
                 target_nw = int(prof.grid.nw)
                 target_w0 = float(prof.grid.min_wave_A)
                 target_w1 = float(prof.grid.max_wave_A)
-                # If the index declares a profile id, require exact match (case-insensitive)
                 idx_prof = (idx or {}).get('profile_id')
+                g = (idx or {}).get('grid_params') or {}
+
+                # Stricter rules for ONIR: require explicit ONIR profile and matching grid metadata
+                if str(active_profile).lower() == 'onir':
+                    if str(idx_prof or '').lower() != 'onir':
+                        return False
+                    if not g:
+                        return False
+
+                # If the index declares a profile id, require exact match (case-insensitive)
                 if idx_prof is not None and str(idx_prof).lower() != str(active_profile).lower():
                     return False
+
                 # If grid_params exist, require grid match within tight tolerance
-                g = (idx or {}).get('grid_params') or {}
                 if g:
                     iNW = int(g.get('NW', target_nw))
                     iW0 = float(g.get('W0', target_w0))

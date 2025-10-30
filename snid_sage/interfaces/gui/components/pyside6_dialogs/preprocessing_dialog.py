@@ -998,13 +998,21 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             preview_wave, preview_flux = self._calculate_current_step_preview()
             preview_wave, preview_flux = self._apply_zero_padding_removal(preview_wave, preview_flux)
             
-            # Mask regions only relevant on masking step
+            # Mask regions only relevant on masking step (manual + auto telluric overlays)
             mask_regions = []
-            if self.current_step == 0 and self.masking_widget:
+            if self.current_step == 0:
+                # Manual masks from interactive widget
+                if self.masking_widget:
+                    try:
+                        mask_regions = self.masking_widget.get_mask_regions()
+                    except Exception:
+                        mask_regions = []
+                # Auto telluric overlays if checkbox enabled
                 try:
-                    mask_regions = self.masking_widget.get_mask_regions()
+                    if hasattr(self, 'aband_cb') and self.aband_cb is not None and bool(self.aband_cb.isChecked()):
+                        mask_regions = list(mask_regions) + [(7550.0, 7700.0)]
                 except Exception:
-                    mask_regions = []
+                    pass
             # Update with current state in top plot and preview in bottom plot
             self.plot_manager.update_standard_preview(
                 current_wave, current_flux, preview_wave, preview_flux, mask_regions
@@ -1511,10 +1519,19 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             # FIXED: Also apply zero padding removal to current state (top plot) for ALL steps
             current_wave, current_flux = self._apply_zero_padding_removal(current_wave, current_flux)
             
-            # Get mask regions for visualization - ONLY in step 0
+            # Get mask regions for visualization - ONLY in step 0 (manual + auto telluric overlays)
             mask_regions = []
-            if self.current_step == 0 and self.masking_widget:
-                mask_regions = self.masking_widget.get_mask_regions()
+            if self.current_step == 0:
+                if self.masking_widget:
+                    try:
+                        mask_regions = self.masking_widget.get_mask_regions()
+                    except Exception:
+                        mask_regions = []
+                try:
+                    if hasattr(self, 'aband_cb') and self.aband_cb is not None and bool(self.aband_cb.isChecked()):
+                        mask_regions = list(mask_regions) + [(7550.0, 7700.0)]
+                except Exception:
+                    pass
             
             # Show current state in top plot, preview in bottom plot
             self.plot_manager.update_standard_preview(

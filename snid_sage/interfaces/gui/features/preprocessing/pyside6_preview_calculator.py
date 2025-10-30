@@ -319,10 +319,14 @@ class PySide6PreviewCalculator(QtCore.QObject):
             
             if clip_type == "aband":
                 if SNID_AVAILABLE:
-                    clipped_wave, clipped_flux = clip_aband(temp_wave, temp_flux)
+                    clipped_wave, clipped_flux = clip_aband(
+                        temp_wave,
+                        temp_flux,
+                        (7550.0, 7700.0),
+                    )
                 else:
-                    # Fallback: remove telluric A-band 7575-7675 Å
-                    a, b = 7575.0, 7675.0
+                    # Fallback: remove telluric O2 A-band only (7550–7700 Å)
+                    a, b = 7550.0, 7700.0
                     keep = ~((temp_wave >= a) & (temp_wave <= b))
                     clipped_wave, clipped_flux = temp_wave[keep], temp_flux[keep]
             elif clip_type == "sky":
@@ -350,37 +354,34 @@ class PySide6PreviewCalculator(QtCore.QObject):
         try:
             temp_wave = self.current_wave.copy()
             temp_flux = self.current_flux.copy()
+            mask_regions = kwargs.get('mask_regions', None)
             
-            if SNID_AVAILABLE:
-                # Ensure wavelength grid is initialized before rebinning using active profile when available
-                from snid_sage.snid.preprocessing import init_wavelength_grid
+            if SNID_AVAILABLE and not mask_regions:
+                # IMPORTANT: Use the already-initialized grid (set by the dialog via active profile)
+                # Do NOT re-resolve/re-initialize here, to avoid switching grids (e.g., ONIR 2048 → 1024)
+                from snid_sage.snid.preprocessing import get_grid_params
                 try:
-                    # Resolve active profile id from env → config; GUI parent not available here
-                    import os
-                    active_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
-                    if active_pid is None:
-                        try:
-                            from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
-                            cfg = ConfigurationManager().load_config()
-                            active_pid = (cfg.get('processing', {}) or {}).get('active_profile_id', None)
-                        except Exception:
-                            active_pid = None
-                    from snid_sage.shared.profiles.builtins import register_builtins
-                    from snid_sage.shared.profiles.registry import get_profile
-                    register_builtins()
-                    prof = get_profile(active_pid or 'optical')
-                    grid = prof.grid
-                    nlog = int(getattr(grid, 'nw', NW))
-                    w0 = float(getattr(grid, 'min_wave_A', MINW))
-                    w1 = float(getattr(grid, 'max_wave_A', MAXW))
+                    # This ensures the grid is initialized; it is set earlier by the dialog
+                    get_grid_params()
                 except Exception:
-                    # Fallback to legacy constants
-                    nlog, w0, w1 = int(NW), float(MINW), float(MAXW)
-                init_wavelength_grid(num_points=nlog, min_wave=w0, max_wave=w1)
+                    # As a last resort, let log_rebin trigger default initialization
+                    pass
                 rebinned_wave, rebinned_flux = log_rebin(temp_wave, temp_flux)
             else:
-                # Fallback: preview by interpolating onto a log grid
+                # Interpolation-based preview only inside masked regions (hybrid), when masks present or SNID not available
                 try:
+                    if SNID_AVAILABLE and mask_regions:
+                        # Use hybrid: integrate baseline + interpolation only in masked bins
+                        from snid_sage.snid.preprocessing import log_rebin, log_rebin_interpolate
+                        # Baseline
+                        base_wave, base_flux = log_rebin(temp_wave, temp_flux)
+                        # Interp result + masked bins
+                        _, interp_flux, mask_logbins = log_rebin_interpolate(temp_wave, temp_flux, mask_regions)
+                        rebinned_wave = base_wave
+                        rebinned_flux = base_flux.copy()
+                        if mask_logbins is not None and mask_logbins.size == rebinned_flux.size:
+                            rebinned_flux[mask_logbins] = interp_flux[mask_logbins]
+                        return rebinned_wave, rebinned_flux
                     import os
                     active_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
                     if active_pid is None:
@@ -403,7 +404,22 @@ class PySide6PreviewCalculator(QtCore.QObject):
                     nlog = int(NW)
                 dwlog = np.log(w1 / w0) / nlog
                 rebinned_wave = w0 * np.exp((np.arange(nlog) + 0.5) * dwlog)
-                rebinned_flux = np.interp(rebinned_wave, temp_wave, temp_flux, left=0.0, right=0.0)
+                # If mask regions provided (SNID unavailable), drop masked samples before interpolation in log space
+                if mask_regions:
+                    keep = np.ones_like(temp_wave, dtype=bool)
+                    for a, b in mask_regions:
+                        aa = float(min(a, b))
+                        bb = float(max(a, b))
+                        keep &= ~((temp_wave >= aa) & (temp_wave <= bb))
+                    w_src = temp_wave[keep]
+                    f_src = temp_flux[keep]
+                    if w_src.size < 2:
+                        rebinned_flux = np.zeros_like(rebinned_wave, dtype=float)
+                    else:
+                        rebinned_flux = np.interp(np.log(rebinned_wave), np.log(w_src), f_src,
+                                                  left=float(f_src[0]), right=float(f_src[-1]))
+                else:
+                    rebinned_flux = np.interp(rebinned_wave, temp_wave, temp_flux, left=0.0, right=0.0)
             return rebinned_wave, rebinned_flux
             
         except Exception as e:
@@ -413,8 +429,8 @@ class PySide6PreviewCalculator(QtCore.QObject):
     def _preview_log_rebin_with_scaling(self, scale_to_mean: bool = True, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """Preview log rebinning with flux scaling"""
         try:
-            # Reuse generic log-rebin (with fallback)
-            rebinned_wave, rebinned_flux = self._preview_log_rebin()
+            # Reuse generic log-rebin, forwarding kwargs so mask_regions reach the rebin
+            rebinned_wave, rebinned_flux = self._preview_log_rebin(**kwargs)
             
             # Apply flux scaling if requested
             if scale_to_mean:
