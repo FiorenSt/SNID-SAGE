@@ -44,6 +44,8 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
+        # Cap to prevent crashes when plotting very large multi-epoch templates (e.g., sn1987A)
+        self._max_epochs_to_plot = 50
         self.current_template = None
         self.template_data = None
         self.plot_manager = None
@@ -96,6 +98,15 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
         control_layout.addStretch()
         
         layout.addWidget(control_panel)
+        
+        # Subsampling information label (shown when capping is applied)
+        self.cap_info_label = QtWidgets.QLabel("")
+        try:
+            self.cap_info_label.setStyleSheet("color: #6b7280; font-size: 9pt;")
+        except Exception:
+            pass
+        self.cap_info_label.setVisible(False)
+        layout.addWidget(self.cap_info_label)
         
         # Plot area (rounded white panel with light grey contour, matching main GUI)
         self.plot_widget = QtWidgets.QFrame()
@@ -371,8 +382,24 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
             
             if view_mode == "All Epochs":
                 self._plot_all_epochs_pg()
+                # Show or hide subsampling info
+                try:
+                    total_epochs = len(self.template_data.epochs)
+                    if total_epochs > self._max_epochs_to_plot:
+                        shown = min(self._max_epochs_to_plot, total_epochs)
+                        self.cap_info_label.setText(f"Showing {shown} of {total_epochs} epochs (subsampled)")
+                        self.cap_info_label.setVisible(True)
+                    else:
+                        self.cap_info_label.setVisible(False)
+                except Exception:
+                    self.cap_info_label.setVisible(False)
             elif view_mode == "Individual Epoch":
                 self._plot_individual_epoch_pg()
+                # Hide subsampling info for individual view
+                try:
+                    self.cap_info_label.setVisible(False)
+                except Exception:
+                    pass
             
             # Ensure x-range includes fixed left label anchor
             try:
@@ -412,6 +439,13 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                 epochs_count = len(self.template_data.epochs)
                 if epochs_count > 1:
                     title_parts.append(f"Epochs: {epochs_count}")
+                # If subsampled in All Epochs view, indicate clearly in the title
+                try:
+                    if view_mode == "All Epochs" and epochs_count > self._max_epochs_to_plot:
+                        shown = min(self._max_epochs_to_plot, epochs_count)
+                        title_parts.append(f"Showing {shown} of {epochs_count}")
+                except Exception:
+                    pass
         except Exception:
             pass
         
@@ -501,17 +535,29 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
             _LOGGER.warning("No wavelength data available for plotting")
             return
             
-        # Generate colors
-        colors = [pg.intColor(i, len(self.template_data.epochs)) for i in range(len(self.template_data.epochs))]
+        # Determine which epochs to plot (subsample if too many)
+        total_epochs = len(self.template_data.epochs)
+        if total_epochs <= self._max_epochs_to_plot:
+            indices = list(range(total_epochs))
+        else:
+            # Evenly spaced indices over the full set
+            lin = np.linspace(0, total_epochs - 1, self._max_epochs_to_plot)
+            indices = sorted({int(round(x)) for x in lin})
+            # Ensure we do not exceed the cap due to rounding collisions
+            if len(indices) > self._max_epochs_to_plot:
+                indices = indices[:self._max_epochs_to_plot]
+        # Generate colors for the plotted subset
+        colors = [pg.intColor(i, max(1, len(indices))) for i in range(len(indices))]
         # Determine fixed left-side label x position once
         label_x = self._compute_left_label_x()
         
-        total_epochs = len(self.template_data.epochs)
-        for i, epoch in enumerate(self.template_data.epochs):
+        total_plotted = len(indices)
+        for j, idx in enumerate(indices):
+            epoch = self.template_data.epochs[idx]
             if epoch['flux'] is not None and len(epoch['flux']) == len(self.template_data.wave_data):
                 # Apply vertical offset
                 # Reverse order so negative ages (early epochs) are at the top
-                offset = (total_epochs - 1 - i) * 0.5
+                offset = (total_plotted - 1 - j) * 0.5
                 flux = epoch['flux'] + offset
                 age = epoch['age']
                 
@@ -519,7 +565,7 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                 curve = self.plot_item.plot(
                     self.template_data.wave_data,
                     flux,
-                    pen=pg.mkPen(color=colors[i], width=1.5),
+                    pen=pg.mkPen(color=colors[j], width=1.5),
                     name=None,
                     connect='all',
                     autoDownsample=False,
@@ -528,9 +574,9 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                 )
                 # Place label exactly at the spectrum's baseline (offset only), left of spectrum
                 y = float(offset)
-                self._add_age_label(label_x, y, age, colors[i])
+                self._add_age_label(label_x, y, age, colors[j])
             else:
-                _LOGGER.warning(f"Skipping epoch {i}: flux data mismatch with wavelength grid")
+                _LOGGER.warning(f"Skipping epoch {idx}: flux data mismatch with wavelength grid")
         
     def _plot_individual_epoch_pg(self):
         """Plot individual epoch using PyQtGraph"""

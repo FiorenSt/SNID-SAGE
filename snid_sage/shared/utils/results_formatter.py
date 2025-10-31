@@ -678,6 +678,29 @@ class UnifiedResultsFormatter:
             age_mean = estimate_weighted_epoch(agg['age_vals'], agg['z_errs'], agg['metrics'])
             age_se = weighted_epoch_se(agg['age_vals'], agg['z_errs'], agg['metrics'])
 
+            # If there are fewer than 2 valid samples contributing, SE is undefined → use NaN
+            try:
+                z_vals_arr = np.asarray(agg['z_vals'], dtype=float)
+                z_errs_arr = np.asarray(agg['z_errs'], dtype=float)
+                metrics_arr_chk = np.asarray(agg['metrics'], dtype=float)
+                valid_z = (np.isfinite(z_vals_arr) & np.isfinite(z_errs_arr) & (z_errs_arr > 0) &
+                           np.isfinite(metrics_arr_chk) & (metrics_arr_chk > 0))
+                if np.sum(valid_z) < 2:
+                    z_se = float('nan')
+            except Exception:
+                pass
+
+            try:
+                age_vals_arr = np.asarray(agg['age_vals'], dtype=float)
+                z_errs_arr = np.asarray(agg['z_errs'], dtype=float)
+                metrics_arr_chk = np.asarray(agg['metrics'], dtype=float)
+                valid_age = (np.isfinite(age_vals_arr) & np.isfinite(z_errs_arr) & (z_errs_arr > 0) &
+                             np.isfinite(metrics_arr_chk) & (metrics_arr_chk > 0))
+                if np.sum(valid_age) < 2:
+                    age_se = float('nan')
+            except Exception:
+                pass
+
             # Top-5 weighted scoring method (rank score):
             #  - Select top 5 by metric value
             #  - Compute weights w = metric^2 / sigma^2 (fallback to metric^2 when sigma<=0 or missing)
