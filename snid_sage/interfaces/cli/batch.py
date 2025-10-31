@@ -685,11 +685,9 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 age_se = weighted_epoch_se(ages_for_estimation, redshift_errors, age_metric_values)
                 summary['cluster_age_weighted'] = age_final
                 summary['cluster_age_se_weighted'] = age_se
-                summary['redshift_age_covariance'] = 0.0
             else:
                 summary['cluster_age_weighted'] = np.nan
                 summary['cluster_age_se_weighted'] = np.nan
-                summary['redshift_age_covariance'] = 0.0
             
             summary['cluster_rlap_mean'] = np.mean(rlaps)
             
@@ -1753,15 +1751,11 @@ def main(args: argparse.Namespace) -> int:
         if not effective_templates_dir:
             try:
                 from importlib import resources
-                if str(active_profile_id or 'optical').lower() == 'onir':
-                    with resources.as_file(resources.files('snid_sage') / 'templates_onir') as _dir:
-                        effective_templates_dir = str(_dir)
-                else:
-                    with resources.as_file(resources.files('snid_sage') / 'templates') as _dir:
-                        effective_templates_dir = str(_dir)
+                with resources.as_file(resources.files('snid_sage') / 'templates') as _dir:
+                    effective_templates_dir = str(_dir)
             except Exception:
-                # Fallback to relative paths
-                effective_templates_dir = 'templates_onir' if str(active_profile_id or 'optical').lower() == 'onir' else 'templates'
+                # Fallback to relative path
+                effective_templates_dir = 'templates'
 
         # Reflect resolved path back into args for downstream consumers and reporting
         args.templates_dir = effective_templates_dir

@@ -122,7 +122,7 @@ try:
             if element_category not in LINE_CATEGORIES:
                 LINE_CATEGORIES[element_category] = ELEMENT_CATEGORIES[element_category]
     
-    _LOGGER.info(f"Loaded {len(GALAXY_LINES)} galaxy lines in {len(LINE_CATEGORIES)} categories")
+    _LOGGER.debug(f"Loaded {len(GALAXY_LINES)} galaxy lines in {len(LINE_CATEGORIES)} categories")
     
 except ImportError:
     # Fallback galaxy lines if constants not available

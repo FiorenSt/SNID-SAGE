@@ -24,7 +24,7 @@ Open via: Preprocessing → Manual wizard
 | 1. Input and range | Wavelength range | `wmin`, `wmax` | None | — | Leave blank for auto |
 | 2. Smoothing | Savitzky–Golay window | `savgol_window` | 0 | `--savgol-window` | 0 disables; typical 11–21 |
 |  | Savitzky–Golay order | `savgol_order` | 3 | `--savgol-order` | |
-| 3. Telluric and sky | Remove A-band | `aband_remove` | False | `--aband-remove` | Masks ~7600–7650 Å |
+| 3. Telluric and sky | Remove A-band | `aband_remove` | False | `--aband-remove` | Masks ~7550–7700 Å |
 |  | Sky line clipping | `skyclip` | False | `--skyclip` | |
 |  | Emission clipping z | `emclip_z` | -1.0 | `--emclip-z` | -1 disables |
 |  | Emission width (Å) | `emwidth` | 40.0 | `--emwidth` | |

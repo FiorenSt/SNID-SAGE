@@ -546,11 +546,9 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 age_se = weighted_epoch_se(ages_for_estimation, redshift_errors, age_metric_values)
                 summary['cluster_age_weighted'] = age_final
                 summary['cluster_age_se_weighted'] = age_se
-                summary['redshift_age_covariance'] = 0.0
             else:
                 summary['cluster_age_weighted'] = np.nan
                 summary['cluster_age_se_weighted'] = np.nan
-                summary['redshift_age_covariance'] = 0.0
             
             summary['cluster_rlap_mean'] = np.mean(rlaps)
             

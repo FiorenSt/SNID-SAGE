@@ -73,23 +73,10 @@ except Exception:
 
 def _resolve_active_profile(profile_id: Optional[str] = None):
     try:
-        # Highest priority: environment override for this process (e.g. GUI launcher)
-        try:
-            env_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
-        except Exception:
-            env_pid = None
-
-        if not profile_id:
-            profile_id = (env_pid or None)
-
-        if not profile_id:
-            cfg = ConfigurationManager().load_config()
-            profile_id = (
-                cfg.get('processing', {}).get('active_profile_id')
-                if isinstance(cfg, dict) else None
-            )
-
-        return get_profile((profile_id or 'optical'))
+        # Config-less default: if caller does not provide a profile, use 'optical'.
+        # This avoids silent overrides from environment or config files.
+        effective_id = (profile_id or 'optical')
+        return get_profile(effective_id)
     except Exception:
         return get_profile('optical')
 
@@ -347,6 +334,7 @@ def preprocess_spectrum(
                 wave,
                 flux,
                 floor_z=spike_floor_z,
+                neg_floor_z=(float(spike_floor_z) * 2.0),
                 baseline_window=spike_baseline_window,
                 baseline_width=spike_baseline_width,
                 rel_edge_ratio=spike_rel_edge_ratio,
@@ -918,19 +906,7 @@ def _run_forced_redshift_analysis_optimized(
             ]
         # Use the same profile as current analysis for template loading
         profile = _resolve_active_profile(profile_id)
-        # Resolve effective templates directory by profile when possible
-        try:
-            import os
-            from pathlib import Path
-            td = Path(templates_dir)
-            if str(getattr(profile, 'id', '')).lower() == 'onir':
-                # If caller passed base 'templates', prefer sibling 'templates_onir' when present
-                if td.name.lower() == 'templates':
-                    alt = td.parent / 'templates_onir'
-                    if alt.exists():
-                        templates_dir = str(alt)
-        except Exception:
-            pass
+        # Use provided directory as-is; profile-specific index selection happens in storage layer
         templates = load_templates_unified(
             templates_dir,
             type_filter=effective_type_filter,
@@ -1580,15 +1556,7 @@ def run_snid_analysis(
         try:
             # Wire progress through to GUI: template loading will report incremental percentages
             # Scale template-loading progress to fit within overall analysis range (~50–75%)
-            # For ONIR: if auto-discovery picked the optical bank (templates), ignore it
             effective_templates_dir = templates_dir
-            if profile.id == 'onir':
-                if not templates_dir:
-                    effective_templates_dir = None
-                else:
-                    td_str = str(templates_dir)
-                    if ('templates_onir' not in td_str) and td_str.lower().endswith('templates'):
-                        effective_templates_dir = None
 
             templates = load_templates_unified(
                 effective_templates_dir,

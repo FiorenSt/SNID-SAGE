@@ -177,9 +177,7 @@ class UnifiedResultsFormatter:
         full_cluster_redshift_error = None
         full_cluster_age = enhanced_age
         full_cluster_age_error = enhanced_age_error
-        # Initialize covariance terms to safe defaults so downstream access is always defined
-        subtype_redshift_age_covariance = np.nan
-        full_cluster_redshift_age_covariance = np.nan
+        # No covariance terms: redshift and age are estimated independently
         
         if winning_cluster and cluster_matches:
             # Check if subtype-specific joint estimates are available
@@ -189,7 +187,6 @@ class UnifiedResultsFormatter:
             subtype_age = winning_cluster.get('subtype_age')
             subtype_age_error = winning_cluster.get('subtype_age_error')
             subtype_age_template_count = winning_cluster.get('subtype_age_template_count', 0)
-            subtype_redshift_age_covariance = winning_cluster.get('subtype_redshift_age_covariance', np.nan)
             
             # Get full cluster joint estimates
             full_cluster_redshift = winning_cluster.get('enhanced_redshift', result.consensus_redshift)
@@ -198,7 +195,6 @@ class UnifiedResultsFormatter:
             full_cluster_age = winning_cluster.get('cluster_age', enhanced_age)
             # Prefer new key; fallback to legacy name if present
             full_cluster_age_error = winning_cluster.get('cluster_age_se', winning_cluster.get('cluster_age_error', enhanced_age_error))
-            full_cluster_redshift_age_covariance = winning_cluster.get('cluster_redshift_age_covariance', np.nan)
             
             # Use subtype redshift as primary if available and valid, otherwise fall back to cluster redshift
             if (subtype_redshift is not None and not np.isnan(subtype_redshift) and 
@@ -371,7 +367,6 @@ class UnifiedResultsFormatter:
             'subtype_redshift_error': subtype_redshift_error,
             'subtype_age': subtype_age,
             'subtype_age_error': subtype_age_error,
-            'subtype_redshift_age_covariance': subtype_redshift_age_covariance,
             'subtype_template_count': subtype_template_count,
             'subtype_age_template_count': subtype_age_template_count,
             'using_subtype_estimates': (subtype_redshift is not None and not np.isnan(subtype_redshift) and 
@@ -383,7 +378,7 @@ class UnifiedResultsFormatter:
             'full_cluster_redshift_error': full_cluster_redshift_error,
             'full_cluster_age': full_cluster_age,
             'full_cluster_age_error': full_cluster_age_error,
-            'full_cluster_redshift_age_covariance': full_cluster_redshift_age_covariance,
+            
             
             # Legacy compatibility flags  
             'using_subtype_redshift': (subtype_redshift is not None and not np.isnan(subtype_redshift) and subtype_template_count > 0),

@@ -408,6 +408,7 @@ def find_spike_indices(
     flux: np.ndarray,
     *,
     floor_z: float = 50.0,
+    neg_floor_z: float | None = None,
     baseline_window: int = 501,
     baseline_width: float | None = None,
     rel_edge_ratio: float = 2.0,
@@ -443,7 +444,9 @@ def find_spike_indices(
         return np.array([], dtype=int)
     z = resid / sR
 
-    core = np.abs(z) >= float(floor_z)
+    # Asymmetric thresholds: positive spikes at floor_z; negative spikes at neg_floor_z (defaults to floor_z)
+    nfz = float(floor_z) if neg_floor_z is None else float(neg_floor_z)
+    core = (z >= float(floor_z)) | (z <= -nfz)
     if min_abs_resid is not None and float(min_abs_resid) > 0:
         core &= (np.abs(resid) >= float(min_abs_resid))
 
@@ -498,6 +501,7 @@ def apply_spike_mask(
     flux: np.ndarray,
     *,
     floor_z: float = 50.0,
+    neg_floor_z: float | None = None,
     baseline_window: int = 501,
     baseline_width: float | None = None,
     rel_edge_ratio: float = 2.0,
@@ -510,6 +514,7 @@ def apply_spike_mask(
         wave,
         flux,
         floor_z=floor_z,
+        neg_floor_z=neg_floor_z,
         baseline_window=baseline_window,
         baseline_width=baseline_width,
         rel_edge_ratio=rel_edge_ratio,

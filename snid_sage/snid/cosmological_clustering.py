@@ -424,12 +424,12 @@ def perform_direct_gmm_clustering(
                         if best_subtype and best_subtype != 'Unknown':
                             # Use joint estimation for subtype
                             (subtype_redshift, subtype_age, subtype_redshift_error, subtype_age_error, 
-                             subtype_redshift_age_covariance, subtype_template_count, subtype_age_template_count) = calculate_joint_subtype_estimates_from_cluster(
+                             _, subtype_template_count, subtype_age_template_count) = calculate_joint_subtype_estimates_from_cluster(
                                 cluster_candidate['matches'], best_subtype
                             )
                         
                         # Calculate weighted estimates for the full cluster as well
-                        cluster_redshift, cluster_age, cluster_redshift_se, cluster_age_se, cluster_redshift_age_covariance = _compute_weighted_cluster_stats(
+                        cluster_redshift, cluster_age, cluster_redshift_se, cluster_age_se, _ = _compute_weighted_cluster_stats(
                             cluster_candidate['matches']
                         )
                         
@@ -446,15 +446,13 @@ def perform_direct_gmm_clustering(
                             'subtype_redshift_error': subtype_redshift_error,
                             'subtype_age': subtype_age,
                             'subtype_age_error': subtype_age_error,
-                            'subtype_redshift_age_covariance': subtype_redshift_age_covariance,
                             'subtype_template_count': subtype_template_count,
                             'subtype_age_template_count': subtype_age_template_count,
                             # Add full cluster joint estimates (update the enhanced_redshift from weighted_mean_redshift)
                             'enhanced_redshift': cluster_redshift,
                             'weighted_redshift_se': cluster_redshift_se,
                             'cluster_age': cluster_age,
-                            'cluster_age_se': cluster_age_se,
-                            'cluster_redshift_age_covariance': cluster_redshift_age_covariance
+                            'cluster_age_se': cluster_age_se
                         })
                         
                         if verbose:
@@ -463,7 +461,7 @@ def perform_direct_gmm_clustering(
                             
                             if not np.isnan(subtype_redshift) and not np.isnan(subtype_age):
                                 _LOGGER.info(f"  Subtype {best_subtype} joint estimates: z={subtype_redshift:.6f}±{subtype_redshift_error:.6f}, "
-                                           f"age={subtype_age:.1f}±{subtype_age_error:.1f} days, cov={subtype_redshift_age_covariance:.8f} "
+                                           f"age={subtype_age:.1f}±{subtype_age_error:.1f} days "
                                            f"(from {subtype_age_template_count} templates with both redshift and age)")
                             elif not np.isnan(subtype_redshift):
                                 _LOGGER.info(f"  Subtype {best_subtype} redshift: {subtype_redshift:.6f} ± {subtype_redshift_error:.6f}")
@@ -473,16 +471,16 @@ def perform_direct_gmm_clustering(
                             
                             if not np.isnan(cluster_redshift) and not np.isnan(cluster_age):
                                 _LOGGER.info(f"  Full cluster joint estimates: z={cluster_redshift:.6f}±{cluster_redshift_se:.6f}, "
-                                           f"age={cluster_age:.1f}±{cluster_age_se:.1f} days, cov={cluster_redshift_age_covariance:.8f}")
+                                           f"age={cluster_age:.1f}±{cluster_age_se:.1f} days")
                 except Exception as e:
                     # If subtype calculation fails, add default values
                     # Still calculate full cluster weighted estimates
                     try:
-                        cluster_redshift, cluster_age, cluster_redshift_se, cluster_age_se, cluster_redshift_age_covariance = _compute_weighted_cluster_stats(
+                        cluster_redshift, cluster_age, cluster_redshift_se, cluster_age_se, _ = _compute_weighted_cluster_stats(
                             cluster_candidate['matches']
                         )
                     except:
-                        cluster_redshift = cluster_age = cluster_redshift_se = cluster_age_se = cluster_redshift_age_covariance = np.nan
+                        cluster_redshift = cluster_age = cluster_redshift_se = cluster_age_se = _ = np.nan
                     
                     cluster_candidate.update({
                         'subtype_info': {
@@ -496,15 +494,13 @@ def perform_direct_gmm_clustering(
                         'subtype_redshift_error': np.nan,
                         'subtype_age': np.nan,
                         'subtype_age_error': np.nan,
-                        'subtype_redshift_age_covariance': np.nan,
                         'subtype_template_count': 0,
                         'subtype_age_template_count': 0,
                         # Add full cluster joint estimates (fallback)
                         'enhanced_redshift': cluster_redshift,
                         'weighted_redshift_se': cluster_redshift_se,
                         'cluster_age': cluster_age,
-                        'cluster_age_se': cluster_age_se,
-                        'cluster_redshift_age_covariance': cluster_redshift_age_covariance
+                        'cluster_age_se': cluster_age_se
                     })
                     if verbose:
                         _LOGGER.warning(f"  Failed to calculate subtypes for cluster {cluster_id}: {e}")

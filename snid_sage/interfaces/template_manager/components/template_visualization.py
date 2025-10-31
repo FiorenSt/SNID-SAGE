@@ -298,10 +298,10 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
     def _find_storage_file(self, storage_file: str, template_info: Dict[str, Any]) -> Optional[str]:
         """Find the full path to a storage file (packaged or user), honoring profile.
 
-        Prefers templates_onir for ONIR entries; falls back to optical templates.
+        Uses unified packaged folder (snid_sage/templates) for both profiles.
         """
         profile_id = ((template_info or {}).get('profile_id') or '').strip().lower()
-        pkg_folder_order = ['templates_onir', 'templates'] if profile_id == 'onir' else ['templates', 'templates_onir']
+        pkg_folder_order = ['templates']
 
         # 1) Packaged templates directory via importlib.resources
         try:
@@ -374,6 +374,19 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
             elif view_mode == "Individual Epoch":
                 self._plot_individual_epoch_pg()
             
+            # Ensure x-range includes fixed left label anchor
+            try:
+                anchor_x = self._compute_left_label_x()
+                vb = self.plot_item.getViewBox()
+                xr, yr = vb.viewRange()
+                xmin, xmax = float(xr[0]), float(xr[1])
+                if anchor_x < xmin:
+                    # Extend to include anchor with a small margin
+                    margin = 0.02 * (xmax - xmin)
+                    vb.setRange(xRange=(anchor_x - margin, xmax), yRange=yr, padding=0)
+            except Exception:
+                pass
+            
         else:
             # Create a sample plot if no real data available
             self._create_sample_plot_pg()
@@ -393,14 +406,9 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
             type_info += f"/{subtype_info}"
         title_parts.append(f"Type: {type_info}")
         
-        # Add age/epochs info from loaded HDF5 data
+        # Include only epochs count (omit Ages from title as requested)
         try:
             if self.template_data and self.template_data.epochs:
-                age_min, age_max = self.template_data.get_age_range()
-                if age_min == age_max:
-                    title_parts.append(f"Age: {age_min:.1f} d")
-                else:
-                    title_parts.append(f"Ages: {age_min:.1f}…{age_max:.1f} d")
                 epochs_count = len(self.template_data.epochs)
                 if epochs_count > 1:
                     title_parts.append(f"Epochs: {epochs_count}")
@@ -417,6 +425,72 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
         except Exception:
             pass
         
+    def _get_active_profile_id(self) -> str:
+        """Determine active profile id for labeling (optical|onir)."""
+        try:
+            info = (self.current_template or {}).get('info') or {}
+            pid = (info.get('profile_id') or '').strip().lower()
+            if pid:
+                return pid
+        except Exception:
+            pass
+        # Fallback to service
+        try:
+            from snid_sage.interfaces.template_manager.services.template_service import get_template_service
+            return (get_template_service().get_active_profile() or 'optical').strip().lower()
+        except Exception:
+            return 'optical'
+
+    def _compute_left_label_x(self) -> float:
+        """Return fixed left-side anchor wavelength by profile."""
+        pid = self._get_active_profile_id()
+        return 1950.0 if pid == 'onir' else 2450.0
+
+    def _compute_label_x(self, wave: np.ndarray) -> float:
+        """Choose label x-position near right end depending on profile, clamped to data range."""
+        if wave is None or wave.size == 0:
+            return 0.0
+        try:
+            anchor = 10000.0 if self._get_active_profile_id() != 'onir' else 25000.0
+            xmax = float(wave[-1])
+            xmin = float(wave[0])
+            # Clamp anchor to [xmin, xmax]; bias slightly left of max to avoid clipping
+            x = min(max(anchor, xmin), xmax)
+            # If anchor equals max, step a bit left
+            if abs(x - xmax) <= 1e-6:
+                x = xmin + 0.98 * (xmax - xmin)
+            return x
+        except Exception:
+            return float(wave[-1])
+
+    def _nearest_index(self, array: np.ndarray, value: float) -> int:
+        try:
+            idx = int(np.searchsorted(array, value))
+            if idx <= 0:
+                return 0
+            if idx >= array.size:
+                return array.size - 1
+            # Pick closer between idx and idx-1
+            return (idx if abs(array[idx] - value) < abs(array[idx-1] - value) else idx-1)
+        except Exception:
+            return max(0, array.size - 1)
+
+    def _add_age_label(self, x: float, y: float, age: float, color) -> None:
+        try:
+            txt = f"{age:.1f}"
+            # Right-center anchor so the label sits to the left of x and centered on y
+            label = pg.TextItem(txt, color=color, anchor=(1.0, 0.5))
+            try:
+                f = QtGui.QFont()
+                f.setPointSize(8)
+                label.setFont(f)
+            except Exception:
+                pass
+            self.plot_item.addItem(label)
+            label.setPos(float(x), float(y))
+        except Exception:
+            pass
+
     def _plot_all_epochs_pg(self):
         """Plot all epochs with vertical offset using PyQtGraph"""
         if not self.template_data or not self.template_data.epochs:
@@ -429,13 +503,15 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
             
         # Generate colors
         colors = [pg.intColor(i, len(self.template_data.epochs)) for i in range(len(self.template_data.epochs))]
+        # Determine fixed left-side label x position once
+        label_x = self._compute_left_label_x()
         
-        legend_items = []
-        
+        total_epochs = len(self.template_data.epochs)
         for i, epoch in enumerate(self.template_data.epochs):
             if epoch['flux'] is not None and len(epoch['flux']) == len(self.template_data.wave_data):
                 # Apply vertical offset
-                offset = i * 0.5
+                # Reverse order so negative ages (early epochs) are at the top
+                offset = (total_epochs - 1 - i) * 0.5
                 flux = epoch['flux'] + offset
                 age = epoch['age']
                 
@@ -444,22 +520,17 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                     self.template_data.wave_data,
                     flux,
                     pen=pg.mkPen(color=colors[i], width=1.5),
-                    name=f"Age: {age:.1f} days",
+                    name=None,
                     connect='all',
                     autoDownsample=False,
                     clipToView=False,
                     downsample=1,
                 )
-                legend_items.append((curve, f"Age: {age:.1f} days"))
+                # Place label exactly at the spectrum's baseline (offset only), left of spectrum
+                y = float(offset)
+                self._add_age_label(label_x, y, age, colors[i])
             else:
                 _LOGGER.warning(f"Skipping epoch {i}: flux data mismatch with wavelength grid")
-        
-        # Add legend - ensure no duplicates
-        if legend_items:
-            # Remove any existing legend first (already handled in _plot_template_spectrum)
-            legend = self.plot_item.addLegend(offset=(10, 10))
-            for curve, label in legend_items:
-                legend.addItem(curve, label)
         
     def _plot_individual_epoch_pg(self):
         """Plot individual epoch using PyQtGraph"""
@@ -487,16 +558,17 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                     self.template_data.wave_data,
                     epoch['flux'],
                     pen=pg.mkPen(color='blue', width=2),
-                    name=f"Age: {age:.1f} days",
+                    name=None,
                     connect='all',
                     autoDownsample=False,
                     clipToView=False,
                     downsample=1,
                 )
                 
-                # Add legend
-                legend = self.plot_item.addLegend(offset=(10, 10))
-                legend.addItem(curve, f"Age: {age:.1f} days")
+                # Place label exactly at baseline (no offset), left of spectrum
+                label_x = self._compute_left_label_x()
+                y = 0.0
+                self._add_age_label(label_x, y, age, 'blue')
             else:
                 _LOGGER.warning(f"Epoch {epoch_idx}: flux data mismatch with wavelength grid")
         else:

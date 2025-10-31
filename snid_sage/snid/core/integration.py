@@ -51,14 +51,10 @@ def get_unified_storage(template_dir: str | None, profile_id: str | None = None)
     if not template_dir:
         try:
             from importlib import resources
-            if str(profile_id).lower() == 'onir':
-                with resources.as_file(resources.files('snid_sage') / 'templates_onir') as _dir:
-                    template_dir = str(_dir)
-            else:
-                with resources.as_file(resources.files('snid_sage') / 'templates') as _dir:
-                    template_dir = str(_dir)
+            with resources.as_file(resources.files('snid_sage') / 'templates') as _dir:
+                template_dir = str(_dir)
         except Exception:
-            template_dir = 'templates_onir' if str(profile_id).lower() == 'onir' else 'templates'
+            template_dir = 'templates'
 
     key = (str(template_dir), str(profile_id))
 

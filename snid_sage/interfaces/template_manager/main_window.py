@@ -40,6 +40,18 @@ class SNIDTemplateManagerGUI(QtWidgets.QMainWindow):
         self.setup_window()
         self.setup_theme()
         self.create_interface()
+        # Debounce rapid template selections to avoid heavy repeated loads
+        try:
+            self._selection_debounce_timer = QtCore.QTimer(self)
+            self._selection_debounce_timer.setSingleShot(True)
+            self._selection_debounce_timer.setInterval(150)
+            self._selection_debounce_timer.timeout.connect(self._apply_pending_selection)
+            self._pending_selection = None  # type: Optional[tuple]
+            self._loading_template = False
+        except Exception:
+            self._selection_debounce_timer = None
+            self._pending_selection = None
+            self._loading_template = False
         
     def setup_window(self):
         """Setup main window properties"""
@@ -221,7 +233,12 @@ class SNIDTemplateManagerGUI(QtWidgets.QMainWindow):
         except Exception:
             # Fallback to minimal defaults
             self.type_filter.addItems(["All Types", "Ia", "Ib", "Ic", "II", "AGN", "Galaxy", "Star"])
-        self.type_filter.currentTextChanged.connect(self._filter_templates)
+        self.type_filter.currentTextChanged.connect(self._on_type_changed)
+        # Also react to re-selecting the same type (activated fires even if text didn't change)
+        try:
+            self.type_filter.activated.connect(lambda *_: self._on_type_changed(self.type_filter.currentText()))
+        except Exception:
+            pass
         search_layout.addWidget(self.type_filter)
         
         layout.addWidget(search_frame)
@@ -262,6 +279,20 @@ class SNIDTemplateManagerGUI(QtWidgets.QMainWindow):
         search_text = self.search_edit.text()
         type_filter = self.type_filter.currentText()
         self.template_tree.filter_templates(search_text, type_filter)
+
+    def _on_type_changed(self, type_text: str) -> None:
+        """When type selection changes, filter and select first visible in that type."""
+        try:
+            self._filter_templates()
+            t = (type_text or "").strip()
+            # Avoid auto-select on 'All Types'
+            if t and t != "All Types":
+                # Defer selection until the view updates
+                QtCore.QTimer.singleShot(0, lambda: self.template_tree.select_first_visible(t))
+            else:
+                QtCore.QTimer.singleShot(0, lambda: self.template_tree.select_first_visible(None))
+        except Exception:
+            pass
 
     def _on_source_changed(self, mode: str):
         """Handle source filter changes and reload tree"""
@@ -456,18 +487,25 @@ class SNIDTemplateManagerGUI(QtWidgets.QMainWindow):
             
     @QtCore.Slot(str, dict)
     def on_template_selected(self, template_name: str, template_info: Dict[str, Any]):
-        """Handle template selection from tree"""
-        # Do not force-switch tabs; just update widgets so they're ready if user navigates
+        """Handle template selection from tree with debouncing/throttling."""
         try:
-            self.viewer_widget.set_template(template_name, template_info)
+            self._pending_selection = (template_name, template_info)
+            if getattr(self, '_selection_debounce_timer', None) is not None:
+                # Restart debounce window
+                self._selection_debounce_timer.start(150)
+            else:
+                # Fallback: apply immediately
+                self._apply_pending_selection()
         except Exception:
-            pass
-        
-        # Update manager widget with selected template
-        try:
-            self.manager_widget.set_template_for_editing(template_name, template_info)
-        except Exception:
-            pass
+            # Fallback to immediate behavior in case of any issue
+            try:
+                self.viewer_widget.set_template(template_name, template_info)
+            except Exception:
+                pass
+            try:
+                self.manager_widget.set_template_for_editing(template_name, template_info)
+            except Exception:
+                pass
         
         
     
@@ -484,6 +522,41 @@ class SNIDTemplateManagerGUI(QtWidgets.QMainWindow):
                 self.manager_widget.update_empty_state()
         except Exception:
             pass
+
+    @QtCore.Slot()
+    def _apply_pending_selection(self) -> None:
+        """Apply the latest pending selection, coalescing rapid changes."""
+        try:
+            if not getattr(self, '_pending_selection', None):
+                return
+            if getattr(self, '_loading_template', False):
+                # Try again shortly after current load completes
+                try:
+                    self._selection_debounce_timer.start(100)
+                except Exception:
+                    pass
+                return
+            selection = self._pending_selection
+            self._pending_selection = None
+            self._loading_template = True
+            name, info = selection
+            # Do not force-switch tabs; just update widgets so they're ready if user navigates
+            try:
+                self.viewer_widget.set_template(name, info)
+            except Exception:
+                pass
+            try:
+                self.manager_widget.set_template_for_editing(name, info)
+            except Exception:
+                pass
+        finally:
+            self._loading_template = False
+            # If new selection arrived meanwhile, apply it immediately
+            try:
+                if getattr(self, '_pending_selection', None) is not None:
+                    QtCore.QTimer.singleShot(0, self._apply_pending_selection)
+            except Exception:
+                pass
 
     def _open_user_folder(self):
         """Open the user templates directory in the system file explorer."""

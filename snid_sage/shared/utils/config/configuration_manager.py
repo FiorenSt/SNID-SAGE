@@ -49,9 +49,9 @@ class ConfigurationManager:
         self.default_config_file = self.config_dir / "snid_sage_config.json"
         self.profiles_dir = self.config_dir / "profiles"
         
-        # Ensure directories exist
-        self.config_dir.mkdir(parents=True, exist_ok=True)
-        self.profiles_dir.mkdir(parents=True, exist_ok=True)
+        # CONFIG-LESS MODE: Do not create any config files or directories eagerly.
+        # Directories/files will not be created; the manager operates purely with defaults
+        # unless a caller explicitly writes something. This avoids persistent state surprises.
         
         # Initialize validation rules
         self._validation_rules = self._create_validation_rules()
@@ -330,93 +330,11 @@ class ConfigurationManager:
         Returns:
             Configuration dictionary
         """
-        if config_file is None:
-            config_file = self.default_config_file
-        
-        try:
-            if config_file.exists():
-                with open(config_file, 'r', encoding='utf-8') as f:
-                    config = json.load(f)
-                
-                # Merge with defaults to ensure all keys exist
-                default_config = self.get_default_config()
-                merged_config = self._deep_merge_configs(default_config, config)
-                
-                self._current_config = merged_config
-                return merged_config
-            else:
-                # Attempt migration from previous locations → ~/.snid_sage
-                # 1) Qt AppDataLocation-based path
-                try:
-                    from PySide6.QtCore import QStandardPaths
-                    legacy_qt_dir = Path(QStandardPaths.writableLocation(QStandardPaths.AppDataLocation)) / 'SNID_SAGE'
-                    legacy_qt_file = legacy_qt_dir / 'snid_sage_config.json'
-                except Exception:
-                    legacy_qt_file = None
-
-                if legacy_qt_file is not None and legacy_qt_file.exists():
-                    try:
-                        with open(legacy_qt_file, 'r', encoding='utf-8') as f:
-                            legacy_cfg = json.load(f)
-                        merged = self._deep_merge_configs(self.get_default_config(), legacy_cfg)
-                        # Save migrated as new default for future runs
-                        self.save_config(merged, self.default_config_file)
-                        self._current_config = merged
-                        return merged
-                    except Exception:
-                        pass
-
-                # 2) Old Windows AppData path (pre-change default)
-                try:
-                    legacy_appdata_dir = Path(os.environ.get('APPDATA', str(Path.home()))) / 'SNID_SAGE'
-                    legacy_appdata_file = legacy_appdata_dir / 'snid_sage_config.json'
-                except Exception:
-                    legacy_appdata_file = None
-                if legacy_appdata_file is not None and legacy_appdata_file.exists():
-                    try:
-                        with open(legacy_appdata_file, 'r', encoding='utf-8') as f:
-                            legacy_cfg = json.load(f)
-                        merged = self._deep_merge_configs(self.get_default_config(), legacy_cfg)
-                        self.save_config(merged, self.default_config_file)
-                        self._current_config = merged
-                        return merged
-                    except Exception:
-                        pass
-
-                # 3) Old XDG config (~/.config/snid_sage)
-                legacy_xdg_file = (Path.home() / '.config' / 'snid_sage' / 'snid_sage_config.json')
-                if legacy_xdg_file.exists():
-                    try:
-                        with open(legacy_xdg_file, 'r', encoding='utf-8') as f:
-                            legacy_cfg = json.load(f)
-                        merged = self._deep_merge_configs(self.get_default_config(), legacy_cfg)
-                        self.save_config(merged, self.default_config_file)
-                        self._current_config = merged
-                        return merged
-                    except Exception:
-                        pass
-
-                # 4) Very old CLI config (~/.config/snid/config.json)
-                legacy_path = Path.home() / '.config' / 'snid' / 'config.json'
-                if legacy_path.exists():
-                    try:
-                        with open(legacy_path, 'r', encoding='utf-8') as f:
-                            legacy_cfg = json.load(f)
-                        migrated = self._migrate_legacy_cli_config(legacy_cfg)
-                        merged = self._deep_merge_configs(self.get_default_config(), migrated)
-                        # Save migrated as new default for future runs
-                        self.save_config(merged, self.default_config_file)
-                        self._current_config = merged
-                        return merged
-                    except Exception:
-                        pass
-                # Fallback: return default configuration
-                default_config = self.get_default_config()
-                self._current_config = default_config
-                return default_config
-                
-        except (json.JSONDecodeError, OSError) as e:
-            raise ConfigurationError(f"Failed to load configuration: {e}")
+        # CONFIG-LESS MODE: Always ignore on-disk configuration and return in-memory defaults.
+        # This prevents accidental overrides (e.g., profile) from stale files.
+        default_config = self.get_default_config()
+        self._current_config = default_config
+        return default_config
     
     def save_config(self, config: Dict[str, Any], config_file: Optional[Path] = None) -> bool:
         """
@@ -429,37 +347,13 @@ class ConfigurationManager:
         Returns:
             True if successful, False otherwise
         """
-        if config_file is None:
-            config_file = self.default_config_file
-        
-        try:
-            # Validate configuration before saving
-            validation_result = self.validate_config(config)
-            if not validation_result.is_valid:
-                raise ConfigurationError(f"Configuration validation failed: {validation_result.errors}")
-            
-            # Update metadata
-            config = copy.deepcopy(config)
-            if 'metadata' not in config:
-                config['metadata'] = {}
-            
-            import datetime
-            config['metadata']['last_modified'] = datetime.datetime.now().isoformat()
-            if 'created_date' not in config['metadata'] or not config['metadata']['created_date']:
-                config['metadata']['created_date'] = datetime.datetime.now().isoformat()
-            
-            # Ensure directory exists
-            config_file.parent.mkdir(parents=True, exist_ok=True)
-            
-            # Save configuration
-            with open(config_file, 'w', encoding='utf-8') as f:
-                json.dump(config, f, indent=2, ensure_ascii=False)
-            
-            self._current_config = config
-            return True
-            
-        except (OSError, TypeError, ValueError) as e:
-            raise ConfigurationError(f"Failed to save configuration: {e}")
+        # CONFIG-LESS MODE: No-op persistence. Accept and remember in-memory only.
+        # Return True so callers proceed without error, but do not write to disk.
+        validation_result = self.validate_config(config)
+        if not validation_result.is_valid:
+            raise ConfigurationError(f"Configuration validation failed: {validation_result.errors}")
+        self._current_config = copy.deepcopy(config)
+        return True
     
     def validate_config(self, config: Dict[str, Any]) -> 'ValidationResult':
         """

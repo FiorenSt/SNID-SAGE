@@ -18,7 +18,7 @@ try:
 except Exception:  # pragma: no cover
     resources = None  # type: ignore
 
-from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+from datetime import datetime
 
 
 def _is_writable_dir(path: Path) -> bool:
@@ -37,14 +37,20 @@ def get_user_templates_dir(strict: bool = False) -> Optional[Path]:
     - strict=False: same behavior for now (no implicit fallbacks). Legacy discovery should
       be explicitly requested by callers via discover_legacy_user_templates().
     """
-    cm = ConfigurationManager()
-    cfg = cm.get_current_config() or cm.load_config()
-    paths = (cfg.get('paths') or {})
-    override = paths.get('user_templates_dir')
-    if override:
-        p = Path(override)
-        if _is_writable_dir(p):
-            return p
+    # Minimal persistence independent of global config: ~/.snid_sage/user_templates.json
+    try:
+        settings_path = Path.home() / '.snid_sage' / 'user_templates.json'
+        if settings_path.exists():
+            import json
+            with open(settings_path, 'r', encoding='utf-8') as f:
+                data = json.load(f) or {}
+            raw = data.get('path') or data.get('user_templates_dir')
+            if raw:
+                p = Path(raw)
+                if _is_writable_dir(p):
+                    return p
+    except Exception:
+        pass
     # No legacy fallback here; caller decides policy
     return None
 
@@ -53,11 +59,16 @@ def set_user_templates_dir(path: Path) -> None:
     """Persist the user templates directory into configuration after validation."""
     if not _is_writable_dir(path):
         raise PermissionError(f"User templates directory is not writable: {path}")
-
-    cm = ConfigurationManager()
-    cfg = cm.get_current_config() or cm.load_config()
-    cfg.setdefault('paths', {})['user_templates_dir'] = str(path)
-    cm.save_config(cfg)
+    try:
+        settings_dir = Path.home() / '.snid_sage'
+        settings_dir.mkdir(parents=True, exist_ok=True)
+        settings_path = settings_dir / 'user_templates.json'
+        data = {'path': str(path), 'last_modified': datetime.now().isoformat()}
+        import json
+        with open(settings_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        raise OSError(f"Failed to persist user templates directory: {e}")
 
 
 def discover_legacy_user_templates() -> List[Path]:

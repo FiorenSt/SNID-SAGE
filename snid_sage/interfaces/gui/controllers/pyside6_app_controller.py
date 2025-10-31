@@ -158,7 +158,7 @@ class PySide6AppController(QtCore.QObject):
 
         Strategy:
         - Try configured templates_dir when it exists and appears complete (multiple types in index or multiple HDF5 files)
-        - Otherwise, return packaged directory based on the active profile (optical → snid_sage/templates; onir → snid_sage/templates_onir)
+        - Otherwise, return packaged directory from the unified folder (snid_sage/templates)
         - Final fallback: simple_template_finder
         """
         try:
@@ -202,11 +202,10 @@ class PySide6AppController(QtCore.QObject):
             except Exception:
                 pass
 
-            # 2) Use packaged resources based on profile
+            # 2) Use packaged resources (single unified templates folder)
             try:
                 from importlib import resources
-                pkg_folder = 'templates_onir' if active_pid == 'onir' else 'templates'
-                with resources.as_file(resources.files('snid_sage') / pkg_folder) as p:
+                with resources.as_file(resources.files('snid_sage') / 'templates') as p:
                     if p.exists():
                         _LOGGER.info(f"Using packaged templates directory: {p}")
                         return str(p)
@@ -224,7 +223,7 @@ class PySide6AppController(QtCore.QObject):
                 pass
 
             # 4) Last resort: repo-relative defaults by profile
-            repo_fallback = (Path(__file__).resolve().parents[3] / ('templates_onir' if active_pid == 'onir' else 'templates'))
+            repo_fallback = (Path(__file__).resolve().parents[3] / 'templates')
             return str(repo_fallback)
         except Exception as e:
             _LOGGER.warning(f"Failed to resolve templates directory robustly: {e}")

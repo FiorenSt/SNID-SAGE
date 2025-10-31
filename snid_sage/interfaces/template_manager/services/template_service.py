@@ -55,11 +55,18 @@ def _compute_builtin_dir() -> Path:
 _BUILTIN_DIR = _compute_builtin_dir()
 from snid_sage.shared.utils.paths.user_templates import get_user_templates_dir
 
-def _user_index_path() -> Optional[Path]:
+def _user_index_path(profile_id: Optional[str] = None) -> Optional[Path]:
     p = get_user_templates_dir(strict=True)
-    return (p / "template_index.user.json") if p else None
+    if not p:
+        return None
+    req = (profile_id or '').strip().lower()
+    if req == 'onir':
+        # Prefer ONIR-specific user index; fall back to default if missing
+        onir_path = p / "template_index.user.onir.json"
+        return onir_path if onir_path.exists() else (p / "template_index.user.onir.json")
+    return p / "template_index.user.json"
 
-_USER_INDEX = _user_index_path()
+_USER_INDEX = _user_index_path(None)
 _BUILTIN_INDEX = _BUILTIN_DIR / "template_index.json"
 
 
@@ -228,7 +235,7 @@ class TemplateService:
 
         For legacy entries missing profile_id, infer by HDF5 grid metadata.
         """
-        idx_path = _user_index_path()
+        idx_path = _user_index_path(profile_id)
         data = self._read_json(idx_path) or {
             "version": "2.0",
             "template_count": 0,
@@ -335,12 +342,22 @@ class TemplateService:
 
                 # Update user index (omit non-essential fields like phase/age/rebinned)
                 # Determine index path (override when target_dir provided)
-                idx_path = self._index_path_for_target(target_dir)
+                idx_path = self._index_path_for_target(target_dir, profile_id=target_profile_id)
                 index = self._read_json(idx_path) or {
                     "version": "2.0",
                     "templates": {},
                     "by_type": {},
                     "template_count": 0,
+                }
+                # Ensure header metadata is present and accurate for compatibility
+                hdr = index
+                hdr["profile_id"] = target_profile_id
+                hdr["grid_rebinned"] = True
+                hdr["grid_params"] = {
+                    "NW": int(target_grid.num_points),
+                    "W0": float(target_grid.min_wave),
+                    "W1": float(target_grid.max_wave),
+                    "DWLOG": float(target_grid.dlog),
                 }
                 index_templates = index.setdefault("templates", {})
                 if combined and final_name in index_templates:
@@ -546,7 +563,7 @@ class TemplateService:
         """Duplication is disabled by policy."""
         return False
 
-    def rebuild_user_index(self) -> bool:
+    def rebuild_user_index(self, profile_id: Optional[str] = None) -> bool:
         """Re-scan user HDF5 files and rebuild the user index from scratch."""
         try:
             templates: Dict[str, Any] = {}
@@ -568,14 +585,44 @@ class TemplateService:
                             "epochs": int(attrs.get("epochs", 1)),
                             "storage_file": str(h5_path).replace("\\", "/"),
                         }
+            # Attempt to infer grid/profile for header
+            hdr_profile: Optional[str] = None
+            hdr_grid: Optional[Dict[str, float]] = None
+            try:
+                any_h5 = next((p for p in (user_dir.glob("templates_*.user.hdf5"))), None)
+                if any_h5 is not None and any_h5.exists():
+                    with h5py.File(any_h5, "r") as f:
+                        meta = f.get("metadata")
+                        if meta is not None:
+                            pid = meta.attrs.get("profile_id")
+                            if isinstance(pid, (str, bytes)):
+                                hdr_profile = (pid.decode() if isinstance(pid, bytes) else pid)
+                            hdr_grid = {
+                                "NW": int(meta.attrs.get("NW", 1024)),
+                                "W0": float(meta.attrs.get("W0", 2500.0)),
+                                "W1": float(meta.attrs.get("W1", 10000.0)),
+                                "DWLOG": float(meta.attrs.get("DWLOG", 0.0)),
+                            }
+            except Exception:
+                hdr_profile = None
+                hdr_grid = None
+
             index = {
                 "version": "2.0",
                 "templates": templates,
                 "by_type": self._compute_by_type(templates),
                 "template_count": len(templates),
+                "profile_id": (profile_id or hdr_profile or self._active_profile_id),
+                "grid_rebinned": True,
+                "grid_params": hdr_grid or {
+                    "NW": int(self._standard_grid.num_points),
+                    "W0": float(self._standard_grid.min_wave),
+                    "W1": float(self._standard_grid.max_wave),
+                    "DWLOG": float(self._standard_grid.dlog),
+                },
             }
             with self._lock:
-                idx_path = _user_index_path()
+                idx_path = _user_index_path(profile_id or hdr_profile or self._active_profile_id)
                 if idx_path is None:
                     return False
                 self._write_json_atomic(idx_path, index)
@@ -622,7 +669,8 @@ class TemplateService:
             base_dir = get_user_templates_dir(strict=True)
         if base_dir is None:
             raise RuntimeError("Templates destination is not set. Configure a User Templates folder or select a destination.")
-        abs_path = Path(base_dir) / f"templates_{safe_type}.user.hdf5"
+        suffix = "_onir" if str(profile_id or '').strip().lower() == 'onir' else ""
+        abs_path = Path(base_dir) / f"templates_{safe_type}{suffix}.user.hdf5"
         if not abs_path.exists():
             abs_path.parent.mkdir(parents=True, exist_ok=True)
             with h5py.File(abs_path, "w") as f:
@@ -779,15 +827,17 @@ class TemplateService:
                 meta.attrs["template_count"] = 1
             return final_name, False, 1, "created"
 
-    def _index_path_for_target(self, target_dir: Optional[Path]) -> Optional[Path]:
+    def _index_path_for_target(self, target_dir: Optional[Path], profile_id: Optional[str] = None) -> Optional[Path]:
         """Return the index path for the selected destination or the configured user folder."""
         if target_dir is not None:
             try:
                 base = Path(target_dir)
+                if str(profile_id or '').strip().lower() == 'onir':
+                    return base / "template_index.user.onir.json"
                 return base / "template_index.user.json"
             except Exception:
-                return _user_index_path()
-        return _user_index_path()
+                return _user_index_path(profile_id)
+        return _user_index_path(profile_id)
 
     def _compute_by_type(self, templates: Dict[str, Any]) -> Dict[str, Any]:
         by_type: Dict[str, Any] = {}
@@ -813,17 +863,20 @@ class TemplateService:
 
     def _compute_onir_index_path(self) -> Optional[Path]:
         """Return path to packaged ONIR index if available."""
+        # Prefer unified templates folder with ONIR-named index
         try:
-            with resources.as_file(resources.files('snid_sage') / 'templates_onir') as tpl_dir:
-                idx = tpl_dir / 'template_index.json'
-                if idx.exists():
-                    return idx
+            with resources.as_file(resources.files('snid_sage') / 'templates') as tpl_dir:
+                for alt in ('template_index_onir.json', 'template_index.onir.json'):
+                    idx = tpl_dir / alt
+                    if idx.exists():
+                        return idx
         except Exception:
             pass
-        # Fallback to repo-relative path
+        # Fallback to repo-relative unified path
         try:
-            p = Path(__file__).resolve().parents[3] / 'templates_onir' / 'template_index.json'
-            return p if p.exists() else None
+            root = Path(__file__).resolve().parents[3]
+            p1 = root / 'snid_sage' / 'templates' / 'template_index_onir.json'
+            return p1 if p1.exists() else None
         except Exception:
             return None
 

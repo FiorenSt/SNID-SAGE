@@ -30,6 +30,16 @@ class TemplateTreeWidget(QtWidgets.QTreeWidget):
         self.setHeaderLabels(["Template", "Type"])
         self.setSelectionMode(QtWidgets.QTreeWidget.SingleSelection)
         self.itemClicked.connect(self._on_item_clicked)
+        # Ensure keyboard navigation updates selection preview
+        try:
+            self.currentItemChanged.connect(self._on_current_item_changed)
+        except Exception:
+            pass
+        # Ensure the widget can accept focus for arrow key navigation
+        try:
+            self.setFocusPolicy(QtCore.Qt.StrongFocus)
+        except Exception:
+            pass
         self._source_mode = 'Combined'  # 'Default' | 'User' | 'Combined'
         
         # Load templates on initialization
@@ -184,6 +194,19 @@ class TemplateTreeWidget(QtWidgets.QTreeWidget):
         if template_info:
             template_name = item.text(0)
             self.template_selected.emit(template_name, template_info)
+
+    def _on_current_item_changed(self, current, previous):
+        """Emit selection when current item changes (e.g., via keyboard)."""
+        try:
+            if current is None:
+                return
+            template_info = current.data(0, QtCore.Qt.UserRole)
+            if not template_info:
+                return
+            template_name = current.text(0)
+            self.template_selected.emit(template_name, template_info)
+        except Exception:
+            pass
     
     def filter_templates(self, search_text: str = "", type_filter: str = "All Types"):
         """Filter templates based on search text and selected type.
@@ -280,3 +303,46 @@ class TemplateTreeWidget(QtWidgets.QTreeWidget):
             type_name = type_item.text(0).split(' (')[0]  # Remove count from display
             counts[type_name] = type_item.childCount()
         return counts
+
+    def select_first_visible(self, type_name: Optional[str] = None) -> bool:
+        """Select the first visible template item (optionally within a given type).
+
+        Returns True if a selection was made.
+        """
+        try:
+            root = self.invisibleRootItem()
+            # Helper to emit selection
+            def _select_item(it) -> bool:
+                if it is None or it.isHidden():
+                    return False
+                self.setCurrentItem(it)
+                info = it.data(0, QtCore.Qt.UserRole)
+                if info:
+                    self.template_selected.emit(it.text(0), info)
+                return True
+
+            if type_name:
+                for i in range(root.childCount()):
+                    type_item = root.child(i)
+                    base_name = type_item.text(0).split(' (')[0]
+                    if base_name != type_name:
+                        continue
+                    if type_item.isHidden():
+                        return False
+                    for j in range(type_item.childCount()):
+                        tpl_item = type_item.child(j)
+                        if not tpl_item.isHidden():
+                            return _select_item(tpl_item)
+                    return False
+            # No specific type: find first visible across tree
+            for i in range(root.childCount()):
+                type_item = root.child(i)
+                if type_item.isHidden():
+                    continue
+                for j in range(type_item.childCount()):
+                    tpl_item = type_item.child(j)
+                    if not tpl_item.isHidden():
+                        return _select_item(tpl_item)
+            return False
+        except Exception:
+            return False

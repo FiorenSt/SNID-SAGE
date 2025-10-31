@@ -31,9 +31,10 @@ from PySide6 import QtCore
 try:
     from snid_sage.snid.preprocessing import (
         savgol_filter_fixed,
-        clip_aband, clip_sky_lines, 
-        log_rebin, fit_continuum, fit_continuum_spline, 
-        apodize
+        clip_aband, clip_sky_lines,
+        log_rebin, log_rebin_interpolate,
+        fit_continuum, fit_continuum_spline,
+        apodize,
     )
     # Import wavelength grid constants - use same source as dialog
     from snid_sage.snid.snid import NW, MINW, MAXW
@@ -372,7 +373,6 @@ class PySide6PreviewCalculator(QtCore.QObject):
                 try:
                     if SNID_AVAILABLE and mask_regions:
                         # Use hybrid: integrate baseline + interpolation only in masked bins
-                        from snid_sage.snid.preprocessing import log_rebin, log_rebin_interpolate
                         # Baseline
                         base_wave, base_flux = log_rebin(temp_wave, temp_flux)
                         # Interp result + masked bins

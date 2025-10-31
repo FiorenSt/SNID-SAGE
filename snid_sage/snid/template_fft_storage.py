@@ -83,7 +83,12 @@ class TemplateFFTStorage:
         self.template_dir = Path(template_dir)
         self.output_dir = Path(output_dir) if output_dir else self.template_dir
         self.storage_files = {}  # Will be populated with type -> file mapping
-        self.index_file = self.output_dir / 'template_index.json'
+        # Profile-aware index selection: prefer unified folder naming
+        if str(profile_id or '').strip().lower() == 'onir':
+            # Prefer same-folder ONIR index; fallback to legacy name variants handled in _load_index
+            self.index_file = self.output_dir / 'template_index_onir.json'
+        else:
+            self.index_file = self.output_dir / 'template_index.json'
         
         # Load index if available (profile-aware)
         self._index: Optional[Dict] = None
@@ -379,7 +384,15 @@ class TemplateFFTStorage:
             user_dir = get_user_templates_dir(strict=True)
         except Exception:
             user_dir = None
-        user_index_path = (user_dir / 'template_index.user.json') if user_dir is not None else None
+        # Choose user index file based on active profile
+        user_index_path = None
+        if user_dir is not None:
+            if str(effective_profile_id or '').strip().lower() == 'onir':
+                # Prefer ONIR-specific user index
+                cand = user_dir / 'template_index.user.onir.json'
+                user_index_path = cand if cand.exists() else (user_dir / 'template_index.user.json')
+            else:
+                user_index_path = user_dir / 'template_index.user.json'
         if user_index_path is not None and user_index_path.exists():
             try:
                 with open(user_index_path, 'r', encoding='utf-8') as f:
@@ -387,6 +400,16 @@ class TemplateFFTStorage:
             except Exception as e:
                 _LOG.warning(f"Failed to load user index file: {e}")
                 user_index = None
+        
+        # ONIR: if base index file missing, try unified alternative name variant
+        if base_index is None and str(effective_profile_id or '').strip().lower() == 'onir':
+            try:
+                alt = self.output_dir / 'template_index.onir.json'
+                if alt.exists():
+                    with open(alt, 'r', encoding='utf-8') as f:
+                        base_index = json.load(f)
+            except Exception:
+                pass
 
         # If no base index and no user index, nothing to do
         if base_index is None and user_index is None:
@@ -421,11 +444,19 @@ class TemplateFFTStorage:
                 idx_prof = (idx or {}).get('profile_id')
                 g = (idx or {}).get('grid_params') or {}
 
-                # Stricter rules for ONIR: require explicit ONIR profile and matching grid metadata
+                # Stricter rules for ONIR, but allow inference for user indices lacking headers
                 if str(active_profile).lower() == 'onir':
-                    if str(idx_prof or '').lower() != 'onir':
-                        return False
-                    if not g:
+                    if str(idx_prof or '').lower() != 'onir' or not g:
+                        # Try to infer from storage_file names when headers are missing
+                        try:
+                            tmpls = (idx or {}).get('templates') or {}
+                            # Accept if any storage_file suggests ONIR naming
+                            for _name, _meta in list(tmpls.items())[:25]:
+                                sf = str((_meta or {}).get('storage_file', '')).strip().lower()
+                                if sf.endswith('_onir.hdf5') or sf.endswith('_onir.user.hdf5') or '_onir.' in sf:
+                                    return True
+                        except Exception:
+                            pass
                         return False
 
                 # If the index declares a profile id, require exact match (case-insensitive)
@@ -472,6 +503,41 @@ class TemplateFFTStorage:
                     _LOG.info(f"Skipping merge of user template index at '{user_index_path}' due to incompatibility with active profile '{effective_profile_id}'.")
                 except Exception:
                     pass
+
+        # Adjust storage file names for ONIR unified folder: add _onir suffix when needed
+        try:
+            if str(effective_profile_id or '').strip().lower() == 'onir':
+                def _suffix_onir(path_str: str) -> str:
+                    try:
+                        p = Path(path_str)
+                        # Only modify relative HDF5 names like templates_*.hdf5
+                        name = p.name
+                        if name.endswith('.hdf5') and '_onir' not in name:
+                            suffixed = name[:-5] + '_onir.hdf5'
+                            cand = self.template_dir / suffixed
+                            if cand.exists():
+                                return suffixed
+                        return path_str
+                    except Exception:
+                        return path_str
+                # by_type storage_file
+                bt = merged.get('by_type') or {}
+                for t, info in bt.items():
+                    sf = (info or {}).get('storage_file', '')
+                    if isinstance(sf, str) and sf:
+                        new_sf = _suffix_onir(sf)
+                        if new_sf != sf:
+                            info['storage_file'] = new_sf
+                # templates entries
+                tm = merged.get('templates') or {}
+                for nm, meta in tm.items():
+                    sf = (meta or {}).get('storage_file', '')
+                    if isinstance(sf, str) and sf:
+                        new_sf = _suffix_onir(sf)
+                        if new_sf != sf:
+                            meta['storage_file'] = new_sf
+        except Exception:
+            pass
 
         self._index = merged
     

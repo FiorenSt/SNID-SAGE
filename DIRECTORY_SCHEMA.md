@@ -282,7 +282,7 @@ SNID_SAGE/                                    # project root
 │   ├── templates/                            # Optical templates
 │   │   ├── template_index.json
 │   │   └── templates_*.hdf5
-│   └── templates_onir/                       # ONIR templates
+│   └── templates/                            # Unified templates (optical + *_onir files)
 │       ├── template_index.json
 │       └── templates_*.hdf5
  
