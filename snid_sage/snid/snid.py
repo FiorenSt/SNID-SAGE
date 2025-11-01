@@ -305,7 +305,7 @@ def preprocess_spectrum(
             f"Insufficient overlap with active grid: only {overlap_angstrom:.1f} Å "
             f"(< {float(min_overlap_angstrom):.0f} Å required)."
         )
-        _LOG.error(msg)
+        _LOG.warning(msg)
         raise SpectrumProcessingError(msg)
 
     # Clip to grid if spectrum extends beyond bounds
@@ -942,7 +942,16 @@ def _run_forced_redshift_analysis_optimized(
     
     if age_range is not None:
         age_min, age_max = age_range
-        templates = [t for t in templates if age_min <= t.get('age', 0) <= age_max]
+        def _age_in_range(tpl: Dict[str, Any]) -> bool:
+            a = tpl.get('age', None)
+            if a is None:
+                return True
+            try:
+                av = float(a)
+            except Exception:
+                return True
+            return age_min <= av <= age_max
+        templates = [t for t in templates if _age_in_range(t)]
         _LOG.info(f"Age filtering for forced analysis: {original_count} -> {len(templates)} templates")
 
     # ============================================================================
@@ -1609,7 +1618,16 @@ def run_snid_analysis(
         if age_range is not None:
             report_progress(f"Filtering templates by age range: {age_range}")
             age_min, age_max = age_range
-            templates = [t for t in templates if age_min <= t.get('age', 0) <= age_max]
+            def _age_in_range(tpl: Dict[str, Any]) -> bool:
+                a = tpl.get('age', None)
+                if a is None:
+                    return True
+                try:
+                    av = float(a)
+                except Exception:
+                    return True
+                return age_min <= av <= age_max
+            templates = [t for t in templates if _age_in_range(t)]
             _LOG.info(f"Step 7a: Age filtering: {original_count} -> {len(templates)} templates")
         
         if type_filter is not None and len(type_filter) > 0:

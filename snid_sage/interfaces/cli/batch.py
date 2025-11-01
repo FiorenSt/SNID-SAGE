@@ -186,7 +186,16 @@ class BatchTemplateManager:
         # Apply age filtering
         if age_range is not None:
             age_min, age_max = age_range
-            templates = [t for t in templates if age_min <= t.get('age', 0) <= age_max]
+            def _age_in_range(tpl: Dict[str, Any]) -> bool:
+                a = tpl.get('age', None)
+                if a is None:
+                    return True
+                try:
+                    av = float(a)
+                except Exception:
+                    return True
+                return age_min <= av <= age_max
+            templates = [t for t in templates if _age_in_range(t)]
             self._log.info(f"🔍 Age filtering: {original_count} -> {len(templates)} templates")
         
         # Apply type filtering

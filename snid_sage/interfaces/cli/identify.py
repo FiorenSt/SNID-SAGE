@@ -892,10 +892,17 @@ def main(args: argparse.Namespace) -> int:
             print(f"[ERROR] {e}", file=sys.stderr)
             return 2
             
-        # Prepare age range
+        # Prepare age range (open-ended if only one bound provided)
         age_range = None
         if args.age_min is not None or args.age_max is not None:
-            age_range = (args.age_min, args.age_max)
+            try:
+                import math
+                age_min = args.age_min if args.age_min is not None else float('-inf')
+                age_max = args.age_max if args.age_max is not None else float('inf')
+                age_range = (float(age_min), float(age_max))
+            except Exception:
+                # Fallback: if parsing fails, leave age_range unset
+                age_range = None
         
         # Create progress indicator - show only when --progress given, not quiet, and TTY
         is_tty = sys.stdout.isatty()
