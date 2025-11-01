@@ -277,18 +277,8 @@ class PySide6AppController(QtCore.QObject):
             
             # Early grid range check based on active profile (optical or onir)
             try:
-                # Resolve active profile id: env override > config default
-                try:
-                    env_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
-                except Exception:
-                    env_pid = None
-                try:
-                    from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
-                    cfg = ConfigurationManager().load_config()
-                    cfg_pid = (cfg.get('processing', {}) or {}).get('active_profile_id', 'optical')
-                except Exception:
-                    cfg_pid = 'optical'
-                active_pid = (env_pid or cfg_pid or 'optical')
+                # Use the GUI session's active profile (set at launch); avoid env/config mismatch
+                active_pid = (getattr(self, 'active_profile_id', None) or 'optical')
 
                 # Get profile grid
                 try:

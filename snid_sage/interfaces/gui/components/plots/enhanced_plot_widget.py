@@ -17,6 +17,9 @@ Developed by Fiorenzo Stoppa for SNID SAGE
 import os
 import sys
 from typing import Optional, Dict, Any
+import re
+import csv
+from itertools import zip_longest
 
 # PySide6 imports
 import PySide6.QtCore as QtCore
@@ -202,12 +205,36 @@ class EnhancedPlotWidget(pg.PlotWidget):
         # Track whether save button should be shown
         self.save_proxy = None
         self._show_save_button = False
+        # Suggested base name for export dialogs (without extension)
+        self._default_export_basename: str = "snid_sage_plot"
         
         # Initialize save functionality after a short delay to ensure plot is ready
         QtCore.QTimer.singleShot(100, self._setup_save_functionality)
         
         # Apply enhanced tick styling
         self._apply_tick_styling()
+
+    def set_default_export_basename(self, basename: str) -> None:
+        """Set the default basename used in export dialogs (extension added automatically).
+
+        Unsafe characters will be removed. Spaces become underscores. If empty, a fallback is used.
+        """
+        try:
+            if not isinstance(basename, str):
+                return
+            # Normalize spaces and slashes
+            name = basename.strip().replace('/', '-').replace('\\', '-')
+            name = re.sub(r"\s+", "_", name)
+            # Remove characters not allowed in filenames (keep alnum, dash, underscore, dot)
+            name = re.sub(r"[^A-Za-z0-9._-]", "", name)
+            # Collapse multiple underscores/dashes
+            name = re.sub(r"[_-]{2,}", "_", name)
+            name = name.strip('._-')
+            if not name:
+                name = "snid_sage_plot"
+            self._default_export_basename = name
+        except Exception:
+            self._default_export_basename = "snid_sage_plot"
 
     # Drag-and-drop handlers to keep Qt from emitting dragLeave before dragEnter warnings
     def dragEnterEvent(self, event: QtGui.QDragEnterEvent) -> None:  # type: ignore[override]
@@ -346,6 +373,10 @@ class EnhancedPlotWidget(pg.PlotWidget):
             }
         """)
         
+        # Add CSV export action
+        csv_action = menu.addAction("📊 Save spectrum data (CSV)")
+        csv_action.triggered.connect(self._save_csv_data)
+        
         # Add image export action
         image_action = menu.addAction("📷 Save as High-Res Image (Screen Resolution)")
         image_action.triggered.connect(self._save_high_res_image)
@@ -365,10 +396,114 @@ class EnhancedPlotWidget(pg.PlotWidget):
         else:
             menu.exec(QtWidgets.QCursor.pos())
     
+    def _save_csv_data(self):
+        """Save plotted spectrum data to CSV.
+        - If only one spectrum is present: write wavelength,flux
+        - If overlay is present: write wavelength_obs,flux_obs,wavelength_template,flux_template
+        """
+        try:
+            plot_item = self.getPlotItem()
+            if not plot_item:
+                QtWidgets.QMessageBox.information(self, "Export Data", "No plot available to export.")
+                return
+
+            # Collect data items from the plot
+            try:
+                data_items = plot_item.listDataItems()
+            except Exception:
+                data_items = []
+
+            if not data_items:
+                QtWidgets.QMessageBox.information(self, "Export Data", "No data to export.")
+                return
+
+            obs_x = obs_y = None
+            tpl_x = tpl_y = None
+
+            for item in data_items:
+                try:
+                    # PlotDataItem exposes getData(); guard if not available
+                    x, y = item.getData()  # type: ignore[attr-defined]
+                except Exception:
+                    continue
+
+                name = ""
+                try:
+                    name = (item.name() or "").lower()  # type: ignore[attr-defined]
+                except Exception:
+                    name = ""
+
+                # Heuristics to classify curves
+                if "template" in name:
+                    tpl_x, tpl_y = x, y
+                elif "observed" in name:
+                    if obs_x is None:
+                        obs_x, obs_y = x, y
+                elif "spectrum" in name:
+                    if obs_x is None:
+                        obs_x, obs_y = x, y
+                else:
+                    # Fallback assignment if names are missing
+                    if obs_x is None:
+                        obs_x, obs_y = x, y
+                    elif tpl_x is None:
+                        tpl_x, tpl_y = x, y
+
+            default_name = f"{getattr(self, '_default_export_basename', 'snid_sage_plot')}.csv"
+            filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+                self, "Save Spectrum Data (CSV)", default_name,
+                "CSV Files (*.csv);;All Files (*)"
+            )
+
+            if not filename:
+                return
+
+            # Hide save button during export to avoid capturing it or interaction issues
+            if hasattr(self, 'save_proxy') and self.save_proxy:
+                try:
+                    self.save_proxy.hide()
+                except Exception:
+                    pass
+
+            with open(filename, 'w', newline='') as f:
+                writer = csv.writer(f)
+                if obs_x is not None and obs_y is not None and tpl_x is not None and tpl_y is not None:
+                    # Overlay present: single wavelength column (shared grid), two flux columns
+                    writer.writerow(["wavelength", "flux_obs", "flux_template"])
+                    for xo, yo, yt in zip_longest(obs_x, obs_y, tpl_y, fillvalue=""):
+                        writer.writerow([xo, yo, yt])
+                elif obs_x is not None and obs_y is not None:
+                    # Single spectrum
+                    writer.writerow(["wavelength", "flux"])
+                    for x, y in zip(obs_x, obs_y):
+                        writer.writerow([x, y])
+                else:
+                    # Template only (edge case)
+                    writer.writerow(["wavelength", "flux"])
+                    if tpl_x is not None and tpl_y is not None:
+                        for x, y in zip(tpl_x, tpl_y):
+                            writer.writerow([x, y])
+
+            QtWidgets.QMessageBox.information(
+                self, "Export Successful",
+                f"Data saved successfully:\n{os.path.basename(filename)}"
+            )
+
+        except Exception as e:
+            _LOGGER.error(f"Failed to save CSV data: {e}")
+            QtWidgets.QMessageBox.warning(self, "Export Failed", str(e))
+        finally:
+            if hasattr(self, 'save_proxy') and self.save_proxy:
+                try:
+                    self.save_proxy.show()
+                except Exception:
+                    pass
+
     def _save_high_res_image(self):
         """Save plot as high-resolution image (100 DPI for screen-like appearance)"""
+        default_name = f"{getattr(self, '_default_export_basename', 'snid_sage_plot')}.png"
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Save Plot as High-Resolution Image", "snid_sage_plot.png",
+            self, "Save Plot as High-Resolution Image", default_name,
             "PNG Files (*.png);;JPEG Files (*.jpg);;All Files (*)"
         )
         
@@ -413,8 +548,9 @@ class EnhancedPlotWidget(pg.PlotWidget):
     
     def _save_svg(self):
         """Save plot as SVG vector graphics"""
+        default_name = f"{getattr(self, '_default_export_basename', 'snid_sage_plot')}.svg"
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Save Plot as Vector Graphics", "snid_sage_plot.svg",
+            self, "Save Plot as Vector Graphics", default_name,
             "SVG Files (*.svg);;All Files (*)"
         )
         

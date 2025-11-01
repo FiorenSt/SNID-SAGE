@@ -152,7 +152,8 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
             # Add to widget layout with inner margins to avoid clipping rounded corners
             plot_layout = QtWidgets.QVBoxLayout(self.plot_widget)
             try:
-                plot_layout.setContentsMargins(8, 8, 8, 8)
+                # Reduce top margin to minimize whitespace above the title
+                plot_layout.setContentsMargins(8, 2, 8, 8)
                 plot_layout.setSpacing(0)
             except Exception:
                 pass
@@ -168,7 +169,8 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
 
             # Add slight content margins and view padding like main GUI
             try:
-                self.plot_item.setContentsMargins(6, 10, 6, 6)
+                # Reduce top content margin to bring title closer to the plot
+                self.plot_item.setContentsMargins(6, 2, 6, 6)
                 self.plot_item.getViewBox().setDefaultPadding(0.08)
             except Exception:
                 pass
@@ -451,6 +453,21 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
         
         title = " | ".join(title_parts)
         self.plot_item.setTitle(title)
+
+        # Suggest a nice default filename for exports: <TemplateName>__<Type[-Subtype]>
+        try:
+            type_info_safe = template_info.get('type', 'Unknown') or 'Unknown'
+            subtype_info_safe = template_info.get('subtype', '') or ''
+            if subtype_info_safe and subtype_info_safe != 'Unknown':
+                type_block = f"{type_info_safe}-{subtype_info_safe}"
+            else:
+                type_block = f"{type_info_safe}"
+            basename_suggestion = f"{clean_name}__{type_block}"
+            if hasattr(self, 'plot_widget_pg') and self.plot_widget_pg is not None:
+                # Let the plot widget sanitize characters and apply as default
+                self.plot_widget_pg.set_default_export_basename(basename_suggestion)
+        except Exception:
+            pass
 
         # Show save button once actual content is plotted
         try:

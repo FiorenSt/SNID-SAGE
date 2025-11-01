@@ -774,6 +774,23 @@ class PySide6PlotManager:
             self.reapply_mask_regions()
             
             # Show save button now that we have actual spectrum data
+            try:
+                # Suggest export filename based on spectrum name and view type
+                if hasattr(self.main_window, 'app_controller') and hasattr(self.plot_widget, 'set_default_export_basename'):
+                    from pathlib import Path as _Path
+                    spectrum_path = getattr(self.main_window.app_controller, 'current_file_path', None)
+                    spec_name = None
+                    try:
+                        if spectrum_path:
+                            spec_name = _Path(str(spectrum_path)).stem
+                    except Exception:
+                        spec_name = None
+                    if not spec_name:
+                        spec_name = 'spectrum'
+                    view_tag = 'Flux' if view_type == 'flux' else 'Flat'
+                    self.plot_widget.set_default_export_basename(f"{spec_name}__{view_tag}")
+            except Exception:
+                pass
             if hasattr(self.plot_widget, 'show_save_button'):
                 self.plot_widget.show_save_button()
             
@@ -962,6 +979,24 @@ class PySide6PlotManager:
             self.reapply_mask_regions()
             
             # Show save button now that we have actual spectrum data
+            try:
+                # Suggest export filename based on spectrum and matched template/type
+                if hasattr(self.plot_widget, 'set_default_export_basename'):
+                    from pathlib import Path as _Path
+                    spectrum_path = getattr(self.main_window.app_controller, 'current_file_path', None)
+                    try:
+                        spec_name = _Path(str(spectrum_path)).stem if spectrum_path else 'spectrum'
+                    except Exception:
+                        spec_name = 'spectrum'
+                    # Build type-subtype block
+                    type_info = current_match.get('type', 'Unknown')
+                    subtype_info = template.get('subtype', '') or ''
+                    type_block = f"{type_info}-{subtype_info}" if subtype_info and subtype_info != 'Unknown' else f"{type_info}"
+                    # Create basename: Spectrum__Template__Type[-Subtype]
+                    export_base = f"{spec_name}__{template_name}__{type_block}"
+                    self.plot_widget.set_default_export_basename(export_base)
+            except Exception:
+                pass
             if hasattr(self.plot_widget, 'show_save_button'):
                 self.plot_widget.show_save_button()
             

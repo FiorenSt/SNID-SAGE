@@ -245,6 +245,11 @@ class SNIDTemplateManagerGUI(QtWidgets.QMainWindow):
         
         # Template tree
         self.template_tree = TemplateTreeWidget()
+        # Hide type count badges by default; they can be noisy and confusing
+        try:
+            self.template_tree.set_show_counts(False)
+        except Exception:
+            pass
         self.template_tree.template_selected.connect(self.on_template_selected)
         self.layout_manager.setup_template_browser(self.template_tree)
         layout.addWidget(self.template_tree)

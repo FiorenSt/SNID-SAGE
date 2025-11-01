@@ -540,6 +540,12 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
             return
             
         try:
+            # Preserve current view ranges to avoid losing user zoom/pan state
+            try:
+                x_range_before, y_range_before = self.plot_item.viewRange()
+            except Exception:
+                x_range_before, y_range_before = None, None
+            
             # Clear plot
             self.plot_item.clear()
             
@@ -588,6 +594,21 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
             try:
                 if hasattr(self.plot_widget, 'show_save_button'):
                     self.plot_widget.show_save_button()
+            except Exception:
+                pass
+            
+            # Restore previous view ranges (preserve zoom/pan) if available
+            try:
+                if x_range_before is not None and y_range_before is not None:
+                    # Ensure auto-range stays disabled before restoring
+                    try:
+                        self.plot_item.disableAutoRange()
+                    except Exception:
+                        self.plot_widget.enableAutoRange(axis='x', enable=False)
+                        self.plot_widget.enableAutoRange(axis='y', enable=False)
+                    # Apply previous ranges without extra padding
+                    self.plot_item.setXRange(x_range_before[0], x_range_before[1], padding=0)
+                    self.plot_item.setYRange(y_range_before[0], y_range_before[1], padding=0)
             except Exception:
                 pass
                 

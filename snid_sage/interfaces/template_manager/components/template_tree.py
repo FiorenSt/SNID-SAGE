@@ -41,9 +41,22 @@ class TemplateTreeWidget(QtWidgets.QTreeWidget):
         except Exception:
             pass
         self._source_mode = 'Combined'  # 'Default' | 'User' | 'Combined'
+        # Whether to show (visible/total) counts in the type headers
+        self._show_counts = False
         
         # Load templates on initialization
         self.load_templates()
+
+    def set_show_counts(self, show: bool) -> None:
+        """Enable/disable showing (visible/total) counts next to type names."""
+        try:
+            self._show_counts = bool(show)
+            # Re-apply current filter to refresh labels
+            # Infer current filters by reading visible state (best-effort)
+            # Default to no search and all types
+            self.filter_templates("", "All Types")
+        except Exception:
+            pass
         
     def set_source_mode(self, mode: str) -> None:
         """Set source mode: 'Default', 'User', or 'Combined' and reload."""
@@ -217,9 +230,10 @@ class TemplateTreeWidget(QtWidgets.QTreeWidget):
         root = self.invisibleRootItem()
         for i in range(root.childCount()):
             type_item = root.child(i)
-            type_name = type_item.text(0)
+            # Strip any appended counts from the displayed type text
+            base_type_name = type_item.text(0).split(' (')[0]
 
-            type_visible = (type_filter == "All Types" or type_filter == type_name)
+            type_visible = (type_filter == "All Types" or type_filter == base_type_name)
 
             template_count = 0
             visible_templates = 0
@@ -238,13 +252,21 @@ class TemplateTreeWidget(QtWidgets.QTreeWidget):
                 if template_visible:
                     visible_templates += 1
 
-            if visible_templates > 0:
-                type_item.setText(0, f"{type_name} ({visible_templates}/{template_count})")
-                type_item.setHidden(False)
+            if self._show_counts:
+                if visible_templates > 0:
+                    type_item.setText(0, f"{base_type_name} ({visible_templates}/{template_count})")
+                    type_item.setHidden(False)
+                else:
+                    type_item.setHidden(not type_visible or bool(search_text))
+                    if not type_item.isHidden():
+                        type_item.setText(0, f"{base_type_name} (0/{template_count})")
             else:
-                type_item.setHidden(not type_visible or bool(search_text))
-                if not type_item.isHidden():
-                    type_item.setText(0, f"{type_name} (0/{template_count})")
+                # Only show the base type name; control visibility as usual
+                type_item.setText(0, base_type_name)
+                if visible_templates > 0:
+                    type_item.setHidden(False)
+                else:
+                    type_item.setHidden(not type_visible or bool(search_text))
     
     def get_selected_template(self) -> Optional[tuple]:
         """Get the currently selected template"""
