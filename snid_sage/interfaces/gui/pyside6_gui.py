@@ -1094,6 +1094,73 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
             _LOGGER.error(f"Error running quick analysis: {e}")
             self.status_label.setText("Quick analysis error occurred")
     
+    def _compose_classification_header(self, result) -> str:
+        """Compose the status header showing best/selected type and subtype without confidence values."""
+        try:
+            from snid_sage.shared.utils.results_formatter import create_unified_formatter
+            formatter = create_unified_formatter(result, getattr(result, 'spectrum_name', None), getattr(result, 'spectrum_path', None))
+            summary = formatter.get_export_data()
+            import math
+
+            # Active (selected or auto-best) classification
+            active_type = (summary.get('consensus_type') or 'Unknown').strip()
+            active_subtype = (summary.get('consensus_subtype') or '').strip()
+            active_display = f"{active_type} / {active_subtype}".strip().rstrip('/')
+
+            # Determine winning-subtype redshift (prefer subtype-specific; fallback to enhanced; then result.redshift)
+            active_z = None
+            try:
+                z_sub = summary.get('subtype_redshift', None)
+                if isinstance(z_sub, (int, float)) and math.isfinite(float(z_sub)):
+                    active_z = float(z_sub)
+                else:
+                    z_enh = summary.get('enhanced_redshift', None)
+                    if isinstance(z_enh, (int, float)) and math.isfinite(float(z_enh)):
+                        active_z = float(z_enh)
+                    else:
+                        z0 = getattr(result, 'redshift', None)
+                        if isinstance(z0, (int, float)) and math.isfinite(float(z0)):
+                            active_z = float(z0)
+            except Exception:
+                pass
+            z_fragment = f" — z = {active_z:.6f}" if isinstance(active_z, float) else ""
+
+            # If no manual override, show professional classification label
+            if not summary.get('is_manual_selection', False):
+                return f"Classification: {active_display}{z_fragment}"
+
+            # Manual selection differs from auto best → show Selected vs Suggested best
+            suggested_type = ''
+            suggested_subtype = ''
+            clres = getattr(result, 'clustering_results', {}) or {}
+            best_cluster = clres.get('best_cluster') if isinstance(clres, dict) else None
+            if isinstance(best_cluster, dict):
+                suggested_type = (best_cluster.get('type') or '').strip()
+                st_info = best_cluster.get('subtype_info', {}) or {}
+                suggested_subtype = (st_info.get('best_subtype') or '').strip()
+                if not suggested_subtype:
+                    try:
+                        matches = best_cluster.get('matches', []) or []
+                        if matches:
+                            tpl = matches[0].get('template', {}) if isinstance(matches[0].get('template'), dict) else {}
+                            suggested_subtype = (tpl.get('subtype') or '').strip()
+                    except Exception:
+                        suggested_subtype = ''
+            suggested_display = f"{suggested_type} / {suggested_subtype}".strip().rstrip('/')
+            return f"Selected: {active_display}{z_fragment} — Suggested: {suggested_display}" if suggested_display else f"Selected: {active_display}{z_fragment}"
+        except Exception:
+            # Fallback to type-only display
+            t = getattr(result, 'consensus_type', None) or 'Unknown'
+            st = getattr(result, 'best_subtype', None) or ''
+            disp = f"{t} / {st}".strip().rstrip('/')
+            try:
+                import math
+                z0 = getattr(result, 'redshift', None)
+                z_fragment = f" — z = {float(z0):.6f}" if isinstance(z0, (int, float)) and math.isfinite(float(z0)) else ""
+            except Exception:
+                z_fragment = ""
+            return f"Classification: {disp}{z_fragment}"
+
     # Signal handlers for app controller updates
     def _on_analysis_completed(self, success: bool):
         """Handle analysis completion signal from app controller"""
@@ -1197,9 +1264,17 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                     elif type_conf < 0.30:
                         self.status_label.setText("Analysis weak – only low-quality matches above threshold")
                     else:
-                        self.status_label.setText("SNID-SAGE analysis completed")
+                        # Show best type/subtype without confidence
+                        try:
+                            self.status_label.setText(self._compose_classification_header(results))
+                        except Exception:
+                            self.status_label.setText("Analysis complete")
                 else:
-                    self.status_label.setText("SNID-SAGE analysis completed")
+                    # Good cluster path – show best now; later selection may update it
+                    try:
+                        self.status_label.setText(self._compose_classification_header(results))
+                    except Exception:
+                        self.status_label.setText("Analysis complete")
                 
                 # Enable analysis plot/navigation buttons only when we have reliable matches
                 reliable = bool(getattr(results, 'clustering_results', None) and results.clustering_results.get('success')) or bool(fm)
@@ -1636,8 +1711,11 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                 self.workflow_manager.refresh_button_states()
                 _LOGGER.debug("🔄 Workflow manager button states refreshed after results available")
             
-            # Update status
-            self.status_label.setText(f"Best: {getattr(result, 'template_name', 'Unknown')} ({getattr(result, 'consensus_type', 'Unknown')})")
+            # Update status with type/subtype (handles manual selection messaging)
+            try:
+                self.status_label.setText(self._compose_classification_header(result))
+            except Exception:
+                self.status_label.setText(f"Classification: {getattr(result, 'consensus_type', 'Unknown')}")
             
             # Enable plot buttons if available
             for btn in getattr(self, 'analysis_plot_buttons', []):
@@ -1693,20 +1771,11 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                 _LOGGER.warning("No SNID results available to refresh displays")
                 return
             
-            # Update status label with new best match
-            consensus_type = getattr(snid_results, 'consensus_type', 'Unknown')
-            template_name = getattr(snid_results, 'template_name', 'Unknown')
-            
-            # Check if this was a user-selected cluster
-            cluster_info = ""
-            if hasattr(snid_results, 'clustering_results') and snid_results.clustering_results:
-                if snid_results.clustering_results.get('user_selected_cluster'):
-                    cluster_info = " [User Selected]"
-                elif snid_results.clustering_results.get('winning_cluster'):
-                    cluster_info = " [User Updated]"
-            
-            status_text = f"Best: {template_name} ({consensus_type}){cluster_info}"
-            self.status_label.setText(status_text)
+            # Update status label with new classification header
+            try:
+                self.status_label.setText(self._compose_classification_header(snid_results))
+            except Exception:
+                self.status_label.setText(f"Classification: {getattr(snid_results, 'consensus_type', 'Unknown')}")
             
             # Update config status
             self.config_status_label.setText("Analysis Complete (Cluster Updated)")

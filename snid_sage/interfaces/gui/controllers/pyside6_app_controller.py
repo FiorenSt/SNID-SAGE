@@ -307,12 +307,29 @@ class PySide6AppController(QtCore.QObject):
                 # Enforce minimum overlap of 2000 Å with active grid
                 overlap_angstrom = max(0.0, min(wmax, gmax) - max(wmin, gmin))
                 if overlap_angstrom < 2000.0:
+                    suggestion = ""
+                    try:
+                        if str(active_pid).strip().lower() != 'onir':
+                            from snid_sage.shared.profiles.builtins import register_builtins
+                            from snid_sage.shared.profiles.registry import get_profile
+                            register_builtins()
+                            onir_prof = get_profile('onir')
+                            onir_min = float(getattr(onir_prof.grid, 'min_wave_A', 2000.0))
+                            onir_max = float(getattr(onir_prof.grid, 'max_wave_A', 25000.0))
+                            onir_overlap = max(0.0, min(wmax, onir_max) - max(wmin, onir_min))
+                            if onir_overlap >= 2000.0:
+                                suggestion = (
+                                    f" Tip: the spectrum overlaps the ONIR grid by {onir_overlap:.1f} Å; "
+                                    f"consider using the ONIR profile for extended coverage (~2000–25000 Å)."
+                                )
+                    except Exception:
+                        pass
                     QtWidgets.QMessageBox.critical(
                         self.main_window,
                         "Insufficient Overlap",
                         (
                             f"The spectrum overlaps the active grid by only {overlap_angstrom:.1f} Å, "
-                            f"which is insufficient (< 2000 Å)."
+                            f"which is insufficient (< 2000 Å)." + suggestion
                         ),
                     )
                     return False
@@ -1441,16 +1458,21 @@ class PySide6AppController(QtCore.QObject):
             if gui_instance and hasattr(gui_instance, 'show_results_summary'):
                 gui_instance.show_results_summary(result)
             
-            # Update status
-            cluster_info = ""
-            if hasattr(result, 'clustering_results') and result.clustering_results:
-                if result.clustering_results.get('user_selected_cluster'):
-                    cluster_info = " [User Selected]"
-                elif result.clustering_results.get('best_cluster'):
-                    cluster_info = " [Auto Selected]"
-            
-            status_msg = f"Best: {getattr(result, 'template_name', 'Unknown')} ({getattr(result, 'consensus_type', 'Unknown')}){cluster_info}"
-            if gui_instance and hasattr(gui_instance, 'update_header_status'):
+            # Update status using GUI's classification header helper for consistent wording
+            status_msg = None
+            try:
+                if gui_instance and hasattr(gui_instance, '_compose_classification_header'):
+                    status_msg = gui_instance._compose_classification_header(result)
+                else:
+                    t = getattr(result, 'consensus_type', 'Unknown')
+                    st = getattr(result, 'best_subtype', '') or ''
+                    disp = f"{t} / {st}".strip().rstrip('/')
+                    status_msg = f"Classification: {disp}"
+            except Exception:
+                t = getattr(result, 'consensus_type', 'Unknown')
+                status_msg = f"Classification: {t}"
+
+            if gui_instance and hasattr(gui_instance, 'update_header_status') and status_msg:
                 gui_instance.update_header_status(status_msg)
             
             _LOGGER.debug("GUI updates completed from main thread")

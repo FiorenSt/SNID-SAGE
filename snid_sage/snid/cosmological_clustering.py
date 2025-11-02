@@ -22,7 +22,6 @@ from sklearn.mixture import GaussianMixture
 import logging
 import time
 from collections import defaultdict
-import scipy.stats as stats
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -1311,84 +1310,70 @@ def find_winning_cluster_top5_method(
 
 
 def _calculate_cluster_confidence(cluster_scores: List[Dict[str, Any]], metric_name: str) -> Dict[str, Any]:
-    """Calculate confidence in cluster selection vs alternatives."""
+    """Calculate relative confidence as percent improvement vs best different-type competitor.
+
+    Returns a minimal assessment with:
+      - confidence_pct: percent improvement (NaN if no different-type competitor)
+      - confidence_level: discrete flag derived from confidence_pct
+      - second_best_type: type of best different-type competitor (or 'N/A')
+      - confidence_description: concise human-readable summary
+    """
+    # Not enough clusters to compare
     if len(cluster_scores) < 2:
         return {
-            'confidence_level': 'High',
-            'confidence_description': 'Only one cluster available',
-            'margin_vs_second': float('inf'),
-            'statistical_significance': 'N/A'
+            'confidence_pct': float('nan'),
+            'confidence_level': 'No Comp',
+            'confidence_description': 'Single cluster',
+            'second_best_type': 'N/A'
         }
-    
-    # Determine the first runner-up cluster that is NOT of the same type as the winner
+
+    # Find the first runner-up of a different type than the winner
     winning_type = cluster_scores[0]['cluster_type']
     competitor_info = None
     for i in range(1, len(cluster_scores)):
         if cluster_scores[i]['cluster_type'] != winning_type:
             competitor_info = cluster_scores[i]
             break
-    
-    # If no different-type competitor exists, consider confidence High by consistency
+
+    # No different-type competitor -> undefined percent (NaN)
     if competitor_info is None:
         return {
-            'confidence_level': 'High',
-            'confidence_description': 'All top clusters share the same type; no different-type competitor',
-            'margin_vs_second': float('inf'),
-            'relative_margin': float('inf'),
-            'statistical_significance': 'N/A',
+            'confidence_pct': float('nan'),
+            'confidence_level': 'No Comp',
+            'confidence_description': 'No competitor',
             'second_best_type': 'N/A'
         }
-    
-    best_score = cluster_scores[0]['penalized_score']
-    second_best_score = competitor_info['penalized_score']
-    
-    # Calculate margin vs next-best different-type cluster
-    margin = best_score - second_best_score
-    relative_margin = margin / second_best_score if second_best_score > 0 else float('inf')
-    
-    # Determine confidence level based on margin
-    if relative_margin >= 0.3:  # 30% better than second best
-        confidence_level = 'High'
-        confidence_description = f'Winning cluster is {relative_margin*100:.1f}% better than second best'
-    elif relative_margin >= 0.15:  # 15% better
-        confidence_level = 'Medium'
-        confidence_description = f'Winning cluster is {relative_margin*100:.1f}% better than second best'
-    elif relative_margin >= 0.05:  # 5% better
-        confidence_level = 'Low'
-        confidence_description = f'Winning cluster is {relative_margin*100:.1f}% better than second best'
+
+    best_score = float(cluster_scores[0]['penalized_score'])
+    second_best_score = float(competitor_info['penalized_score'])
+
+    # Percent improvement; guard zero competitor
+    if second_best_score > 0.0:
+        confidence_pct = (best_score - second_best_score) / second_best_score * 100.0
     else:
-        confidence_level = 'Very Low'
-        confidence_description = f'Winning cluster is only {relative_margin*100:.1f}% better than second best'
-    
-    # Simple t-test approximation for statistical significance using the selected competitor
-    if len(cluster_scores) >= 2:
-        best_values = cluster_scores[0]['top_5_values']
-        second_values = competitor_info['top_5_values']
-        
-        if len(best_values) >= 2 and len(second_values) >= 2:
-            try:
-                t_stat, p_value = stats.ttest_ind(best_values, second_values)
-                if p_value < 0.01:
-                    statistical_significance = 'highly_significant'
-                elif p_value < 0.05:
-                    statistical_significance = 'significant'
-                elif p_value < 0.1:
-                    statistical_significance = 'marginally_significant'
-                else:
-                    statistical_significance = 'not_significant'
-            except:
-                statistical_significance = 'unknown'
+        # Treat as undefined; display can clamp if desired
+        confidence_pct = float('nan')
+
+    # Discrete flag from percent thresholds
+    if isinstance(confidence_pct, float) and not np.isnan(confidence_pct):
+        # Updated thresholds: High ≥ 100%, Medium ≥ 30%, Low ≥ 10%, else Very Low
+        if confidence_pct >= 100.0:
+            confidence_level = 'High'
+        elif confidence_pct >= 30.0:
+            confidence_level = 'Medium'
+        elif confidence_pct >= 10.0:
+            confidence_level = 'Low'
         else:
-            statistical_significance = 'insufficient_data'
+            confidence_level = 'Very Low'
+        confidence_description = f"{confidence_pct:.1f}% better than second best"
     else:
-        statistical_significance = 'N/A'
-    
+        confidence_level = 'N/A'
+        confidence_description = 'N/A'
+
     return {
+        'confidence_pct': confidence_pct,
         'confidence_level': confidence_level,
         'confidence_description': confidence_description,
-        'margin_vs_second': margin,
-        'relative_margin': relative_margin,
-        'statistical_significance': statistical_significance,
         'second_best_type': competitor_info['cluster_type']
     }
 
@@ -1456,7 +1441,6 @@ def _log_cluster_selection_details(assessment: Dict[str, Any]) -> None:
     _LOGGER.info(f"🔍 CONFIDENCE ASSESSMENT:")
     _LOGGER.info(f"   Confidence level: {confidence['confidence_level'].upper()}")
     _LOGGER.info(f"   {confidence['confidence_description']}")
-    _LOGGER.info(f"   Statistical significance: {confidence['statistical_significance']}")
     
     _LOGGER.info(f"📊 QUALITY ASSESSMENT:")
     _LOGGER.info(f"   Quality category: {quality['quality_category']}")

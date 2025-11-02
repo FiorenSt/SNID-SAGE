@@ -305,6 +305,22 @@ def preprocess_spectrum(
             f"Insufficient overlap with active grid: only {overlap_angstrom:.1f} Å "
             f"(< {float(min_overlap_angstrom):.0f} Å required)."
         )
+        # Suggest ONIR profile when spectrum sufficiently overlaps the ONIR grid
+        try:
+            active_pid = str(getattr(_profile_for_bounds, "id", "")).strip().lower()
+            if active_pid != "onir":
+                onir_profile = get_profile("onir")
+                onir_min = float(onir_profile.grid.min_wave_A)
+                onir_max = float(onir_profile.grid.max_wave_A)
+                onir_overlap = max(0.0, min(wmax, onir_max) - max(wmin, onir_min))
+                if onir_overlap >= float(min_overlap_angstrom):
+                    msg += (
+                        f" Tip: the spectrum overlaps the ONIR grid by {onir_overlap:.1f} Å; "
+                        f"consider using the ONIR profile (--profile onir) for extended coverage "
+                        f"(~2000–25000 Å)."
+                    )
+        except Exception:
+            pass
         _LOG.warning(msg)
         raise SpectrumProcessingError(msg)
 

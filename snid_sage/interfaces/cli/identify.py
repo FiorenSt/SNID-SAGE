@@ -488,9 +488,9 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
         
         if 'confidence_assessment' in winning_cluster:
             ca = winning_cluster['confidence_assessment']
-            summary['cluster_confidence_level'] = ca.get('confidence_level', 'unknown')
+            summary['cluster_confidence_pct'] = ca.get('confidence_pct')
+            summary['cluster_confidence_level'] = ca.get('confidence_level', 'N/A')
             summary['cluster_confidence_description'] = ca.get('confidence_description', '')
-            summary['cluster_statistical_significance'] = ca.get('statistical_significance', 'unknown')
             summary['cluster_second_best_type'] = ca.get('second_best_type', 'N/A')
         
         # Calculate enhanced cluster statistics using hybrid methods

@@ -626,7 +626,7 @@ class AnalysisMenuManager:
                     # Update the clustering results with the new winning cluster
                     if hasattr(snid_results, 'clustering_results'):
                         snid_results.clustering_results['winning_cluster'] = selected_cluster
-                        snid_results.clustering_results['best_cluster'] = selected_cluster
+                        # Preserve original 'best_cluster' for comparison in summaries; don't overwrite it here
                         snid_results.clustering_results['user_selected_cluster'] = selected_cluster
                         snid_results.clustering_results['user_selected_index'] = selected_index
                         

@@ -411,9 +411,9 @@ class UnifiedResultsFormatter:
             'cluster_quality_description': winning_cluster.get('quality_assessment', {}).get('quality_description', '') if winning_cluster else '',
             'cluster_mean_top_5': winning_cluster.get('quality_assessment', {}).get('mean_top_5', 0) if winning_cluster else 0,
             'cluster_penalized_score': winning_cluster.get('quality_assessment', {}).get('penalized_score', 0) if winning_cluster else 0,
+            'cluster_confidence_pct': winning_cluster.get('confidence_assessment', {}).get('confidence_pct', None) if winning_cluster else None,
             'cluster_confidence_level': winning_cluster.get('confidence_assessment', {}).get('confidence_level', '') if winning_cluster else '',
             'cluster_confidence_description': winning_cluster.get('confidence_assessment', {}).get('confidence_description', '') if winning_cluster else '',
-            'cluster_statistical_significance': winning_cluster.get('confidence_assessment', {}).get('statistical_significance', '') if winning_cluster else '',
             'cluster_second_best_type': winning_cluster.get('confidence_assessment', {}).get('second_best_type', '') if winning_cluster else '',
             
             # Template matches (ALL from active matches if clustering, otherwise respect engine-selected count)
@@ -428,6 +428,81 @@ class UnifiedResultsFormatter:
             # Additional clustering statistics
             'clustering_overview': self._get_clustering_overview() if hasattr(result, 'clustering_results') else None,
         }
+
+        # Override second_best_subtype to reflect the competitor type's winning subtype (if available)
+        try:
+            if winning_cluster and hasattr(result, 'clustering_results') and result.clustering_results:
+                clres = result.clustering_results
+                all_candidates = clres.get('all_candidates', []) or []
+                if isinstance(all_candidates, list) and len(all_candidates) > 1:
+                    # Sort candidates by penalized score desc
+                    def _pen_score(c):
+                        try:
+                            return float(c.get('quality_assessment', {}).get('penalized_score', 0.0))
+                        except Exception:
+                            return 0.0
+                    sorted_candidates = sorted(all_candidates, key=_pen_score, reverse=True)
+                    winning_type = winning_cluster.get('type', '')
+                    competitor = None
+                    for c in sorted_candidates:
+                        if c.get('type', '') != winning_type:
+                            competitor = c
+                            break
+                    if competitor:
+                        comp_best_subtype = competitor.get('subtype_info', {}).get('best_subtype', None)
+                        if comp_best_subtype:
+                            summary['second_best_subtype'] = comp_best_subtype
+        except Exception:
+            pass
+
+        # If clustering is present but no quality assessment provided, fill from existing
+        # cluster fields. Prefer the precomputed penalized_score used for ranking; as a
+        # fallback, derive it from the top-5 matches in this cluster.
+        if winning_cluster and not summary.get('cluster_quality_level'):
+            try:
+                penalized = None
+                if isinstance(winning_cluster.get('penalized_score', None), (int, float)):
+                    penalized = float(winning_cluster.get('penalized_score'))
+                elif cluster_matches:
+                    from snid_sage.shared.utils.math_utils import get_best_metric_value, compute_cluster_weights
+                    pairs = []
+                    for m in cluster_matches:
+                        metric = float(get_best_metric_value(m))
+                        sigma = m.get('redshift_error', m.get('z_err', m.get('sigma_z', None)))
+                        sigma = float(sigma) if sigma is not None else float('nan')
+                        pairs.append((metric, sigma))
+                    if pairs:
+                        pairs.sort(key=lambda x: x[0], reverse=True)
+                        top = pairs[:5]
+                        top_metrics = np.asarray([p[0] for p in top], dtype=float)
+                        top_sigmas = np.asarray([p[1] for p in top], dtype=float)
+                        valid = (np.isfinite(top_metrics) & np.isfinite(top_sigmas) & (top_sigmas > 0))
+                        if np.any(valid):
+                            weights = compute_cluster_weights(top_metrics[valid], top_sigmas[valid])
+                            sw = np.sum(weights)
+                            mean_top = float(np.sum(weights * top_metrics[valid]) / sw) if sw > 0 else float(np.mean(top_metrics))
+                        else:
+                            mean_top = float(np.mean(top_metrics))
+                        penalty = min(len(top_metrics) / 5.0, 1.0)
+                        penalized = mean_top * penalty
+                if penalized is not None:
+                    if penalized > 10.0:
+                        q_cat = 'High'
+                        q_desc = f'Excellent match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                    elif penalized >= 4.0:
+                        q_cat = 'Medium'
+                        q_desc = f'Good match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                    elif penalized >= 2.5:
+                        q_cat = 'Low'
+                        q_desc = f'Poor match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                    else:
+                        q_cat = 'Very Low'
+                        q_desc = f'Very poor match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                    summary['cluster_quality_level'] = q_cat
+                    summary['cluster_quality_description'] = q_desc
+                    summary['cluster_penalized_score'] = penalized
+            except Exception:
+                pass
 
         # If no clustering, compute a type-level match quality from penalized top-5 RLAP-CCC
         if not winning_cluster and active_matches:
@@ -612,26 +687,33 @@ class UnifiedResultsFormatter:
         # Winning Type table (simple, compact)
         # Keep single blank line before this section
         lines.append("Winning Type")
-        header_title = "Type   | Match Quality | Relative Confidence | Margin vs next best type"
+        header_title = "Type   | Match Quality | Confidence vs next best type"
         lines.append("-" * len(header_title))
         lines.append(header_title)
         # Compose cells with safe fallbacks
         type_cell = s.get('consensus_type', 'Unknown') or 'Unknown'
-        conf_cell = s.get('cluster_confidence_level', '')
-        conf_cell = conf_cell.title() if conf_cell else 'N/A'
+        # Confidence: discrete level and percent (and competitor) when available
+        conf_level = s.get('cluster_confidence_level', '')
+        conf_level = conf_level.title() if conf_level else ''
+        conf_pct = s.get('cluster_confidence_pct', None)
+        second_best_type = s.get('cluster_second_best_type', 'N/A')
+        if isinstance(conf_pct, (int, float)):
+            try:
+                conf_pct_val = float(conf_pct)
+                if np.isfinite(conf_pct_val):
+                    if second_best_type and second_best_type != 'N/A':
+                        conf_cell = f"{conf_level or 'N/A'} (+{conf_pct_val:.1f}%, vs {second_best_type})"
+                    else:
+                        conf_cell = f"{conf_level or 'N/A'} (+{conf_pct_val:.1f}%)"
+                else:
+                    conf_cell = conf_level or 'N/A'
+            except Exception:
+                conf_cell = conf_level or 'N/A'
+        else:
+            conf_cell = conf_level or 'N/A'
         qual_cell = s.get('cluster_quality_level', '')
         qual_cell = qual_cell.title() if qual_cell else 'N/A'
-        # Extract margin if available
-        margin_cell = 'N/A'
-        try:
-            desc = s.get('cluster_confidence_description', '') or ''
-            if '% better than second best' in desc:
-                m = re.search(r'(\d+\.?\d*)% better than second best', desc)
-                if m:
-                    margin_cell = f"+{m.group(1)}% (vs {s.get('cluster_second_best_type','N/A')})"
-        except Exception:
-            pass
-        lines.append(f"{type_cell:<6} | {qual_cell:<13} | {conf_cell:<19} | {margin_cell}")
+        lines.append(f"{type_cell:<6} | {qual_cell:<13} | {conf_cell}")
         # Extra blank line before subtype table for clearer separation
         lines.append("")
         

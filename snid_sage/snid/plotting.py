@@ -498,17 +498,24 @@ def plot_comparison(result: Any, figsize: Tuple[int, int] = (12, 9),
     if template_age is not None and np.isfinite(template_age):
         info_text += f"Age: {template_age:.1f} days\n"
     
-
     
-    if hasattr(result, 'type_confidence'):
-        # Convert numeric confidence to qualitative level (like CLI)
-        if result.type_confidence > 0.7:
-            confidence_level = "High"
-        elif result.type_confidence > 0.4:
-            confidence_level = "Medium"
-        else:
-            confidence_level = "Low"
-        info_text += f"Confidence: {confidence_level}\n"
+    # Show confidence from clustering assessment when available
+    try:
+        ca = None
+        if hasattr(result, 'clustering_results') and result.clustering_results:
+            if isinstance(result.clustering_results, dict):
+                bestc = result.clustering_results.get('best_cluster')
+                if isinstance(bestc, dict):
+                    ca = bestc.get('confidence_assessment')
+        if isinstance(ca, dict):
+            level = ca.get('confidence_level', 'N/A')
+            pct = ca.get('confidence_pct', None)
+            if isinstance(pct, (int, float)) and np.isfinite(float(pct)):
+                info_text += f"Confidence: {level} (+{float(pct):.1f}%)\n"
+            else:
+                info_text += f"Confidence: {level}\n"
+    except Exception:
+        pass
     
     # Match statistics
     if hasattr(result, 'match_statistics'):
