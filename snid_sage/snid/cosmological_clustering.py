@@ -359,15 +359,24 @@ def perform_direct_gmm_clustering(
         
         clustering_results[sn_type] = type_result
         
-        if type_result['success'] and 'gmm_model' in type_result:
+        # Proceed when we have clusters, regardless of having a fitted GMM model
+        if type_result.get('success') and type_result.get('clusters'):
             # For each cluster, use the EXACT same winning cluster selection as reference
             type_redshifts = np.array([m['redshift'] for m in type_matches])
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             type_metric_values = np.array([get_best_metric_value(m) for m in type_matches])
             
-            # Get cluster labels for this type
+            # Get cluster labels for this type (prefer GMM; fallback to gamma/argmax; else single cluster)
             features = type_redshifts.reshape(-1, 1)
-            labels = type_result['gmm_model'].predict(features)
+            if 'gmm_model' in type_result and type_result['gmm_model'] is not None:
+                labels = type_result['gmm_model'].predict(features)
+            elif 'gamma' in type_result and isinstance(type_result['gamma'], np.ndarray):
+                try:
+                    labels = np.argmax(type_result['gamma'], axis=1)
+                except Exception:
+                    labels = np.zeros(len(type_matches), dtype=int)
+            else:
+                labels = np.zeros(len(type_matches), dtype=int)
             
             # Note: winning_cluster_id is now determined by the new top-5 method at the end
             # We don't need this old selection here anymore
@@ -922,13 +931,21 @@ def _create_single_cluster_result(
         'composite_score': 0.0
     }
     
+    # Create a trivial responsibilities matrix (all weight to the single cluster)
+    try:
+        gamma = np.ones((len(type_matches), 1), dtype=float)
+    except Exception:
+        gamma = None
+
     return {
         'success': True,
         'type': sn_type,
         'optimal_n_clusters': 1,
         'final_n_clusters': 1,
         'clusters': [cluster_info],
-        'quality_threshold': quality_threshold
+        'quality_threshold': quality_threshold,
+        'gamma': gamma,
+        'type_matches': type_matches
     }
 
 
@@ -937,7 +954,7 @@ def choose_subtype_weighted_voting(
     k_star: int, 
     matches: List[Dict[str, Any]], 
     gamma: np.ndarray, 
-    resp_cut: float = 0.1
+    resp_cut: float = 0.001
 ) -> tuple:
     """
     Choose the best subtype within the winning cluster using top-5 best metric method.
@@ -967,23 +984,31 @@ def choose_subtype_weighted_voting(
         raise ValueError(f"Cluster index {k_star} is out of bounds for gamma matrix with {gamma.shape[1]} clusters")
     
     for i, match in enumerate(matches):
-        if gamma[i, k_star] >= resp_cut:
-            subtype = match['template'].get('subtype', 'Unknown')
-            if not subtype or subtype.strip() == '':
-                subtype = 'Unknown'
-            
-            # Use best available metric (RLAP-CCC if available, otherwise RLAP)
-            from snid_sage.shared.utils.math_utils import get_best_metric_value
-            metric_value = get_best_metric_value(match)
-            # Pull per-match redshift uncertainty if available
-            sigma_z = match.get('redshift_error', match.get('z_err', match.get('sigma_z', None)))
-            
-            cluster_members.append({
-                'subtype': subtype,
-                'metric_value': metric_value,
-                'cluster_membership': gamma[i, k_star],
-                'redshift_error': sigma_z
-            })
+        # Include members assigned to the selected cluster (no responsibility threshold)
+        # Assignment is by argmax of responsibilities, matching how cluster members are defined downstream
+        try:
+            assigned_cluster = int(np.argmax(gamma[i, :]))
+        except Exception:
+            assigned_cluster = -1
+        if assigned_cluster != k_star:
+            continue
+        
+        subtype = match['template'].get('subtype', 'Unknown')
+        if not subtype or subtype.strip() == '':
+            subtype = 'Unknown'
+        
+        # Use best available metric (RLAP-CCC if available, otherwise RLAP)
+        from snid_sage.shared.utils.math_utils import get_best_metric_value
+        metric_value = get_best_metric_value(match)
+        # Pull per-match redshift uncertainty if available
+        sigma_z = match.get('redshift_error', match.get('z_err', match.get('sigma_z', None)))
+        
+        cluster_members.append({
+            'subtype': subtype,
+            'metric_value': metric_value,
+            'cluster_membership': gamma[i, k_star],
+            'redshift_error': sigma_z
+        })
     
     if not cluster_members:
         return "Unknown", 0.0, 0.0, None
@@ -1196,6 +1221,7 @@ def find_winning_cluster_top5_method(
         sigmas = [s for _, s in top_5_pairs]
         
         # Calculate weighted mean of top 5 using w = metric^2 / sigma_z^2; fallback to unweighted mean
+        top_1_share = 0.0
         if top_5_values:
             from snid_sage.shared.utils.math_utils import compute_cluster_weights
             metrics_array = np.asarray(top_5_values, dtype=float)
@@ -1205,18 +1231,27 @@ def find_winning_cluster_top5_method(
                 weights = compute_cluster_weights(metrics_array[valid_mask], sigmas_array[valid_mask])
                 sum_w = np.sum(weights)
                 top_5_mean = float(np.sum(weights * metrics_array[valid_mask]) / sum_w) if sum_w > 0 else float(np.mean(metrics_array))
+                # Contribution share of the first/top match among the top-5 weights
+                if sum_w > 0 and valid_mask.size > 0 and valid_mask[0]:
+                    # Index 0 corresponds to the highest-metric match
+                    # Map index 0 in full array to its position in the compressed valid array
+                    pos0 = int(np.flatnonzero(valid_mask)[0])
+                    top_1_share = float(weights[pos0] / sum_w) if pos0 < len(weights) else 0.0
+                else:
+                    top_1_share = 0.0
             else:
                 top_5_mean = float(np.mean(metrics_array))
+                top_1_share = 1.0 / float(len(metrics_array))
         else:
             top_5_mean = 0.0
+            top_1_share = 0.0
         
-        # Apply penalty for clusters with fewer than 5 points
-        penalty_factor = 1.0
-        if len(metric_sigma_pairs) < 5:
-            # Penalty: reduce score by 5% for each missing match (so clusters with <5 still participate)
-            penalty_factor = 0.95 ** (5 - len(metric_sigma_pairs))
-            
-        penalized_score = top_5_mean * penalty_factor  # No hard quality threshold – keep ALL clusters
+        # Apply penalty using the same linear scheme as subtype selection: count/5.0 (capped at 1.0)
+        penalty_factor = (len(top_5_values) / 5.0) if top_5_values else 0.0
+        if penalty_factor > 1.0:
+            penalty_factor = 1.0
+        
+        penalized_score = top_5_mean * penalty_factor  # Keep ALL clusters; penalize small ones linearly
         
         # Annotate the original cluster dictionary so downstream UIs can display these metrics
         cluster['top_5_values'] = top_5_values
@@ -1225,6 +1260,8 @@ def find_winning_cluster_top5_method(
         cluster['penalized_score'] = penalized_score
         # For convenience update composite_score field used in various summaries
         cluster['composite_score'] = penalized_score
+        # Store the top-1 contribution share for diagnostics/reporting
+        cluster['top_1_share'] = top_1_share
         
         cluster_info = {
             'cluster': cluster,
@@ -1234,7 +1271,8 @@ def find_winning_cluster_top5_method(
             'penalty_factor': penalty_factor,
             'penalized_score': penalized_score,
             'cluster_type': cluster.get('type', 'Unknown'),
-            'cluster_id': cluster.get('cluster_id', 0)
+            'cluster_id': cluster.get('cluster_id', 0),
+            'top_1_share': top_1_share
         }
         
         cluster_scores.append(cluster_info)
@@ -1364,16 +1402,23 @@ def _calculate_absolute_quality(winning_cluster_info: Dict[str, Any], metric_nam
     penalty_factor = winning_cluster_info['penalty_factor']
     cluster_size = winning_cluster_info['cluster_size']
     
-    # Quality categories based on penalized top-5 mean
-    if penalized_score >= 10.0:
+    # Quality categories based solely on penalized top-5 mean (global rule)
+    #  - Very Low: < 2.5
+    #  - Low: 2.5 to < 4.0
+    #  - Medium: 4.0 to ≤ 10.0
+    #  - High: > 10.0
+    if penalized_score > 10.0:
         quality_category = 'High'
         quality_description = f'Excellent match quality (penalized top-5 {metric_name}: {penalized_score:.1f})'
-    elif penalized_score >= 5.0:
+    elif penalized_score >= 4.0:
         quality_category = 'Medium'
         quality_description = f'Good match quality (penalized top-5 {metric_name}: {penalized_score:.1f})'
-    else:
+    elif penalized_score >= 2.5:
         quality_category = 'Low'
         quality_description = f'Poor match quality (penalized top-5 {metric_name}: {penalized_score:.1f})'
+    else:
+        quality_category = 'Very Low'
+        quality_description = f'Very poor match quality (penalized top-5 {metric_name}: {penalized_score:.1f})'
     
     # Add penalty information if applicable
     if penalty_factor < 1.0:
@@ -1402,6 +1447,11 @@ def _log_cluster_selection_details(assessment: Dict[str, Any]) -> None:
     _LOGGER.info(f"   Top-5 mean: {winning_info['top_5_mean']:.3f}")
     _LOGGER.info(f"   Penalty factor: {winning_info['penalty_factor']:.3f}")
     _LOGGER.info(f"   Final score: {winning_info['penalized_score']:.3f}")
+    try:
+        share_pct = float(winning_info.get('top_1_share', 0.0)) * 100.0
+        _LOGGER.info(f"   Top-1 share of weighted top-5: {share_pct:.1f}%")
+    except Exception:
+        pass
     
     _LOGGER.info(f"🔍 CONFIDENCE ASSESSMENT:")
     _LOGGER.info(f"   Confidence level: {confidence['confidence_level'].upper()}")

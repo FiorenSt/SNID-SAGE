@@ -2,6 +2,15 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
+## [0.10.0] - 2025-11-01
+
+- Added ONIR profile option with extended optical+near-IR coverage
+  - Redshift reach: up to z = 2.5 (optical profile reaches z = 1.0)
+  - Designed for higher-z analyses where near-IR features are informative
+- Added Templates GUI (`snid-sage-templates`)
+  - Create and manage user templates that complement the default library
+  - Streamlined import, inspection, and metadata handling for custom templates
+
 ## [0.9.1] - 2025-10-08
 
 - Uncertainty: Corrected cluster redshift SE to use σ = √(Σ w² σ²) / Σ w with w = exp(√RLAP-CCC)/σ². This replaces the previous RMS-style propagation.

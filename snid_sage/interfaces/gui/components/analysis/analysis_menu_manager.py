@@ -577,19 +577,19 @@ class AnalysisMenuManager:
                 )
                 return
             
-            # Check if we have clustering results with multiple candidates
+            # Check if we have clustering results with candidates
             clustering_results = getattr(snid_results, 'clustering_results', None)
             all_candidates = None
             
             if clustering_results:
                 all_candidates = clustering_results.get('all_candidates', [])
                 
-            # If we have multiple cluster candidates, show selection dialog
-            if all_candidates and len(all_candidates) > 1:
+            # If we have any cluster candidates, show selection dialog (even one)
+            if all_candidates and len(all_candidates) >= 1:
                 _LOGGER.info(f"Opening cluster selection dialog with {len(all_candidates)} candidates")
                 self._show_cluster_selection_dialog(all_candidates, snid_results)
             else:
-                # Otherwise show the visualization dialog (current behavior)
+                # Otherwise show the visualization dialog (legacy fallback)
                 _LOGGER.info("Opening GMM clustering visualization dialog")
                 self._show_gmm_visualization_dialog(snid_results)
                 

@@ -428,6 +428,58 @@ class UnifiedResultsFormatter:
             # Additional clustering statistics
             'clustering_overview': self._get_clustering_overview() if hasattr(result, 'clustering_results') else None,
         }
+
+        # If no clustering, compute a type-level match quality from penalized top-5 RLAP-CCC
+        if not winning_cluster and active_matches:
+            try:
+                from snid_sage.shared.utils.math_utils import get_best_metric_value, compute_cluster_weights
+                # Build (metric, sigma_z) for matches of the consensus type if available
+                consensus_type = summary.get('consensus_type', None)
+                matches_scope = active_matches
+                if consensus_type:
+                    try:
+                        matches_scope = [m for m in active_matches if m.get('template', {}).get('type') == consensus_type]
+                        matches_scope = matches_scope or active_matches
+                    except Exception:
+                        matches_scope = active_matches
+                pairs = []
+                for m in matches_scope:
+                    metric = float(get_best_metric_value(m))
+                    sigma = m.get('redshift_error', m.get('z_err', m.get('sigma_z', None)))
+                    sigma = float(sigma) if sigma is not None else float('nan')
+                    pairs.append((metric, sigma))
+                if pairs:
+                    pairs.sort(key=lambda x: x[0], reverse=True)
+                    top = pairs[:5]
+                    top_metrics = np.asarray([p[0] for p in top], dtype=float)
+                    top_sigmas = np.asarray([p[1] for p in top], dtype=float)
+                    valid = (np.isfinite(top_metrics) & np.isfinite(top_sigmas) & (top_sigmas > 0))
+                    if np.any(valid):
+                        weights = compute_cluster_weights(top_metrics[valid], top_sigmas[valid])
+                        sw = np.sum(weights)
+                        mean_top = float(np.sum(weights * top_metrics[valid]) / sw) if sw > 0 else float(np.mean(top_metrics))
+                    else:
+                        mean_top = float(np.mean(top_metrics))
+                    penalty = min(len(top_metrics) / 5.0, 1.0)
+                    penalized = mean_top * penalty
+                    # Map to quality
+                    if penalized > 10.0:
+                        q_cat = 'High'
+                        q_desc = f'Excellent match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                    elif penalized >= 4.0:
+                        q_cat = 'Medium'
+                        q_desc = f'Good match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                    elif penalized >= 2.5:
+                        q_cat = 'Low'
+                        q_desc = f'Poor match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                    else:
+                        q_cat = 'Very Low'
+                        q_desc = f'Very poor match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                    summary['cluster_quality_level'] = q_cat
+                    summary['cluster_quality_description'] = q_desc + ' [No clustering]'
+                    summary['cluster_penalized_score'] = penalized
+            except Exception:
+                pass
         
         return summary
     
@@ -560,7 +612,7 @@ class UnifiedResultsFormatter:
         # Winning Type table (simple, compact)
         # Keep single blank line before this section
         lines.append("Winning Type")
-        header_title = "Type   | Quality | Confidence | Margin over next best type"
+        header_title = "Type   | Match Quality | Relative Confidence | Margin vs next best type"
         lines.append("-" * len(header_title))
         lines.append(header_title)
         # Compose cells with safe fallbacks
@@ -579,7 +631,7 @@ class UnifiedResultsFormatter:
                     margin_cell = f"+{m.group(1)}% (vs {s.get('cluster_second_best_type','N/A')})"
         except Exception:
             pass
-        lines.append(f"{type_cell:<6} | {qual_cell:<7} | {conf_cell:<10} | {margin_cell}")
+        lines.append(f"{type_cell:<6} | {qual_cell:<13} | {conf_cell:<19} | {margin_cell}")
         # Extra blank line before subtype table for clearer separation
         lines.append("")
         
@@ -701,19 +753,29 @@ class UnifiedResultsFormatter:
             except Exception:
                 pass
 
-            # Top-5 weighted scoring method (rank score):
-            #  - Select top 5 by metric value
-            #  - Compute weights w = metric^2 / sigma^2 (fallback to metric^2 when sigma<=0 or missing)
-            #  - Sum the weights of those top 5 for ranking
+            # Subtype ranking score must match selection logic: mean(top-5) × (n_top/5)
+            # - Use weights w = metric^2 / sigma_z^2 for the mean when sigma is available
             metrics_arr = np.array(agg['metrics'], dtype=float)
             sigmas_arr = np.array([e if (e is not None and np.isfinite(e) and e > 0) else np.nan for e in agg['z_errs']], dtype=float)
             if metrics_arr.size:
                 top_idx = np.argsort(-metrics_arr)[:5]
                 top_metrics = metrics_arr[top_idx]
                 top_sigmas = sigmas_arr[top_idx]
-                with np.errstate(divide='ignore', invalid='ignore'):
-                    weights_top = np.where(np.isfinite(top_sigmas) & (top_sigmas > 0), (top_metrics ** 2) / (top_sigmas ** 2), (top_metrics ** 2))
-                rank_score = float(np.nansum(weights_top)) if weights_top.size else 0.0
+                # Compute weighted mean of top metrics if any finite sigmas > 0, else unweighted mean
+                valid_mask = np.isfinite(top_metrics) & np.isfinite(top_sigmas) & (top_sigmas > 0)
+                if np.any(valid_mask):
+                    try:
+                        from snid_sage.shared.utils.math_utils import compute_cluster_weights
+                        weights = compute_cluster_weights(top_metrics[valid_mask], top_sigmas[valid_mask])
+                        sum_w = np.sum(weights)
+                        mean_top = float(np.sum(weights * top_metrics[valid_mask]) / sum_w) if sum_w > 0 else float(np.mean(top_metrics))
+                    except Exception:
+                        mean_top = float(np.mean(top_metrics))
+                else:
+                    mean_top = float(np.mean(top_metrics))
+                # Linear penalty for fewer than 5 templates (capped at 1.0)
+                penalty_factor = min(top_metrics.size / 5.0, 1.0)
+                rank_score = mean_top * penalty_factor
             else:
                 rank_score = 0.0
 

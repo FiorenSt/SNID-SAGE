@@ -397,12 +397,7 @@ Examples:
         help="Do not generate plots (by default plots are saved)"
     )
     
-    # General options
-    parser.add_argument(
-        "--verbose", "-v", 
-        action="store_true", 
-        help="Print detailed processing information"
-    )
+    # General options: rely on global --verbose/--debug from main parser
 
 
 def _get_winning_cluster(result: SNIDResult) -> Optional[Dict[str, Any]]:

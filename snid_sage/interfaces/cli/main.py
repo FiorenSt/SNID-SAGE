@@ -163,16 +163,6 @@ def main(argv: Optional[List[str]] = None) -> int:
                 rest_part.append(tok)
                 i += 1
 
-        try:
-            wants_verbose = any(f in argv for f in ['-v', '--verbose', '-d', '--debug'])
-            if sys.stderr.isatty() and wants_verbose:
-                print(
-                    "Tip: defaulting to 'identify' subcommand.",
-                    file=sys.stderr
-                )
-        except Exception:
-            pass
-
         argv = globals_part + ['identify'] + rest_part
     
     args = parser.parse_args(argv)
