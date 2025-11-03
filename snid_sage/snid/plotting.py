@@ -1317,10 +1317,10 @@ def plot_flux_comparison(match: Dict[str, Any], result: Any,
     This recreates the 'FLUX' view from Fortran SNID, showing the observed spectrum
     with the unflattened template in the same plot.
     
-    CRITICAL FIX: Now uses the correctly processed spectrum from SNID analysis.
-    - SNID analysis stores log_flux as the reconstructed apodized flux
-    - This is: (tapered_flux[left_edge:right_edge+1] + 1.0) * continuum[left_edge:right_edge+1]
-    - Data is already trimmed and filtered, matching the GUI's display exactly
+    Uses the processed spectrum from SNID analysis.
+    - log_flux is the reconstructed apodized flux
+    - (tapered_flux[left_edge:right_edge+1] + 1.0) * continuum[left_edge:right_edge+1]
+    - Data is trimmed and filtered to match the GUI display
     
     Parameters:
         match: Dictionary containing template match information
@@ -1594,10 +1594,10 @@ def plot_flat_comparison(match: Dict[str, Any], result: Any,
     This recreates the 'FLAT' view from Fortran SNID, showing the processed spectra
     for both the input and template, which highlights spectral features.
     
-    CRITICAL FIX: Now uses the correctly processed spectrum from SNID analysis.
-    - SNID analysis stores flat_flux as the apodized flat spectrum  
-    - This is: tapered_flux[left_edge:right_edge+1] (fully processed and apodized)
-    - Data is already trimmed and filtered, matching the GUI's display exactly
+    Uses the processed spectrum from SNID analysis.
+    - flat_flux is the apodized flat spectrum  
+    - tapered_flux[left_edge:right_edge+1] (processed and apodized)
+    - Data is trimmed and filtered to match the GUI display
     
     Parameters:
         match: Dictionary containing template match information

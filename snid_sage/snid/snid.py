@@ -80,43 +80,7 @@ def _resolve_active_profile(profile_id: Optional[str] = None):
     except Exception:
         return get_profile('optical')
 
-def _apply_feathered_masks_on_loggrid(log_wave: np.ndarray,
-                                      log_flux: np.ndarray,
-                                      masks: List[Dict[str, float]]) -> np.ndarray:
-    """Apply symmetric cosine feather masks on rebinned data (weights multiply flux)."""
-    if log_wave.size == 0 or log_flux.size == 0 or not masks:
-        return log_flux
-    w = log_wave.astype(float)
-    out = log_flux.copy()
-    weights = np.ones_like(out, dtype=float)
-    pi = np.pi
-    for m in masks:
-        try:
-            a = float(m.get('start_A'))
-            b = float(m.get('end_A'))
-            feather = float(m.get('feather_A', 0.0))
-        except Exception:
-            continue
-        if b <= a:
-            continue
-        # Core masked region weight = 0
-        core = (w >= a) & (w <= b)
-        weights[core] *= 0.0
-        if feather > 0:
-            # Left feather [a-feather, a]
-            left_lo = a - feather
-            left_mask = (w >= left_lo) & (w < a)
-            if np.any(left_mask):
-                x = (w[left_mask] - left_lo) / feather  # 0..1
-                weights[left_mask] *= 0.5 * (1 - np.cos(pi * x))
-            # Right feather [b, b+feather]
-            right_hi = b + feather
-            right_mask = (w > b) & (w <= right_hi)
-            if np.any(right_mask):
-                x = (right_hi - w[right_mask]) / feather  # 1..0
-                weights[right_mask] *= 0.5 * (1 - np.cos(pi * x))
-    out *= weights
-    return out
+
 
 # Use centralized logging system if available, fallback to standard logging
 try:
@@ -386,6 +350,21 @@ def preprocess_spectrum(
                 _LOG.debug(f"    Queued sky line masks (±{w:.1f} Å) for log-grid masking")
             except Exception:
                 pass
+
+        # Apply GUI-equivalent immediate clipping in linear wavelength
+        # (GUI Advanced Preprocessing removes samples before log rebin)
+        try:
+            if aband_remove:
+                wave, flux = clip_aband(wave, flux, (7550.0, 7700.0))
+                _LOG.debug("    Applied immediate telluric O2 A-band clipping (linear-λ; GUI-equivalent)")
+        except Exception:
+            pass
+        try:
+            if skyclip:
+                wave, flux = clip_sky_lines(wave, flux, width=float(emwidth))
+                _LOG.debug(f"    Applied immediate sky line clipping (±{float(emwidth):.1f} Å; GUI-equivalent)")
+        except Exception:
+            pass
         if emclip_z >= 0:
             # Keep current behavior for host emission clipping (narrow features)
             wave, flux = clip_host_emission_lines(wave, flux, emclip_z, emwidth)
@@ -430,23 +409,12 @@ def preprocess_spectrum(
         grid_spec = profile.grid
         init_wavelength_grid(num_points=grid_spec.nw, min_wave=grid_spec.min_wave_A, max_wave=grid_spec.max_wave_A)
         NW_grid, W0, W1, DWLOG_grid = get_grid_params()
-        # Use combined masks from Step 1 if present
+        # Use combined masks from Step 1 if present (mask-aware integration in all cases)
         combined_masks = trace.get("pending_mask_ranges") or wavelength_masks
-        if combined_masks:
-            from .preprocessing import log_rebin_interpolate_masked_only
-            log_wave, log_flux, mask_logbins = log_rebin_interpolate_masked_only(wave, flux, combined_masks)
-            trace["mask_logbins"] = mask_logbins.copy()
-        else:
-            log_wave, log_flux = log_rebin(wave, flux)
-            # Apply feathered masks only if profile has defaults
-            if profile.masks:
-                masks_dicts = [
-                    {'start_A': m.start_A, 'end_A': m.end_A, 'feather_A': m.feather_A}
-                    for m in profile.masks
-                ]
-                log_flux = _apply_feathered_masks_on_loggrid(log_wave, log_flux, masks_dicts)
-            trace["mask_logbins"] = np.zeros_like(log_flux, dtype=bool)
-        _LOG.info("Step 3: Performed log-wavelength rebinning (%s)", "interpolate" if (combined_masks is not None and len(combined_masks) > 0) else "integrate")
+        from .preprocessing import log_rebin_maskaware
+        log_wave, log_flux, mask_logbins = log_rebin_maskaware(wave, flux, combined_masks or [])
+        trace["mask_logbins"] = mask_logbins.copy()
+        _LOG.info("Step 3: Performed mask-aware log-wavelength rebinning")
         if verbose:
             _LOG.info(f"    Grid parameters: NW={NW_grid}, W0={W0:.1f}, W1={W1:.1f}, DWLOG={DWLOG_grid:.6f}")
     else:
@@ -485,8 +453,16 @@ def preprocess_spectrum(
     if "continuum_fitting" not in skip_steps:
         # Use a higher knot count for ONIR to keep bins-per-knot similar to optical
         knotnum_for_profile = 26 if getattr(profile, "id", None) == "onir" else 13
+        # Exclude masked bins from the continuum fit (treat them as zero so they are ignored)
+        try:
+            flux_for_continuum = log_flux.copy()
+            mask_logbins = trace.get("mask_logbins")
+            if mask_logbins is not None and getattr(mask_logbins, 'size', 0) == flux_for_continuum.size and np.any(mask_logbins):
+                flux_for_continuum[mask_logbins] = 0.0
+        except Exception:
+            flux_for_continuum = log_flux
         flat_flux, cont = fit_continuum(
-            log_flux,
+            flux_for_continuum,
             method="spline",
             knotnum=int(knotnum_for_profile)
         )
@@ -717,8 +693,8 @@ def _process_template_peaks(
                     ctr_p = -b_p / (2*a_p)
                     hgt_p = a_p*ctr_p**2 + b_p*ctr_p + c_p
                     
-                    # PATCH: Validate quadratic fit to prevent unrealistic extrapolation
-                    # If fitted center is too far from actual peak, use direct peak values
+                    # Validate quadratic fit to prevent unrealistic extrapolation
+                    # If fitted center is too far from the actual peak, use direct peak values
                     max_allowed_offset = peak_window_size  # Allow at most the search window size
                     if abs(ctr_p - peak_idx) > max_allowed_offset:
                         _LOG.debug(f"Quadratic fit extrapolated too far: center={ctr_p:.1f}, peak={peak_idx}, "
@@ -2595,7 +2571,7 @@ def run_snid_analysis(
         if any_ccc and isinstance(rlap_ccc_threshold, (int, float)):
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             filtered = [m for m in overlay_candidates if get_best_metric_value(m) >= float(rlap_ccc_threshold)]
-            # Do NOT fallback if filtering removes all — empty list correctly signals no reliable matches
+            # Do not fallback if filtering removes all; an empty list correctly signals no reliable matches
             overlay_candidates = filtered
     except Exception:
         pass

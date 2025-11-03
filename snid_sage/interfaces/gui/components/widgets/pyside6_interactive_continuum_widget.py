@@ -165,14 +165,24 @@ class PySide6InteractiveContinuumWidget(QtCore.QObject):
         # Edge handling note
         note_group = QtWidgets.QGroupBox("Note")
         note_layout = QtWidgets.QVBoxLayout(note_group)
+        # Add generous margins so longer notes fit comfortably
+        try:
+            note_layout.setContentsMargins(10, 12, 10, 14)
+        except Exception:
+            pass
         
         note_text = QtWidgets.QLabel(
-            "💡 Don't worry about spectrum edges during continuum editing.\n"
-            "They will be properly handled in the apodization step."
+            "💡 Don't worry about spectrum edges or masked regions (e.g., telluric) during continuum editing.\n"
+            "They are excluded from the fit and will be properly handled/zeroed in the apodization step."
         )
         note_text.setStyleSheet("color: #64748b; font-style: italic; font-size: 10pt;")
         note_text.setWordWrap(True)
         note_layout.addWidget(note_text)
+        # Add extra vertical space to ensure the note doesn't feel cramped
+        try:
+            note_layout.addSpacing(8)
+        except Exception:
+            pass
         
         layout.addWidget(note_group)
         
@@ -414,8 +424,8 @@ class PySide6InteractiveContinuumWidget(QtCore.QObject):
     def reset_to_fitted_continuum(self):
         """Reset continuum to original fitted values"""
         try:
-            # CRITICAL FIX: Instead of trying to get stored continuum, recalculate it fresh
-            # This ensures we get the actual fitted continuum that follows the spectrum shape
+            # Recalculate the continuum instead of using stored values
+            # Ensures the fitted continuum follows the current spectrum
             current_wave, current_flux = self.preview_calculator.get_current_state()
             method = getattr(self, '_current_method', 'spline')
             
@@ -484,8 +494,7 @@ class PySide6InteractiveContinuumWidget(QtCore.QObject):
             # Determine method
             method = getattr(self, '_current_method', 'spline')
             
-            # CRITICAL FIX: Force a fresh continuum calculation regardless of existing state
-            # We need to calculate the continuum on the current spectrum state
+            # Calculate the continuum from the current spectrum state
             if method == "spline":
                 knotnum = parameter_value if parameter_value is not None else 13
                 flat_flux, continuum = self.preview_calculator._fit_continuum_improved(current_flux, method="spline", knotnum=knotnum)

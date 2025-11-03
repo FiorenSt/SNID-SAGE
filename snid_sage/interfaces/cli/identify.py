@@ -1017,16 +1017,12 @@ def main(args: argparse.Namespace) -> int:
             output_dir_path = Path(args.output_dir)
             output_dir_path.mkdir(parents=True, exist_ok=True)
             
-            # CRITICAL FIX: Don't overwrite the processed_spectrum from SNID analysis!
-            # The SNID analysis already correctly stores the processed spectrum with apodized versions.
-            # Overwriting it with the original preprocessed spectrum loses the apodization information.
-            # Instead, merge the additional preprocessing info needed for complete output generation.
+            # Preserve the processed_spectrum from SNID analysis; merge needed preprocessing info for output.
             if not hasattr(result, 'processed_spectrum') or not result.processed_spectrum:
                 # Fallback: only set if SNID analysis didn't create one
                 result.processed_spectrum = processed_spectrum
             else:
-                # Enhance the existing processed_spectrum with full preprocessing data for output generation
-                # Add the missing keys that are needed for complete file output
+                # Add missing preprocessing fields required for complete file output
                 for key in ['tapered_flux', 'left_edge', 'right_edge', 'grid_params']:
                     if key in processed_spectrum and key not in result.processed_spectrum:
                         result.processed_spectrum[key] = processed_spectrum[key]

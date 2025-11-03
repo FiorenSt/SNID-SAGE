@@ -1464,15 +1464,15 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
         if failed_results:
             for name, success, message, _ in failed_results:
                 spectrum = name[:15]
-                cons_type = ''
-                cons_subtype = ''
-                z_str = ''
+                cons_type = 'nan'
+                cons_subtype = 'nan'
+                z_str = 'nan'
                 z_se_str = 'nan'
-                age_str = ''
+                age_str = 'nan'
                 age_se_str = 'nan'
-                best_metric_str = ''
-                match_quality = ''
-                type_conf = ''
+                best_metric_str = 'nan'
+                match_quality = 'nan'
+                type_conf = 'nan'
                 status_marker = 'x'
                 row = (
                     f"{spectrum:<16} {cons_type:<7} {cons_subtype:<12} "

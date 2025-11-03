@@ -188,7 +188,7 @@ class PySide6PlotManager:
     def init_pyqtgraph_plot(self):
         """Initialize PyQtGraph plot for better performance and Qt integration"""
         try:
-            # CRITICAL FIX: Configure PyQtGraph for complete software rendering (WSL compatibility)
+            # Configure PyQtGraph for complete software rendering (WSL compatibility)
             _LOGGER.debug("🔧 Configuring PyQtGraph for software rendering...")
             pg.setConfigOptions(
                 antialias=True, 
@@ -684,7 +684,7 @@ class PySide6PlotManager:
             _LOGGER.info(f"✅ Got spectrum data for {view_type} view: {len(wave)} points, wavelength range {wave[0]:.1f}-{wave[-1]:.1f}")
             _LOGGER.info(f"✅ Flux range: {np.min(flux):.2e} to {np.max(flux):.2e}")
             
-            # CRITICAL FIX: Clean up data arrays and remove non-finite values
+            # Clean up data arrays and remove non-finite values
             wave = np.asarray(wave, dtype=float)
             flux = np.asarray(flux, dtype=float)
             

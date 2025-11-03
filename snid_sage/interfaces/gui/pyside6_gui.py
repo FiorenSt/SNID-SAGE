@@ -1801,8 +1801,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
         try:
             _LOGGER.info("Cluster selection completed - staying in main window (skipping automatic results dialog)")
             
-            # Do NOT automatically show the results dialog anymore
-            # User can manually access results via the Analysis menu if needed
+            # Do not automatically show the results dialog; users can access it via the Analysis menu
             
             # Just update the main window status to indicate completion
             cluster_info = ""

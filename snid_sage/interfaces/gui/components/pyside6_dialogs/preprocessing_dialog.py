@@ -154,6 +154,12 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
                 prof = get_profile(active_pid or 'optical')
                 grid = prof.grid
                 init_wavelength_grid(num_points=int(grid.nw), min_wave=float(grid.min_wave_A), max_wave=float(grid.max_wave_A))
+                # Align GUI continuum defaults with profile: ONIR uses 26 knots by default
+                try:
+                    if hasattr(self, 'processing_params') and isinstance(self.processing_params, dict):
+                        self.processing_params['spline_knots'] = 26 if str(getattr(prof, 'id', 'optical')).lower() == 'onir' else 13
+                except Exception:
+                    pass
             except Exception:
                 # Safe fallback to defaults
                 init_wavelength_grid()
@@ -894,7 +900,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             return
         
         try:
-            # CRITICAL FIX: Cache current step to avoid accessing potentially deleted widgets
+            # Cache current step to avoid accessing deleted widgets
             step_to_apply = self.current_step
             _LOGGER.debug(f"Applying step {step_to_apply}")
             
@@ -1067,9 +1073,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             final_wave, final_flux = self.preview_calculator.get_current_state()
             
 
-            
-            # CRITICAL FIX: Get the continuum from the step history instead of stored_continuum
-            # which seems to get corrupted during GUI interactions
+            # Get the continuum from step history rather than stored_continuum to avoid GUI-state corruption
             continuum = None
             applied_steps = self.preview_calculator.applied_steps
             
@@ -1156,19 +1160,8 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             
 
             
-            # Get edge information from preview calculator (properly tracked through steps)
+            # Get edge information from preview calculator (will be recomputed below for parity)
             left_edge, right_edge = self.preview_calculator.get_current_edges()
-            
-            # Fallback to calculation if edges weren't tracked properly
-            if left_edge is None or right_edge is None:
-                # For continuum-subtracted spectra, negative values are valid
-                valid_mask = (final_flux != 0) & np.isfinite(final_flux)
-                if np.any(valid_mask):
-                    left_edge = np.argmax(valid_mask)
-                    right_edge = len(final_flux) - 1 - np.argmax(valid_mask[::-1])
-                else:
-                    left_edge = 0
-                    right_edge = len(final_flux) - 1
 
             
             # Determine what the final_flux actually represents based on the applied steps
@@ -1241,6 +1234,16 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
                 display_flux = final_flux.copy()  # Scaled flux
                 display_flat = final_flux.copy()  # Same data (no actual flattening occurred)
             
+            # Recompute edges exactly like CLI: based on log_flux (scaled) not flat
+            try:
+                valid_mask_cli = (log_flux != 0) & np.isfinite(log_flux)
+                if np.any(valid_mask_cli):
+                    left_edge = int(np.argmax(valid_mask_cli))
+                    right_edge = int(len(log_flux) - 1 - np.argmax(valid_mask_cli[::-1]))
+                else:
+                    left_edge, right_edge = 0, int(len(log_flux) - 1)
+            except Exception:
+                left_edge, right_edge = 0, int(len(log_flux) - 1)
 
             
         # Determine if apodization was already applied and which percent to use
@@ -1273,6 +1276,57 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             tapered_flux = apodize(flat_spectrum, l1, l2, percent=selected_percent)
         else:
             tapered_flux = flat_spectrum.copy()
+
+        # Derive mask bins on the log grid and zero them in flattened/apodized series (CLI parity)
+        mask_logbins = None
+        try:
+            # Prefer mask bins from preview calculator if available
+            if hasattr(self.preview_calculator, 'current_mask_logbins') and self.preview_calculator.current_mask_logbins is not None:
+                m = self.preview_calculator.current_mask_logbins
+                if len(m) == len(tapered_flux):
+                    mask_logbins = m.astype(bool)
+            # Fallback: compute from current mask regions against final_wave
+            if mask_logbins is None:
+                mask_regions = []
+                try:
+                    if hasattr(self, 'masking_widget') and self.masking_widget is not None:
+                        mask_regions = self.masking_widget.get_mask_regions() or []
+                except Exception:
+                    mask_regions = []
+                # Include A-band / sky using stable processing_params
+                try:
+                    apply_aband = bool(self.processing_params.get('clip_aband', False))
+                except Exception:
+                    apply_aband = False
+                try:
+                    apply_sky = bool(self.processing_params.get('clip_sky_lines', False))
+                except Exception:
+                    apply_sky = False
+                try:
+                    sky_width = float(self.processing_params.get('sky_width', 40.0))
+                except Exception:
+                    sky_width = 40.0
+                if apply_aband:
+                    mask_regions = list(mask_regions) + [(7550.0, 7700.0)]
+                if apply_sky:
+                    for l in (5577.0, 6300.2, 6364.0):
+                        mask_regions.append((l - sky_width, l + sky_width))
+                if mask_regions:
+                    try:
+                        from snid_sage.snid.preprocessing import compute_mask_on_loggrid
+                        mask_logbins = compute_mask_on_loggrid(final_wave, mask_regions)
+                    except Exception:
+                        mask_logbins = None
+            # Apply zeroing to flattened/apodized flux
+            if mask_logbins is not None and len(mask_logbins) == len(tapered_flux):
+                try:
+                    tapered_flux[mask_logbins] = 0.0
+                    # Keep flat_spectrum consistent with tapered_flux for downstream display logic
+                    flat_spectrum = tapered_flux.copy()
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
         # Always define flat and flux view consistently regardless of continuum method
         display_flat = tapered_flux  # apodized flat
@@ -1317,6 +1371,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
                 'W1': W1,
                 'DWLOG': DWLOG_grid
             },
+            'mask_logbins': mask_logbins.copy() if isinstance(mask_logbins, np.ndarray) else (mask_logbins if mask_logbins is None else np.asarray(mask_logbins, dtype=bool)),
             'has_continuum': bool(has_continuum_step and continuum is not None)
         }
         # Only include continuum-dependent keys when continuum fitting actually occurred
@@ -1371,7 +1426,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
     def _apply_step_2(self):
         """Apply log-wavelength rebinning and flux scaling exactly like original"""
         # Log rebinning is always applied (required for SNID)
-        # CRITICAL FIX: Cache widget values safely to avoid accessing deleted C++ objects
+        # Cache widget values to avoid accessing deleted C++ objects
         scale_flux = True  # default fallback
         
         if hasattr(self, 'flux_scaling_cb') and self.flux_scaling_cb is not None:
@@ -1379,8 +1434,33 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
                 scale_flux = self.flux_scaling_cb.isChecked()
             except RuntimeError as e:
                 _LOGGER.warning(f"Widget access error for flux_scaling_cb: {e}, using default value {scale_flux}")
+        # Forward mask regions and toggles so rebin is mask-aware (compute mask_logbins)
+        mask_regions = []
+        try:
+            if hasattr(self, 'masking_widget') and self.masking_widget is not None:
+                mask_regions = self.masking_widget.get_mask_regions() or []
+        except Exception:
+            mask_regions = []
+        # Use stable processing_params (widgets may be deleted when changing pages)
+        try:
+            apply_aband = bool(self.processing_params.get('clip_aband', False))
+        except Exception:
+            apply_aband = False
+        try:
+            apply_sky = bool(self.processing_params.get('clip_sky_lines', False))
+        except Exception:
+            apply_sky = False
+        try:
+            sky_width = float(self.processing_params.get('sky_width', 40.0))
+        except Exception:
+            sky_width = 40.0
+        if apply_aband:
+            mask_regions = list(mask_regions) + [(7550.0, 7700.0)]
+        if apply_sky:
+            for l in (5577.0, 6300.2, 6364.0):
+                mask_regions.append((l - sky_width, l + sky_width))
         
-        self.preview_calculator.apply_step("log_rebin_with_scaling", scale_to_mean=scale_flux, step_index=2)
+        self.preview_calculator.apply_step("log_rebin_with_scaling", scale_to_mean=scale_flux, mask_regions=mask_regions, step_index=2)
     
     def _apply_step_3(self):
         """Apply continuum fitting exactly like original"""
@@ -1397,7 +1477,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             method = self.processing_params['continuum_method']
             
             if method == 'spline':
-                # CRITICAL FIX: Cache widget values safely to avoid accessing deleted C++ objects
+                # Cache widget values to avoid accessing deleted C++ objects
                 knotnum = 13  # default fallback
                 
                 if hasattr(self, 'spline_knots_spin') and self.spline_knots_spin is not None:
@@ -1411,7 +1491,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
     
     def _apply_step_4(self):
         """Apply apodization exactly like original"""
-        # CRITICAL FIX: Cache widget values safely to avoid accessing deleted C++ objects
+        # Cache widget values to avoid accessing deleted C++ objects
         apply_apodization = False  # default fallback
         percent = 10.0  # default fallback
         
@@ -1485,8 +1565,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
                 # Check if we have continuum data to show
                 continuum_points = self.continuum_widget.get_continuum_points()
                 if continuum_points:
-                    # CRITICAL FIX: Get preview data using the current manual continuum
-                    # This ensures real-time updates during dragging
+                    # Use current manual continuum for real-time preview updates
                     if self.continuum_widget.is_interactive_mode():
                         # Use the manual continuum for real-time preview during interactive editing
                         wave_grid, manual_continuum = self.continuum_widget.get_manual_continuum_array()

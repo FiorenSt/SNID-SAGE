@@ -66,20 +66,24 @@ def apply_step(dialog) -> None:
             mask_regions = dialog.masking_widget.get_mask_regions() or []
     except Exception:
         mask_regions = []
-    # Include telluric A-band if toggled
+    # Include A-band/skylines using stable processing_params (widgets may be deleted)
     try:
-        if hasattr(dialog, 'aband_cb') and dialog.aband_cb is not None and bool(dialog.aband_cb.isChecked()):
-            mask_regions = list(mask_regions) + [(7550.0, 7700.0)]
+        apply_aband = bool(dialog.processing_params.get('clip_aband', False))
     except Exception:
-        pass
-    # Include sky-line masks if toggled
+        apply_aband = False
     try:
-        if hasattr(dialog, 'sky_cb') and dialog.sky_cb is not None and bool(dialog.sky_cb.isChecked()):
-            width = float(dialog.sky_width_spin.value()) if hasattr(dialog, 'sky_width_spin') and dialog.sky_width_spin is not None else 40.0
-            for l in (5577.0, 6300.2, 6364.0):
-                mask_regions.append((l - width, l + width))
+        apply_sky = bool(dialog.processing_params.get('clip_sky_lines', False))
     except Exception:
-        pass
+        apply_sky = False
+    try:
+        sky_width = float(dialog.processing_params.get('sky_width', 40.0))
+    except Exception:
+        sky_width = 40.0
+    if apply_aband:
+        mask_regions = list(mask_regions) + [(7550.0, 7700.0)]
+    if apply_sky:
+        for l in (5577.0, 6300.2, 6364.0):
+            mask_regions.append((l - sky_width, l + sky_width))
     dialog.preview_calculator.apply_step("log_rebin_with_scaling", scale_to_mean=scale_flux, mask_regions=mask_regions, step_index=2)
 
 
@@ -92,20 +96,24 @@ def calculate_preview(dialog):
             mask_regions = dialog.masking_widget.get_mask_regions() or []
     except Exception:
         mask_regions = []
-    # Include A-band if toggled
+    # Include A-band/skylines using stable processing_params
     try:
-        if hasattr(dialog, 'aband_cb') and dialog.aband_cb is not None and bool(dialog.aband_cb.isChecked()):
-            mask_regions = list(mask_regions) + [(7550.0, 7700.0)]
+        apply_aband = bool(dialog.processing_params.get('clip_aband', False))
     except Exception:
-        pass
-    # Include common sky lines if toggled
+        apply_aband = False
     try:
-        if hasattr(dialog, 'sky_cb') and dialog.sky_cb is not None and bool(dialog.sky_cb.isChecked()):
-            width = float(dialog.sky_width_spin.value()) if hasattr(dialog, 'sky_width_spin') and dialog.sky_width_spin is not None else 40.0
-            for l in (5577.0, 6300.2, 6364.0):
-                mask_regions.append((l - width, l + width))
+        apply_sky = bool(dialog.processing_params.get('clip_sky_lines', False))
     except Exception:
-        pass
+        apply_sky = False
+    try:
+        sky_width = float(dialog.processing_params.get('sky_width', 40.0))
+    except Exception:
+        sky_width = 40.0
+    if apply_aband:
+        mask_regions = list(mask_regions) + [(7550.0, 7700.0)]
+    if apply_sky:
+        for l in (5577.0, 6300.2, 6364.0):
+            mask_regions.append((l - sky_width, l + sky_width))
     return dialog.preview_calculator.preview_step("log_rebin_with_scaling", scale_to_mean=scale_to_mean, mask_regions=mask_regions)
 
 

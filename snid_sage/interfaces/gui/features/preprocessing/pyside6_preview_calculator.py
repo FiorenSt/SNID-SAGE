@@ -32,7 +32,7 @@ try:
     from snid_sage.snid.preprocessing import (
         savgol_filter_fixed,
         clip_aband, clip_sky_lines,
-        log_rebin, log_rebin_interpolate,
+        log_rebin, log_rebin_maskaware,
         fit_continuum, fit_continuum_spline,
         apodize,
     )
@@ -95,6 +95,8 @@ class PySide6PreviewCalculator(QtCore.QObject):
         self.continuum_method = None  # Store the method used for continuum fitting
         self.continuum_kwargs = None  # Store the parameters used
         self.has_continuum = False  # Track whether continuum removal has been applied
+        # Track mask bins on the log grid (from mask-aware rebin)
+        self.current_mask_logbins: Optional[np.ndarray] = None
         
         # Stage memory removed in simplified flow
         # Track edge information properly through preprocessing steps
@@ -357,31 +359,25 @@ class PySide6PreviewCalculator(QtCore.QObject):
             temp_flux = self.current_flux.copy()
             mask_regions = kwargs.get('mask_regions', None)
             
-            if SNID_AVAILABLE and not mask_regions:
-                # IMPORTANT: Use the already-initialized grid (set by the dialog via active profile)
-                # Do NOT re-resolve/re-initialize here, to avoid switching grids (e.g., ONIR 2048 → 1024)
+            if SNID_AVAILABLE:
+                # Use the already-initialized grid from the dialog's active profile; avoid re-initializing
                 from snid_sage.snid.preprocessing import get_grid_params
                 try:
-                    # This ensures the grid is initialized; it is set earlier by the dialog
                     get_grid_params()
                 except Exception:
-                    # As a last resort, let log_rebin trigger default initialization
                     pass
-                rebinned_wave, rebinned_flux = log_rebin(temp_wave, temp_flux)
+                rebinned_wave, rebinned_flux, mask_logbins = log_rebin_maskaware(temp_wave, temp_flux, mask_regions or [])
+                # Store mask bins for downstream steps (continuum, apodization, display)
+                try:
+                    self.current_mask_logbins = mask_logbins.copy() if mask_logbins is not None else None
+                except Exception:
+                    self.current_mask_logbins = mask_logbins
             else:
-                # Interpolation-based preview only inside masked regions (hybrid), when masks present or SNID not available
+                # Fallback when SNID is unavailable: build grid and interpolate (legacy behavior)
                 try:
                     if SNID_AVAILABLE and mask_regions:
-                        # Use hybrid: integrate baseline + interpolation only in masked bins
-                        # Baseline
-                        base_wave, base_flux = log_rebin(temp_wave, temp_flux)
-                        # Interp result + masked bins
-                        _, interp_flux, mask_logbins = log_rebin_interpolate(temp_wave, temp_flux, mask_regions)
-                        rebinned_wave = base_wave
-                        rebinned_flux = base_flux.copy()
-                        if mask_logbins is not None and mask_logbins.size == rebinned_flux.size:
-                            rebinned_flux[mask_logbins] = interp_flux[mask_logbins]
-                        return rebinned_wave, rebinned_flux
+                        # (This branch no longer reachable; kept for clarity)
+                        pass
                     import os
                     active_pid = os.environ.get('SNID_SAGE_ACTIVE_PROFILE') or os.environ.get('SNID_SAGE_PROFILE')
                     if active_pid is None:
@@ -418,8 +414,15 @@ class PySide6PreviewCalculator(QtCore.QObject):
                     else:
                         rebinned_flux = np.interp(np.log(rebinned_wave), np.log(w_src), f_src,
                                                   left=float(f_src[0]), right=float(f_src[-1]))
+                    # Compute and store mask bins against the target grid for downstream behavior
+                    try:
+                        from snid_sage.snid.preprocessing import compute_mask_on_loggrid
+                        self.current_mask_logbins = compute_mask_on_loggrid(rebinned_wave, mask_regions or [])
+                    except Exception:
+                        self.current_mask_logbins = None
                 else:
                     rebinned_flux = np.interp(rebinned_wave, temp_wave, temp_flux, left=0.0, right=0.0)
+                    self.current_mask_logbins = None
             return rebinned_wave, rebinned_flux
             
         except Exception as e:
@@ -475,6 +478,14 @@ class PySide6PreviewCalculator(QtCore.QObject):
         try:
             temp_wave = self.current_wave.copy()
             temp_flux = self.current_flux.copy()
+            # Exclude masked bins from continuum estimation if available
+            try:
+                if getattr(self, 'current_mask_logbins', None) is not None and len(self.current_mask_logbins) == len(temp_flux):
+                    # Set masked bins to zero so they are ignored by the fitter (which uses flux>0)
+                    temp_flux = temp_flux.copy()
+                    temp_flux[self.current_mask_logbins.astype(bool)] = 0.0
+            except Exception:
+                pass
             
             if method == "spline":
                 knotnum = kwargs.get('knotnum', 13)
@@ -543,6 +554,12 @@ class PySide6PreviewCalculator(QtCore.QObject):
                             out[n1:n1+ns] *= ramp
                             out[n2-ns+1:n2+1] *= ramp[::-1]
                         apodized_flux = out
+                    # After apodization, zero-out masked bins (to match CLI visuals)
+                    try:
+                        if getattr(self, 'current_mask_logbins', None) is not None and len(self.current_mask_logbins) == len(apodized_flux):
+                            apodized_flux[self.current_mask_logbins.astype(bool)] = 0.0
+                    except Exception:
+                        pass
                     return temp_wave, apodized_flux
             
             # If we can't find a valid range, return unchanged

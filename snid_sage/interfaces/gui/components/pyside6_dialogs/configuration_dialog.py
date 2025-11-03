@@ -804,9 +804,7 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
         # Merge defaults with current params
         params = {**self.default_params, **self.current_params}
         
-        # CRITICAL FIX: Check for existing forced redshift from redshift mode dialog
-        # This ensures that when users set forced redshift via the redshift mode dialog,
-        # it gets properly included in the configuration dialog
+        # Include any forced redshift from the redshift mode dialog
         if (self.app_controller and 
             hasattr(self.app_controller, 'redshift_mode_config') and 
             self.app_controller.redshift_mode_config):

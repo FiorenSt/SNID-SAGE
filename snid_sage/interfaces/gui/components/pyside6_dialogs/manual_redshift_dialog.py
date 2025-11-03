@@ -915,7 +915,7 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                 progress_callback("Running quick preprocessing...", 10)
                 
                 # Run minimal preprocessing for galaxy analysis
-                # CRITICAL FIX: Use isolated preprocessing that doesn't affect main GUI state
+                # Use isolated preprocessing that doesn't affect main GUI state
                 try:
                     # Resolve active profile from parent GUI when available
                     try:
@@ -937,9 +937,7 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                         profile_id=active_pid or 'optical'
                     )
                     
-                    # IMPORTANT: Do NOT store in main GUI to prevent contamination
-                    # This processed spectrum is ONLY for temporary redshift analysis
-                    # The main GUI's preprocessing state must remain unchanged
+                    # Do not store in the main GUI; this spectrum is only for temporary redshift analysis
                     
                     progress_callback("Preprocessing complete...", 25)
                     
