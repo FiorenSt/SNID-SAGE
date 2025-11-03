@@ -10,6 +10,7 @@ All notable changes to SNID SAGE will be documented in this file.
 - Added Templates GUI (`snid-sage-templates`)
   - Create and manage user templates that complement the default library
   - Streamlined import, inspection, and metadata handling for custom templates
+- Added profile onir/optical swap in GUI
 
 ## [0.9.1] - 2025-10-08
 
