@@ -839,6 +839,21 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
             # Set current view to flux
             self.current_view = 'flux'
             _LOGGER.info(f"🔧 FILE_LOADED: Set current_view to '{self.current_view}'")
+
+            # Reset left-panel status labels to pre-analysis defaults
+            try:
+                if hasattr(self, 'preprocess_status_label'):
+                    self.preprocess_status_label.setText("Preprocessing not run")
+                if hasattr(self, 'redshift_status_label'):
+                    self.redshift_status_label.setText("Redshift not set (optional)")
+                if hasattr(self, 'config_status_label'):
+                    self.config_status_label.setText("Default SNID parameters loaded")
+                if hasattr(self, 'emission_status_label'):
+                    self.emission_status_label.setText("Run analysis to enable")
+                if hasattr(self, 'ai_status_label'):
+                    self.ai_status_label.setText("Run analysis to enable")
+            except Exception:
+                pass
             
             
         elif new_state == WorkflowState.PREPROCESSED:

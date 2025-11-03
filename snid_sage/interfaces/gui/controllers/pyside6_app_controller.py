@@ -249,7 +249,7 @@ class PySide6AppController(QtCore.QObject):
         return self.current_state
     
     # File operations
-    def load_spectrum_file(self, file_path: str) -> bool:
+    def load_spectrum_file(self, file_path: str, *, offer_profile_switch: bool = True) -> bool:
         """
         Load spectrum data from file using robust spectrum loader
         
@@ -293,6 +293,44 @@ class PySide6AppController(QtCore.QObject):
 
                 wmin = float(np.min(self.original_wave))
                 wmax = float(np.max(self.original_wave))
+
+                # Offer ONIR profile when using optical and spectrum extends well beyond optical
+                suppress_clip_info = False
+                try:
+                    if (
+                        str(active_pid).strip().lower() == 'optical'
+                        and bool(offer_profile_switch)
+                        and wmax > 12000.0
+                    ):
+                        try:
+                            dlg = QtWidgets.QMessageBox(self.main_window)
+                            dlg.setIcon(QtWidgets.QMessageBox.Question)
+                            dlg.setWindowTitle("Better profile available")
+                            dlg.setText(
+                                (
+                                    "This spectrum extends beyond 12000 Å and matches the ONIR profile better.\n\n"
+                                    "Switch to ONIR (enables redshift up to 2.5 and ~2000–25000 Å) and reload, or clip to optical and continue?"
+                                )
+                            )
+                            switch_btn = dlg.addButton("Switch to ONIR", QtWidgets.QMessageBox.AcceptRole)
+                            clip_btn = dlg.addButton("Clip in Optical", QtWidgets.QMessageBox.YesRole)
+                            cancel_btn = dlg.addButton("Cancel", QtWidgets.QMessageBox.RejectRole)
+                            dlg.setDefaultButton(switch_btn)
+                            dlg.exec()
+
+                            clicked = dlg.clickedButton()
+                            if clicked is switch_btn:
+                                return self.switch_active_profile('onir', reload_current_file=True, show_notice=True)
+                            elif clicked is clip_btn:
+                                suppress_clip_info = True
+                            else:
+                                return False
+                        except Exception:
+                            # If dialog fails, continue with default behavior
+                            pass
+                except Exception:
+                    pass
+
                 has_overlap = (wmax >= gmin) and (wmin <= gmax)
                 if not has_overlap:
                     QtWidgets.QMessageBox.critical(
@@ -334,14 +372,15 @@ class PySide6AppController(QtCore.QObject):
                     )
                     return False
                 if (wmin < gmin) or (wmax > gmax):
-                    QtWidgets.QMessageBox.information(
-                        self.main_window,
-                        "Spectrum Will Be Clipped",
-                        (
-                            f"The spectrum extends beyond the active grid {gmin:.0f}-{gmax:.0f} Å (profile: {active_pid}).\n"
-                            f"It will be clipped to the grid during preprocessing."
-                        ),
-                    )
+                    if not suppress_clip_info:
+                        QtWidgets.QMessageBox.information(
+                            self.main_window,
+                            "Spectrum Will Be Clipped",
+                            (
+                                f"The spectrum extends beyond the active grid {gmin:.0f}-{gmax:.0f} Å (profile: {active_pid}).\n"
+                                f"It will be clipped to the grid during preprocessing."
+                            ),
+                        )
             except Exception:
                 pass
 
@@ -1168,6 +1207,123 @@ class PySide6AppController(QtCore.QObject):
         """Get current redshift value"""
         return self.galaxy_redshift_result
     
+    def switch_active_profile(self, new_profile_id: str, *, reload_current_file: bool = True, show_notice: bool = True) -> bool:
+        """Switch the active processing profile (e.g., 'optical' ⇄ 'onir') and optionally reload the current file.
+
+        Parameters:
+        -----------
+        new_profile_id: str
+            Target profile id ('optical' or 'onir').
+        reload_current_file: bool
+            When True and a file is loaded, reloads it under the new profile without prompting again.
+        show_notice: bool
+            When True, shows a small confirmation notice after switching.
+        """
+        try:
+            pid = str(new_profile_id).strip().lower() if new_profile_id else 'optical'
+            # Validate the profile exists
+            try:
+                from snid_sage.shared.profiles.builtins import register_builtins
+                from snid_sage.shared.profiles.registry import get_profile
+                register_builtins()
+                _ = get_profile(pid)
+            except Exception:
+                try:
+                    QtWidgets.QMessageBox.critical(
+                        self.main_window,
+                        "Invalid Profile",
+                        f"Requested profile '{pid}' is not available."
+                    )
+                except Exception:
+                    pass
+                return False
+
+            # If already on requested profile, optionally just reload
+            if str(getattr(self, 'active_profile_id', 'optical')).strip().lower() == pid:
+                if reload_current_file and getattr(self, 'current_file_path', None):
+                    return self.load_spectrum_file(self.current_file_path, offer_profile_switch=False)
+                return True
+
+            # Preserve current file path before resetting
+            prev_path = getattr(self, 'current_file_path', None)
+
+            # Switch the active profile for this session
+            self.active_profile_id = pid
+
+            # Optional notice
+            if show_notice:
+                try:
+                    QtWidgets.QMessageBox.information(
+                        self.main_window,
+                        "Profile Switched",
+                        f"Active profile set to '{pid}'."
+                    )
+                except Exception:
+                    pass
+
+            # Reset state to avoid mixing processed/analysis data across profiles
+            # If a file is loaded, reset back to FILE_LOADED state (preprocessing cleared)
+            # Otherwise, reset to INITIAL.
+            try:
+                if prev_path:
+                    self.reset_to_file_loaded_state()
+                else:
+                    self.reset_to_initial_state()
+            except Exception:
+                self.reset_to_initial_state()
+
+            # Reload prior file under the new profile without re-prompting
+            if reload_current_file and prev_path:
+                ok = self.load_spectrum_file(prev_path, offer_profile_switch=False)
+                try:
+                    if ok and hasattr(self, 'main_window') and self.main_window:
+                        # Ensure spectrum-only plot is shown (no overlays)
+                        try:
+                            from snid_sage.interfaces.gui.components.plots.pyside6_plot_manager import PlotMode
+                            if hasattr(self.main_window, 'plot_manager') and self.main_window.plot_manager:
+                                if self.main_window.plot_manager.current_plot_mode != PlotMode.SPECTRUM:
+                                    self.main_window.plot_manager.switch_to_plot_mode(PlotMode.SPECTRUM)
+                                # Plot spectrum for current view (reset sets view to 'flux')
+                                self.main_window.plot_manager.plot_spectrum(getattr(self.main_window, 'current_view', 'flux'))
+                        except Exception:
+                            pass
+
+                        # Update button states for flux/flat to reflect FILE_LOADED
+                        try:
+                            if hasattr(self.main_window, 'unified_layout_manager'):
+                                self.main_window.unified_layout_manager.update_flux_flat_button_states(
+                                    self.main_window,
+                                    flux_active=True,
+                                    flat_active=False,
+                                    flux_enabled=True,
+                                    flat_enabled=False
+                                )
+                        except Exception:
+                            pass
+
+                        # Update status labels
+                        try:
+                            from pathlib import Path as _Path
+                            fname = _Path(str(prev_path)).name
+                            if hasattr(self.main_window, 'status_label'):
+                                self.main_window.status_label.setText(f"Loaded: {fname}")
+                            if hasattr(self.main_window, 'file_status_label'):
+                                self.main_window.file_status_label.setText(f"File: {fname}")
+                                self.main_window.file_status_label.setStyleSheet("font-style: italic; color: #059669; font-size: 10px !important; font-weight: normal !important; font-family: 'Segoe UI', Arial, sans-serif !important; line-height: 1.0 !important;")
+                            # Clear any analysis classification header/status
+                            if hasattr(self.main_window, 'update_header_status'):
+                                self.main_window.update_header_status("File loaded")
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+                return ok
+
+            return True
+        except Exception as e:
+            _LOGGER.error(f"Error switching active profile: {e}")
+            return False
+
     # Reset operations
     def reset_to_initial_state(self):
         """Reset application to initial state - comprehensive reset including persistent settings"""

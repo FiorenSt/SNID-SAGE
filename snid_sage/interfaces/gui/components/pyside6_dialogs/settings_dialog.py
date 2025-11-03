@@ -210,6 +210,7 @@ class PySide6SettingsDialog(QtWidgets.QDialog):
         
         # Create tabs
         self._create_display_tab(tab_widget)
+        self._create_profile_tab(tab_widget)
         
         layout.addWidget(tab_widget, 1)
     
@@ -244,6 +245,42 @@ class PySide6SettingsDialog(QtWidgets.QDialog):
         layout.addStretch()
         tab_widget.addTab(tab, "🖥️ Display")
     
+    def _create_profile_tab(self, tab_widget):
+        """Create profile selection tab (optical/onir)."""
+        tab = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(tab)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(15)
+
+        group = QtWidgets.QGroupBox("Active Processing Profile")
+        group_layout = QtWidgets.QFormLayout(group)
+
+        # Use a combo box for easy collection via _collect_settings
+        self.widgets['active_profile_id'] = QtWidgets.QComboBox()
+        self.widgets['active_profile_id'].addItems(["optical", "onir"])
+        # Initialize from current GUI controller if available
+        try:
+            current_pid = 'optical'
+            if hasattr(self.parent_gui, 'app_controller') and hasattr(self.parent_gui.app_controller, 'active_profile_id'):
+                current_pid = str(self.parent_gui.app_controller.active_profile_id).strip().lower() or 'optical'
+            idx = self.widgets['active_profile_id'].findText(current_pid)
+            if idx >= 0:
+                self.widgets['active_profile_id'].setCurrentIndex(idx)
+        except Exception:
+            pass
+
+        self.widgets['active_profile_id'].setToolTip("Choose the active processing profile. ONIR enables ~2000–25000 Å and z up to 2.5.")
+        group_layout.addRow("Profile:", self.widgets['active_profile_id'])
+
+        hint = QtWidgets.QLabel("Switching profile will reset the GUI. If a file is loaded, it will be reloaded under the new profile.")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #64748b;")
+
+        layout.addWidget(group)
+        layout.addWidget(hint)
+        layout.addStretch()
+        tab_widget.addTab(tab, "✨ Profile")
+
 
     
     # Behavior tab removed per requirements
@@ -471,6 +508,22 @@ class PySide6SettingsDialog(QtWidgets.QDialog):
         # Apply to parent if available
         if hasattr(self.parent_gui, 'apply_settings'):
             self.parent_gui.apply_settings(settings)
+
+        # Handle profile switch if changed
+        try:
+            target_pid = str(settings.get('active_profile_id', '')).strip().lower()
+            if target_pid in {'optical', 'onir'}:
+                current_pid = None
+                try:
+                    if hasattr(self.parent_gui, 'app_controller') and hasattr(self.parent_gui.app_controller, 'active_profile_id'):
+                        current_pid = str(self.parent_gui.app_controller.active_profile_id).strip().lower()
+                except Exception:
+                    current_pid = None
+                if current_pid and target_pid != current_pid and hasattr(self.parent_gui, 'app_controller'):
+                    # Switch profile and reload current file if present
+                    self.parent_gui.app_controller.switch_active_profile(target_pid, reload_current_file=True, show_notice=True)
+        except Exception as e:
+            _LOGGER.warning(f"Profile switch from settings failed or skipped: {e}")
         
         # Call callbacks
         for callback in self.settings_changed_callbacks:
