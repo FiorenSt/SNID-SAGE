@@ -2716,7 +2716,9 @@ def run_snid(
     # ----- plotting options -------------------------------------------------
     show_plots: bool = True,
     save_plots: bool = False,
-    plot_dir: Optional[str | Path] = None
+    plot_dir: Optional[str | Path] = None,
+    # Profile selection (None -> resolve to 'optical')
+    profile_id: Optional[str] = None
 ) -> Tuple[SNIDResult, Trace]:
     """Run SNID on a spectrum using modular preprocessing and analysis.
     
@@ -2880,7 +2882,8 @@ def run_snid(
             wavelength_masks=wavelength_masks,
             apodize_percent=apodize_percent,
             skip_steps=skip_preprocessing_steps,
-            verbose=verbose
+            verbose=verbose,
+            profile_id=profile_id
         )
     
     full_trace['preprocessing'] = preprocess_trace
@@ -2913,7 +2916,8 @@ def run_snid(
 
         show_plots=show_plots,
         save_plots=save_plots,
-        plot_dir=effective_plot_dir
+        plot_dir=effective_plot_dir,
+        profile_id=profile_id
     )
     
     full_trace['analysis'] = analysis_trace
