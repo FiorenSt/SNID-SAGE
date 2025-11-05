@@ -1646,9 +1646,7 @@ def run_snid_analysis(
     try:
         pid = str(getattr(profile, 'id', '')).lower()
         cap = 2.5 if pid == 'onir' else 1.0
-        # Optional lower bound consistent with engine assumptions
-        if zmin < -0.01:
-            zmin = -0.01
+        # Only clamp the upper bound to the profile cap; honor caller's lower bound
         if zmax > cap:
             zmax = cap
     except Exception:
@@ -3037,7 +3035,7 @@ def run_snid(
     
     else:
         _LOG.error(f"[FAILED] NO GOOD MATCH FOUND")
-        _LOG.error(f"   Try lowering rlapmin or adjusting redshift range")
+        _LOG.error(f"   Try lowering lapmin (overlap) and/or rlapmin. If you expect z > 1, use the 'onir' profile (supports up to z≈2.5).")
     
     _LOG.info(f"   Runtime: {result.runtime_sec:.2f} seconds")
     _LOG.info("="*80)
