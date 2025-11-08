@@ -12,7 +12,8 @@ from .weighted_statistics import (
     estimate_weighted_redshift,
     estimate_weighted_epoch,
     weighted_redshift_se,
-    weighted_epoch_se
+    weighted_epoch_se,
+    weighted_redshift_se_components
 )
 
 from .similarity_metrics import (
@@ -35,6 +36,7 @@ __all__ = [
     'estimate_weighted_epoch',
     'weighted_redshift_se',
     'weighted_epoch_se',
+    'weighted_redshift_se_components',
     # Similarity metrics
     'concordance_correlation_coefficient',
     'compute_rlap_ccc_metric',

@@ -969,6 +969,68 @@ class PySide6AppController(QtCore.QObject):
             )
             
             progress_callback("Processing analysis results...", 90)
+
+            # Verbose logging of SE components for cluster and winning subtype (if available)
+            try:
+                if analysis_kwargs.get('verbose', False) and hasattr(self, 'snid_results') and self.snid_results:
+                    clres = getattr(self.snid_results, 'clustering_results', None)
+                    if clres and clres.get('success'):
+                        winning_cluster = clres.get('user_selected_cluster') or clres.get('best_cluster')
+                        if winning_cluster:
+                            matches = winning_cluster.get('matches', []) or []
+                            # Cluster-level
+                            from snid_sage.shared.utils.math_utils import get_best_metric_value, weighted_redshift_se_components
+                            redshifts_with_errors = []
+                            redshift_errors = []
+                            metric_values = []
+                            for m in matches:
+                                z = m.get('redshift')
+                                z_err = m.get('redshift_error', 0.0)
+                                if z is not None and np.isfinite(z) and np.isfinite(z_err) and z_err > 0:
+                                    redshifts_with_errors.append(float(z))
+                                    redshift_errors.append(float(z_err))
+                                    try:
+                                        metric_values.append(float(get_best_metric_value(m)))
+                                    except Exception:
+                                        metric_values.append(float(m.get('rlap', 0.0) or 0.0))
+                            if redshifts_with_errors:
+                                se_sample, se_prop, se_chosen = weighted_redshift_se_components(
+                                    redshifts_with_errors, redshift_errors, metric_values)
+                                _LOGGER.info(
+                                    f"[Cluster SE] sample={se_sample:.6g}, prop={se_prop:.6g}, chosen={se_chosen:.6g}")
+
+                            # Winning subtype-level
+                            winning_type = winning_cluster.get('type', '')
+                            best_subtype = None
+                            try:
+                                best_subtype = winning_cluster.get('subtype_info', {}).get('best_subtype', None)
+                            except Exception:
+                                best_subtype = None
+                            if not best_subtype:
+                                best_subtype = getattr(self.snid_results, 'best_subtype', None)
+
+                            if best_subtype:
+                                z_vals = []
+                                z_errs = []
+                                metrics = []
+                                for m in matches:
+                                    tpl = m.get('template', {}) if isinstance(m.get('template'), dict) else {}
+                                    if tpl.get('type') == winning_type and tpl.get('subtype') == best_subtype:
+                                        z = m.get('redshift')
+                                        z_err = m.get('redshift_error', 0.0)
+                                        if z is not None and np.isfinite(z) and np.isfinite(z_err) and z_err > 0:
+                                            z_vals.append(float(z))
+                                            z_errs.append(float(z_err))
+                                            try:
+                                                metrics.append(float(get_best_metric_value(m)))
+                                            except Exception:
+                                                metrics.append(float(m.get('rlap', 0.0) or 0.0))
+                                if z_vals:
+                                    se_sample, se_prop, se_chosen = weighted_redshift_se_components(z_vals, z_errs, metrics)
+                                    _LOGGER.info(
+                                        f"[Winning subtype {best_subtype} SE] sample={se_sample:.6g}, prop={se_prop:.6g}, chosen={se_chosen:.6g}")
+            except Exception:
+                pass
             
             if self.snid_results and hasattr(self.snid_results, 'best_matches'):
                 self.max_templates = len(self.snid_results.best_matches)

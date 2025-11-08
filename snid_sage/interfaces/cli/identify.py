@@ -531,6 +531,13 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 z_se = weighted_redshift_se(redshifts_with_errors, redshift_errors, metric_values)
                 summary['cluster_redshift_weighted'] = z_final
                 summary['cluster_redshift_se_weighted'] = z_se
+                try:
+                    from snid_sage.shared.utils.math_utils import weighted_redshift_se_components
+                    se_sample, se_prop, se_chosen = weighted_redshift_se_components(redshifts_with_errors, redshift_errors, metric_values)
+                    logging.getLogger('snid_sage.snid.identify').info(
+                        f"Cluster z SEs: sample={se_sample:.6g}, prop={se_prop:.6g}, chosen={se_chosen:.6g}")
+                except Exception:
+                    pass
             else:
                 summary['cluster_redshift_weighted'] = np.nan
                 summary['cluster_redshift_se_weighted'] = np.nan

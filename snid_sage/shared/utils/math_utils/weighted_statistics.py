@@ -122,17 +122,16 @@ def weighted_redshift_se(
     Standard error (SE) of the weighted mean redshift using w = (rlapccc)^2 / sigma_z^2.
     Previously returned sample SD; now returns SE(mean) for stability and interpretability.
     """
-    z = np.asarray(redshifts, dtype=float)
-    sigma = np.asarray(redshift_errors, dtype=float)
-    r = np.asarray(rlap_ccc_values, dtype=float)
-    if not (len(z) == len(sigma) == len(r)):
-        logger.error("Mismatched input lengths for weighted_redshift_se")
-        return float('nan')
-    valid = (np.isfinite(z) & np.isfinite(sigma) & np.isfinite(r) & (sigma > 0))
-    if not np.any(valid):
-        return float('nan')
-    w = compute_cluster_weights(r[valid], sigma[valid])
-    return _weighted_mean_se(z[valid], w)
+    # Delegate to components function and return the chosen SE to ensure
+    # consistent behavior across all callers (handles forced-z, zero spread, etc.).
+    _, _, se_chosen = weighted_redshift_se_components(redshifts, redshift_errors, rlap_ccc_values)
+    # Apply a global safety floor to avoid numerically tiny, non-physical values.
+    try:
+        if np.isfinite(se_chosen):
+            return float(max(se_chosen, 1e-6))
+    except Exception:
+        pass
+    return se_chosen
 
 
 def weighted_epoch_se(
@@ -158,6 +157,62 @@ def weighted_epoch_se(
 
 # Backward-compatible aliases (deprecated):
 # Removed deprecated aliases weighted_redshift_sd/weighted_epoch_sd
+
+def weighted_redshift_se_components(
+    redshifts: Union[np.ndarray, List[float]],
+    redshift_errors: Union[np.ndarray, List[float]],
+    rlap_ccc_values: Union[np.ndarray, List[float]]
+) -> Tuple[float, float, float]:
+    """
+    Return (SE_sample, SE_propagated, SE_chosen) for the weighted mean redshift.
+
+    - SE_sample: standard error from weighted sample dispersion using weights
+                 w = (metric)^2 / sigma^2.
+    - SE_propagated: propagated standard error of the deterministic weighted mean
+                     using the same normalized weights alpha_i = w_i / sum(w).
+                     Var(\\hat{\\mu}) = sum(alpha_i^2 * sigma_i^2).
+    - SE_chosen: selection rule
+        * If no spread or SE_sample <= 0 or non-finite -> use SE_propagated
+        * Else return max(SE_sample, SE_propagated) when SE_propagated finite;
+          otherwise SE_sample.
+    """
+    z = np.asarray(redshifts, dtype=float)
+    sigma = np.asarray(redshift_errors, dtype=float)
+    r = np.asarray(rlap_ccc_values, dtype=float)
+    if not (len(z) == len(sigma) == len(r)):
+        logger.error("Mismatched input lengths for weighted_redshift_se_components")
+        return float('nan'), float('nan'), float('nan')
+    valid = (np.isfinite(z) & np.isfinite(sigma) & np.isfinite(r) & (sigma > 0))
+    if not np.any(valid):
+        return float('nan'), float('nan'), float('nan')
+    z_v = z[valid]
+    s_v = sigma[valid]
+    r_v = r[valid]
+    w = compute_cluster_weights(r_v, s_v)
+
+    # Sample-based SE
+    se_sample = _weighted_mean_se(z_v, w)
+
+    # Propagated SE for weighted mean
+    sum_w = float(np.sum(w))
+    if sum_w > 0 and np.isfinite(sum_w):
+        alpha = w / sum_w
+        var_propagated = float(np.sum((alpha ** 2) * (s_v ** 2)))
+        se_propagated = float(np.sqrt(var_propagated))
+    else:
+        se_propagated = float('nan')
+
+    try:
+        no_spread = (np.ptp(z_v) <= 1e-9)
+    except Exception:
+        no_spread = False
+
+    if no_spread or not np.isfinite(se_sample) or se_sample <= 0.0:
+        return se_sample, se_propagated, se_propagated
+
+    if np.isfinite(se_propagated):
+        return se_sample, se_propagated, max(se_sample, se_propagated)
+    return se_sample, se_propagated, se_sample
 
 def calculate_combined_weights(
     rlap_ccc_values: Union[np.ndarray, List[float]],
