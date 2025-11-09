@@ -889,13 +889,15 @@ def _run_forced_redshift_analysis_optimized(
     
     # Use unified storage for loading templates (same as normal analysis)
     try:
-        # Default behavior: exclude Galaxy templates from forced analysis unless explicitly requested
+        # Default behavior: exclude Galaxy templates from forced analysis unless explicitly requested.
         effective_type_filter = type_filter
-        if not effective_type_filter:
+        if (not effective_type_filter) and (not template_filter):
             effective_type_filter = [
                 # Include all known main types except Galaxy/NotSN flat galaxy aliases
                 'Ia', 'Ib', 'Ic', 'II', 'SLSN', 'LFBOT', 'TDE', 'KN', 'GAP', 'Star', 'AGN'
             ]
+        elif (not effective_type_filter) and template_filter:
+            _LOG.info("Forced analysis: preserving explicit template selection; skipping default Galaxy exclusion")
         # Use the same profile as current analysis for template loading
         profile = _resolve_active_profile(profile_id)
         # Use provided directory as-is; profile-specific index selection happens in storage layer
@@ -1594,8 +1596,9 @@ def run_snid_analysis(
         # ============================================================================
         # STEP 7a: OPTIONAL FILTERING BY AGE AND TYPE
         # ============================================================================
-        # Default behavior: exclude Galaxy templates from full analysis unless explicitly requested
-        if not type_filter:
+        # Default behavior: exclude Galaxy templates from full analysis unless explicitly requested.
+        # If specific template names were provided, skip the default Galaxy exclusion.
+        if not type_filter and not template_filter:
             pre_count = len(templates)
             templates = [
                 t for t in templates
@@ -1604,6 +1607,8 @@ def run_snid_analysis(
             ]
             if len(templates) < pre_count:
                 _LOG.info(f"Step 7a: Default exclusion of Galaxy templates: {pre_count} -> {len(templates)}")
+        elif not type_filter and template_filter:
+            _LOG.info("Step 7a: Skipping default Galaxy exclusion due to explicit template selection")
 
         original_count = len(templates)
         

@@ -526,7 +526,12 @@ def process_single_spectrum_optimized(
             return spectrum_name, False, "No good matches found", {
                 'spectrum': spectrum_name,
                 'file_path': spectrum_path,
-                'success': False
+                'success': False,
+                # Even on failure, record whether a fixed redshift was attempted
+                'redshift_fixed': used_forced_redshift is not None,
+                'redshift_fixed_value': (
+                    float(used_forced_redshift) if used_forced_redshift is not None else None
+                )
             }
             
     except Exception as e:
@@ -534,7 +539,12 @@ def process_single_spectrum_optimized(
             'spectrum': spectrum_name,
             'file_path': spectrum_path,
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            # Even on error, record whether a fixed redshift was attempted
+            'redshift_fixed': used_forced_redshift is not None if 'used_forced_redshift' in locals() else False,
+            'redshift_fixed_value': (
+                float(used_forced_redshift) if ('used_forced_redshift' in locals() and used_forced_redshift is not None) else None
+            )
         }
  
 
@@ -1734,6 +1744,7 @@ def _export_results_table(results: List[Tuple], output_dir: Path) -> Optional[Pa
         'rlap_ccc_penalized',
         'match_quality',
         'type_confidence',
+        'subtype_confidence',
         # Helpful extras
         'best_template',
         'zfixed',
@@ -1808,6 +1819,8 @@ def _export_results_table(results: List[Tuple], output_dir: Path) -> Optional[Pa
             if not summary.get('has_clustering'):
                 row['match_quality'] = None
             row['type_confidence'] = summary.get('cluster_confidence_level', None)
+            # Subtype confidence (numeric 0-1 from cluster-aware subtype determination)
+            row['subtype_confidence'] = summary.get('subtype_confidence', None)
 
             # Extras
             try:
@@ -1831,7 +1844,10 @@ def _export_results_table(results: List[Tuple], output_dir: Path) -> Optional[Pa
             row['rlap_ccc_penalized'] = 'nan'
             row['match_quality'] = 'nan'
             row['type_confidence'] = 'nan'
+            row['subtype_confidence'] = 'nan'
             row['best_template'] = 'nan'
+            # For failures, still report whether a fixed redshift was attempted
+            row['zfixed'] = bool(summary.get('redshift_fixed', False)) if isinstance(summary, dict) else False
             # Fill competitor columns with nan on failures as requested
             row['second_best_type'] = 'nan'
             row['second_best_subtype'] = 'nan'

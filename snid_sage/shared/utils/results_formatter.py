@@ -684,12 +684,11 @@ class UnifiedResultsFormatter:
         
         # Suppress standalone Best Type/Subtype lines; information is shown in tables below
         
-        # Winning Type table (simple, compact)
+        # Winning Type (compact header on one line, like subtype)
         # Keep single blank line before this section
-        lines.append("Winning Type")
-        header_title = "Type   | Match Quality | Confidence vs next best type"
-        lines.append("-" * len(header_title))
+        header_title = f"{'Type':<6} | {'Match Quality':<13} | Confidence vs next best type"
         lines.append(header_title)
+        lines.append("-" * len(header_title))
         # Compose cells with safe fallbacks
         type_cell = s.get('consensus_type', 'Unknown') or 'Unknown'
         # Confidence: discrete level and percent (and competitor) when available
@@ -871,42 +870,58 @@ class UnifiedResultsFormatter:
             })
         
         if subtype_rows:
-            # Sort: winner first, then by descending Top-5 weighted rank score
-            winner = s.get('consensus_subtype', '')
-            def sort_key(row):
-                if row['subtype'] == winner:
-                    return (0, - (row.get('rank_score') or 0.0))
-                return (1, - (row.get('rank_score') or 0.0))
-            subtype_rows.sort(key=sort_key)
-
-            lines.append("")
-            lines.append(f"Subtype summary (within Type {winning_type})")
-            header = (
-                f"{'Rank':>4} "
-                f"{'Subtype':<12} "
-                f"{'z':>10} "
-                f"{'z_se':>10} "
-                f"{'age [d]':>10} "
-                f"{'age_se [d]':>12}"
-            )
-            lines.append("-" * len(header))
-            lines.append(header)
-            lines.append("-" * len(header))
-            for idx, row in enumerate(subtype_rows, 1):
-                z_mean = f"{row['z_mean']:.6f}" if row['z_mean'] is not None else "N/A"
-                z_se = f"{row['z_se']:.6f}" if row.get('z_se') is not None else "N/A"
-                age_mean = f"{row['age_mean']:.1f}" if row['age_mean'] is not None else "N/A"
-                age_se = f"{row['age_se']:.1f}" if row.get('age_se') is not None else "N/A"
-                lines.append(
-                    f"{idx:>4} "
-                    f"{row['subtype']:<12} "
-                    f"{z_mean:>10} "
-                    f"{z_se:>10} "
-                    f"{age_mean:>10} "
-                    f"{age_se:>12}"
-                )
-            # Two blank lines between subtype summary and template matches for readability
-            lines.append("")
+            # Compact Winning Subtype summary (penalized top-5 RLAP-CCC; relative % improvement flagging)
+            try:
+                winner = s.get('consensus_subtype', '') or ''
+                # Find winner score and the best runner-up score
+                winner_score = None
+                runner_up = None
+                runner_score = None
+                for row in subtype_rows:
+                    if row.get('subtype') == winner:
+                        winner_score = float(row.get('rank_score', 0.0) or 0.0)
+                # Determine best other subtype by score
+                if winner_score is None:
+                    winner_score = 0.0
+                # Sort copy of rows by descending score
+                rows_sorted = sorted(subtype_rows, key=lambda r: float(r.get('rank_score', 0.0) or 0.0), reverse=True)
+                for r in rows_sorted:
+                    if r.get('subtype') != winner:
+                        runner_up = r.get('subtype') or 'N/A'
+                        runner_score = float(r.get('rank_score', 0.0) or 0.0)
+                        break
+                # Compute percent advantage like type-level confidence
+                if runner_score is None:
+                    # No competitor
+                    level = "No Comp"
+                    conf_txt = "No competitor"
+                else:
+                    margin = winner_score - runner_score
+                    # Use competitor score as denominator for percent improvement (consistent with type-level)
+                    denom = runner_score if (isinstance(runner_score, float) and runner_score > 0) else 1e-8
+                    pct = 100.0 * margin / denom
+                    # Thresholds align with type confidence mapping
+                    if pct >= 100.0:
+                        level = "High"
+                    elif pct >= 30.0:
+                        level = "Medium"
+                    elif pct >= 10.0:
+                        level = "Low"
+                    else:
+                        level = "Very Low"
+                    conf_txt = f"{level} (+{pct:.1f}% vs {runner_up})"
+                
+                # Add an extra blank line to separate the two compact tables visually
+                lines.append("")
+                header = f"{'Subtype':<10} | Confidence vs next best subtype"
+                lines.append(header)
+                lines.append("-" * len(header))
+                lines.append(f"{(winner or 'Unknown'):<10} | {conf_txt}")
+                lines.append("")
+            except Exception:
+                # Gracefully skip if anything goes wrong
+                pass
+            # No per-subtype detail table (removed per updated requirements)
             lines.append("")
         
         # Clustering overview removed per updated summary requirements
