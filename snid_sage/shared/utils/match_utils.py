@@ -12,8 +12,8 @@ from typing import Any, Dict
 
 import numpy as np
 
-# Global scaling for redshift uncertainties (empirical). Use 3/8 for Tonry & Davis.
-Z_K = 0.5
+# Global scaling for redshift uncertainties; fixed to 1.0 (no configurability).
+Z_K = 1.0
 
 
 def extract_redshift_sigma(match: Dict[str, Any]) -> float:

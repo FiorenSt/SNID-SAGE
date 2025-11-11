@@ -22,14 +22,15 @@ import numpy as np
 import csv
 import re
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import multiprocessing as mp
 
 from snid_sage.snid.snid import preprocess_spectrum, run_snid_analysis, SNIDResult
 from snid_sage.shared.exceptions.core_exceptions import SpectrumProcessingError
 from snid_sage.shared.utils.math_utils import (
     estimate_weighted_redshift,
     estimate_weighted_epoch,
-    weighted_redshift_se,
-    weighted_epoch_se,
+    weighted_redshift_error,
+    weighted_epoch_error,
     get_best_metric_value
 )
 from snid_sage.shared.utils.results_formatter import clean_template_name
@@ -660,8 +661,23 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
             summary['cluster_confidence_description'] = ca.get('confidence_description', '')
             summary['cluster_second_best_type'] = ca.get('second_best_type', 'N/A')
         
-        # Determine the second-best competitor's best subtype using the same
-        # weighted top-5 method (if available in clustering results)
+        # Expose subtype confidence and runner-up within the winning cluster
+        try:
+            subtype_info = winning_cluster.get('subtype_info', {}) if isinstance(winning_cluster, dict) else {}
+            if subtype_info:
+                summary['subtype_confidence'] = subtype_info.get('subtype_confidence', summary.get('subtype_confidence'))
+                summary['subtype_margin_over_second'] = subtype_info.get('subtype_margin_over_second', summary.get('subtype_margin_over_second'))
+                summary['winning_second_best_subtype'] = subtype_info.get('second_best_subtype')
+        except Exception:
+            # Fallback to result object attributes if available
+            summary['subtype_confidence'] = getattr(result, 'subtype_confidence', summary.get('subtype_confidence', None))
+            try:
+                summary['subtype_margin_over_second'] = getattr(result, 'subtype_margin_over_second', summary.get('subtype_margin_over_second', None))
+            except Exception:
+                pass
+        
+        # Determine the second-best competitor TYPE (kept for reporting); do not override
+        # the within-cluster runner-up subtype field
         try:
             if (hasattr(result, 'clustering_results') and result.clustering_results):
                 clres = result.clustering_results
@@ -680,10 +696,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                         if c.get('type', '') != winning_type:
                             competitor = c
                             break
-                    if competitor:
-                        comp_best_subtype = competitor.get('subtype_info', {}).get('best_subtype', None)
-                        if comp_best_subtype:
-                            summary['second_best_subtype'] = comp_best_subtype
+
         except Exception:
             pass
         
@@ -719,32 +732,25 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                     ages_for_estimation.append(age)
                     age_metric_values.append(metric_val)
             
-            # Weighted redshift mean and SE using canonical weights
+            # Weighted redshift mean and error using canonical weights (unbiased weighted SD)
             if redshifts_with_errors:
                 z_final = estimate_weighted_redshift(redshifts_with_errors, redshift_errors, metric_values)
-                z_se = weighted_redshift_se(redshifts_with_errors, redshift_errors, metric_values)
+                z_err = weighted_redshift_error(redshifts_with_errors, redshift_errors, metric_values)
                 summary['cluster_redshift_weighted'] = z_final
-                summary['cluster_redshift_se_weighted'] = z_se
-                try:
-                    from snid_sage.shared.utils.math_utils import weighted_redshift_se_components
-                    se_sample, se_prop, se_chosen = weighted_redshift_se_components(redshifts_with_errors, redshift_errors, metric_values)
-                    logging.getLogger('snid_sage.snid.batch').info(
-                        f"Cluster z SEs: sample={se_sample:.6g}, prop={se_prop:.6g}, chosen={se_chosen:.6g}")
-                except Exception:
-                    pass
+                summary['cluster_redshift_err_weighted'] = z_err
             else:
                 summary['cluster_redshift_weighted'] = np.nan
-                summary['cluster_redshift_se_weighted'] = np.nan
+                summary['cluster_redshift_err_weighted'] = np.nan
 
-            # Weighted epoch mean and SE using the same canonical weights
+            # Weighted epoch mean and error using the same canonical weights
             if ages_for_estimation and redshift_errors:
                 age_final = estimate_weighted_epoch(ages_for_estimation, redshift_errors, age_metric_values)
-                age_se = weighted_epoch_se(ages_for_estimation, redshift_errors, age_metric_values)
+                age_err = weighted_epoch_error(ages_for_estimation, redshift_errors, age_metric_values)
                 summary['cluster_age_weighted'] = age_final
-                summary['cluster_age_se_weighted'] = age_se
+                summary['cluster_age_err_weighted'] = age_err
             else:
                 summary['cluster_age_weighted'] = np.nan
-                summary['cluster_age_se_weighted'] = np.nan
+                summary['cluster_age_err_weighted'] = np.nan
             
             summary['cluster_rlap_mean'] = np.mean(rlaps)
 
@@ -759,10 +765,27 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 # Filter matches to winning type and winning subtype
                 winning_type = summary.get('consensus_type', '')
                 subtype_matches = []
+                # Also collect matches per subtype within the winning type to compute runner-up confidence
+                by_subtype: Dict[str, Dict[str, List[float]]] = {}
                 for m in cluster_matches:
                     tpl = m.get('template', {}) if isinstance(m.get('template'), dict) else {}
-                    if tpl.get('type') == winning_type and tpl.get('subtype') == winning_subtype:
-                        subtype_matches.append(m)
+                    if tpl.get('type') == winning_type:
+                        st = tpl.get('subtype', '') or ''
+                        # Group for confidence computation
+                        if st not in by_subtype:
+                            by_subtype[st] = {'metrics': [], 'z_errs': []}
+                        # Best available metric (RLAP-CCC preferred)
+                        try:
+                            from snid_sage.shared.utils.math_utils import get_best_metric_value
+                            metric_val_all = float(get_best_metric_value(m))
+                        except Exception:
+                            metric_val_all = float(m.get('rlap', 0.0) or 0.0)
+                        zerr_all = m.get('redshift_error', None)
+                        by_subtype[st]['metrics'].append(metric_val_all)
+                        by_subtype[st]['z_errs'].append(float(zerr_all) if (zerr_all is not None) else float('nan'))
+                        # Keep the list of matches only for the winning subtype aggregates
+                        if st == winning_subtype:
+                            subtype_matches.append(m)
 
                 # Build arrays
                 z_vals = []
@@ -787,25 +810,18 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                     if age is not None and np.isfinite(age):
                         age_vals.append(float(age))
 
-                # Weighted redshift mean and SE for winning subtype
+                # Weighted redshift mean and error for winning subtype
                 if z_vals:
                     z_mean = estimate_weighted_redshift(z_vals, z_errs, metrics)
-                    z_se = weighted_redshift_se(z_vals, z_errs, metrics)
+                    z_err = weighted_redshift_error(z_vals, z_errs, metrics)
                     summary['winning_subtype_redshift'] = z_mean
-                    summary['winning_subtype_redshift_se'] = z_se
-                    try:
-                        from snid_sage.shared.utils.math_utils import weighted_redshift_se_components
-                        se_sample, se_prop, se_chosen = weighted_redshift_se_components(z_vals, z_errs, metrics)
-                        logging.getLogger('snid_sage.snid.batch').info(
-                            f"Winning subtype '{winning_subtype}' z SEs: sample={se_sample:.6g}, prop={se_prop:.6g}, chosen={se_chosen:.6g}")
-                    except Exception:
-                        pass
-                # Weighted age mean and SE for winning subtype (use same weights scheme)
+                    summary['winning_subtype_redshift_err'] = z_err
+                # Weighted age mean and error for winning subtype (use same weights scheme)
                 if age_vals and z_vals:
                     age_mean = estimate_weighted_epoch(age_vals, z_errs, metrics)
-                    age_se = weighted_epoch_se(age_vals, z_errs, metrics)
+                    age_err = weighted_epoch_error(age_vals, z_errs, metrics)
                     summary['winning_subtype_age'] = age_mean
-                    summary['winning_subtype_age_se'] = age_se
+                    summary['winning_subtype_age_err'] = age_err
 
                 # Penalized score for winning subtype (mean of top-5, weighted by metric^2/sigma^2) × (n_top/5)
                 if metrics:
@@ -826,6 +842,59 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                             mean_top = float(_np.mean(top_metrics))
                         penalty_factor = min(top_metrics.size / 5.0, 1.0)
                         summary['winning_subtype_penalized_score'] = float(mean_top * penalty_factor)
+
+                # Compute penalized scores for all subtypes within the winning type to derive qualitative confidence
+                try:
+                    import numpy as _np
+                    from snid_sage.shared.utils.math_utils import compute_cluster_weights
+                    subtype_scores: Dict[str, float] = {}
+                    for st, agg in by_subtype.items():
+                        mets = _np.asarray(agg['metrics'], dtype=float)
+                        sigs = _np.asarray([e if (_np.isfinite(e) and e > 0) else _np.nan for e in agg['z_errs']], dtype=float)
+                        if mets.size == 0:
+                            subtype_scores[st] = 0.0
+                            continue
+                        top_idx = _np.argsort(-mets)[:5]
+                        top_m = mets[top_idx]
+                        top_s = sigs[top_idx]
+                        valid = _np.isfinite(top_m) & _np.isfinite(top_s) & (top_s > 0)
+                        if _np.any(valid):
+                            w = compute_cluster_weights(top_m[valid], top_s[valid])
+                            sw = _np.sum(w)
+                            mean_top = float(_np.sum(w * top_m[valid]) / sw) if sw > 0 else float(_np.mean(top_m))
+                        else:
+                            mean_top = float(_np.mean(top_m))
+                        penalty = min(top_m.size / 5.0, 1.0)
+                        subtype_scores[st] = float(mean_top * penalty)
+                    # Winner and runner-up within same type
+                    winner_score = float(subtype_scores.get(winning_subtype, 0.0))
+                    runner_st = None
+                    runner_score = 0.0
+                    for st, sc in sorted(subtype_scores.items(), key=lambda kv: kv[1], reverse=True):
+                        if st != winning_subtype:
+                            runner_st = st
+                            runner_score = float(sc)
+                            break
+                    if runner_st is not None:
+                        # Percent improvement relative to competitor score (runner as denominator)
+                        denom = runner_score if runner_score > 0 else 1e-8
+                        pct = 100.0 * (winner_score - runner_score) / denom
+                        if pct >= 100.0:
+                            level = 'High'
+                        elif pct >= 30.0:
+                            level = 'Medium'
+                        elif pct >= 10.0:
+                            level = 'Low'
+                        else:
+                            level = 'Very Low'
+                        summary['subtype_confidence_level'] = level
+                        if not summary.get('winning_second_best_subtype'):
+                            summary['winning_second_best_subtype'] = runner_st
+                    else:
+                        summary['subtype_confidence_level'] = 'No Comp'
+                except Exception:
+                    # Leave unset on failure
+                    pass
             except Exception:
                 pass
             
@@ -1407,7 +1476,7 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
         # Header (winning subtype focused)
         header = (
             f"{'Spectrum':<16} {'Type':<7} {'Subtype':<12} "
-            f"{'z':<10} {'z_se':<10} {'Age':<8} {'Age_se':<8} "
+            f"{'z':<10} {'z_err':<10} {'Age':<8} {'Age_err':<8} "
             f"{'RLAP-CCC':<10} {'MatchQual':<10} {'TypeConf':<10} {'zFixed':<6} {'Status':<1}"
         )
         report.append(header)
@@ -1430,37 +1499,33 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
             cons_type = summary.get('consensus_type', 'Unknown')[:6]
             cons_subtype = summary.get('consensus_subtype', 'Unknown')[:11]
 
-            # Redshift/SE from winning subtype or cluster-weighted; avoid SE when no clustering, or when SE is not meaningful (<=0) or cluster size <= 1
+            # Redshift/error from winning subtype or cluster-weighted; hide when not meaningful (<=0) or cluster size <= 1
             z_val = summary.get('winning_subtype_redshift', None)
-            z_se_val = summary.get('winning_subtype_redshift_se', None)
+            z_err_val = summary.get('winning_subtype_redshift_err', None)
             if not (isinstance(z_val, (int, float)) and np.isfinite(z_val)):
                 z_val = summary.get('redshift', 0.0)
             cluster_size_disp = summary.get('cluster_size', 0)
-            if not (isinstance(z_se_val, (int, float)) and np.isfinite(z_se_val)):
-                # Only show SE when clustering provided an aggregate; otherwise N/A
-                z_se_val = None if not summary.get('has_clustering') else summary.get('redshift_error', None)
-            # Hide SE if non-positive or trivially single-member cluster
+            if not (isinstance(z_err_val, (int, float)) and np.isfinite(z_err_val)):
+                # Only show error when clustering provided an aggregate; otherwise N/A
+                z_err_val = None if not summary.get('has_clustering') else summary.get('redshift_error', None)
+            # Hide only if non-positive or invalid; allow single-member σz to show
             try:
-                if (not isinstance(z_se_val, (int, float))) or (not np.isfinite(z_se_val)) or (float(z_se_val) <= 0.0) or (int(cluster_size_disp) <= 1):
-                    z_se_val = None
+                if (not isinstance(z_err_val, (int, float))) or (not np.isfinite(z_err_val)) or (float(z_err_val) <= 0.0):
+                    z_err_val = None
             except Exception:
-                z_se_val = None
+                z_err_val = None
 
             z_str = f"{float(z_val):.6f}" if isinstance(z_val, (int, float)) else ""
-            z_se_str = f"{float(z_se_val):.6f}" if isinstance(z_se_val, (int, float)) else "nan"
+            z_se_str = f"{float(z_err_val):.6f}" if isinstance(z_err_val, (int, float)) else "nan"
 
-            # Age/SE from winning subtype aggregates; fallback to best-match age; hide SE if not meaningful
+            # Age/error from winning subtype aggregates; fallback to best-match age; hide if not meaningful
             age_val = summary.get('winning_subtype_age', None)
-            age_se_val = summary.get('winning_subtype_age_se', None)
+            age_err_val = summary.get('winning_subtype_age_err', None)
             if not (isinstance(age_val, (int, float)) and np.isfinite(age_val)):
                 age_val = summary.get('age', None)
-            try:
-                if (not isinstance(age_se_val, (int, float))) or (not np.isfinite(age_se_val)) or (float(age_se_val) <= 0.0) or (int(cluster_size_disp) <= 1):
-                    age_se_val = None
-            except Exception:
-                age_se_val = None
+            # Age error may be NaN for single-member; leave as-is (will render 'nan')
             age_str = f"{float(age_val):.1f}" if isinstance(age_val, (int, float)) else ""
-            age_se_str = f"{float(age_se_val):.1f}" if isinstance(age_se_val, (int, float)) else "nan"
+            age_se_str = f"{float(age_err_val):.1f}" if isinstance(age_err_val, (int, float)) else "nan"
 
             # Display penalized top-5 RLAP-CCC for winning subtype when available; fallback to best metric
             metric_val = summary.get('winning_subtype_penalized_score', None)
@@ -1520,19 +1585,19 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
 
             # Winning Subtype estimates (preferred)
             z_mean = summary.get('winning_subtype_redshift', None)
-            z_se = summary.get('winning_subtype_redshift_se', None)
+            z_se = summary.get('winning_subtype_redshift_err', None)
             age_mean = summary.get('winning_subtype_age', None)
-            age_se = summary.get('winning_subtype_age_se', None)
+            age_se = summary.get('winning_subtype_age_err', None)
             if isinstance(z_mean, (int, float)) and np.isfinite(z_mean):
                 z_txt = f"{z_mean:.6f}"
             else:
                 z_txt = f"{summary.get('redshift', 0):.6f}"
-            zse_txt = f" (SE={z_se:.6f})" if isinstance(z_se, (int, float)) and np.isfinite(z_se) else ""
+            zse_txt = f" (Err={z_se:.6f})" if isinstance(z_se, (int, float)) and np.isfinite(z_se) else ""
             if isinstance(age_mean, (int, float)) and np.isfinite(age_mean):
                 age_txt = f"{age_mean:.1f}"
             else:
                 age_txt = f"{summary.get('age', float('nan')):.1f}" if isinstance(summary.get('age', None), (int, float)) else "N/A"
-            agese_txt = f" (SE={age_se:.1f})" if isinstance(age_se, (int, float)) and np.isfinite(age_se) else ""
+            agese_txt = f" (Err={age_se:.1f})" if isinstance(age_se, (int, float)) and np.isfinite(age_se) else ""
             report.append(f"   Winning Subtype Estimates: z={z_txt}{zse_txt}; age={age_txt}{agese_txt}")
             
             # Show cluster information if available
@@ -1566,20 +1631,20 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
                     report.append(f"      Type Confidence: {' '.join(conf_parts)}")
                 
                 if 'cluster_redshift_weighted' in summary:
-                    se_val = summary.get('cluster_redshift_se_weighted', float('nan'))
-                    # Hide SE when not meaningful (<=0 or single-member cluster)
+                    se_val = summary.get('cluster_redshift_err_weighted', float('nan'))
+                    # Hide when not meaningful (<=0 or single-member cluster)
                     try:
                         cluster_size_disp = int(summary.get('cluster_size', 0))
                         show_se = (isinstance(se_val, (int, float)) and np.isfinite(se_val) and (float(se_val) > 0.0) and (cluster_size_disp > 1))
                     except Exception:
                         show_se = isinstance(se_val, (int, float)) and np.isfinite(se_val) and (float(se_val) > 0.0)
-                    se_txt = f" (SE={se_val:.6f})" if show_se else ""
+                    se_txt = f" (Err={se_val:.6f})" if show_se else ""
                     report.append(f"      Weighted Redshift: {summary['cluster_redshift_weighted']:.6f}{se_txt}")
                     report.append(f"      Cluster RLAP: {summary.get('cluster_rlap_mean', 0):.2f}")
                 
                 report.append(f"   Best Match Redshift: {summary.get('redshift', 0):.6f} ± {summary.get('redshift_error', 0):.6f}")
             else:
-                # No clustering: show only best-match redshift without SE
+                # No clustering: show only best-match redshift without error
                 report.append(f"   Redshift: {summary.get('redshift', 0):.6f}")
 
             # Redshift mode
@@ -1738,19 +1803,19 @@ def _export_results_table(results: List[Tuple], output_dir: Path) -> Optional[Pa
         'type',
         'subtype',
         'z',
-        'z_se',
+        'z_err',
         'age',
-        'age_se',
+        'age_err',
         'rlap_ccc_penalized',
         'match_quality',
         'type_confidence',
         'subtype_confidence',
+        'second_best_subtype',  # Runner-up within winning cluster
         # Helpful extras
         'best_template',
         'zfixed',
         # Second-best competitor info near the end for readability
         'second_best_type',
-        'second_best_subtype',
         'success',
         'error'
     ]
@@ -1767,47 +1832,46 @@ def _export_results_table(results: List[Tuple], output_dir: Path) -> Optional[Pa
             # Classification
             row['type'] = summary.get('consensus_type', 'Unknown')
             row['subtype'] = summary.get('consensus_subtype', 'Unknown')
-            # Ensure nan text when missing
-            _sbt = summary.get('cluster_second_best_type', None)
-            _sbsub = summary.get('second_best_subtype', None)
+            # Second-best competitor TYPE retained for readability
             def _nan_if_missing(val):
                 try:
                     txt = str(val).strip() if val is not None else ''
                 except Exception:
                     txt = ''
                 return 'nan' if (txt == '' or txt.upper() == 'N/A') else val
-            row['second_best_type'] = _nan_if_missing(_sbt)
-            row['second_best_subtype'] = _nan_if_missing(_sbsub)
+            row['second_best_type'] = _nan_if_missing(summary.get('cluster_second_best_type', None))
+            # Runner-up subtype within the winning cluster
+            row['second_best_subtype'] = _nan_if_missing(summary.get('winning_second_best_subtype', None))
 
             # Use estimated values: prefer winning subtype estimates; fallback to cluster-weighted; then best-match
             z_est = summary.get('winning_subtype_redshift')
-            z_se_est = summary.get('winning_subtype_redshift_se')
+            z_err_est = summary.get('winning_subtype_redshift_err')
             age_est = summary.get('winning_subtype_age')
-            age_se_est = summary.get('winning_subtype_age_se')
+            age_err_est = summary.get('winning_subtype_age_err')
 
             if not isinstance(z_est, (int, float)) or not np.isfinite(z_est):
                 z_est = summary.get('cluster_redshift_weighted', summary.get('redshift'))
-            if not isinstance(z_se_est, (int, float)) or not np.isfinite(z_se_est):
-                z_se_est = summary.get('cluster_redshift_se_weighted', summary.get('redshift_error'))
+            if not isinstance(z_err_est, (int, float)) or not np.isfinite(z_err_est):
+                z_err_est = summary.get('cluster_redshift_err_weighted', summary.get('redshift_error'))
             if not isinstance(age_est, (int, float)) or not np.isfinite(age_est):
                 age_est = summary.get('cluster_age_weighted', summary.get('age'))
-            if not isinstance(age_se_est, (int, float)) or not np.isfinite(age_se_est):
-                age_se_est = summary.get('cluster_age_se_weighted', None)
+            if not isinstance(age_err_est, (int, float)) or not np.isfinite(age_err_est):
+                age_err_est = summary.get('cluster_age_err_weighted', None)
 
-            # Hide SEs when not meaningful (<=0 or single-member cluster)
+            # Hide errors only when not meaningful (<=0); allow single-member σz
             try:
                 cluster_size_csv = int(summary.get('cluster_size', 0))
             except Exception:
                 cluster_size_csv = 0
-            if not (isinstance(z_se_est, (int, float)) and np.isfinite(z_se_est) and (float(z_se_est) > 0.0) and (cluster_size_csv > 1)):
-                z_se_est = 'nan'
-            if not (isinstance(age_se_est, (int, float)) and np.isfinite(age_se_est) and (float(age_se_est) > 0.0) and (cluster_size_csv > 1)):
-                age_se_est = 'nan'
+            if not (isinstance(z_err_est, (int, float)) and np.isfinite(z_err_est) and (float(z_err_est) > 0.0)):
+                z_err_est = 'nan'
+            if not (isinstance(age_err_est, (int, float)) and np.isfinite(age_err_est) and (float(age_err_est) > 0.0)):
+                age_err_est = 'nan'
 
             row['z'] = z_est
-            row['z_se'] = z_se_est
+            row['z_err'] = z_err_est
             row['age'] = age_est
-            row['age_se'] = age_se_est
+            row['age_err'] = age_err_est
 
             # Analysis quality metrics
             try:
@@ -1819,8 +1883,8 @@ def _export_results_table(results: List[Tuple], output_dir: Path) -> Optional[Pa
             if not summary.get('has_clustering'):
                 row['match_quality'] = None
             row['type_confidence'] = summary.get('cluster_confidence_level', None)
-            # Subtype confidence (numeric 0-1 from cluster-aware subtype determination)
-            row['subtype_confidence'] = summary.get('subtype_confidence', None)
+            # Subtype confidence: use qualitative level (High/Medium/Low/Very Low/No Comp)
+            row['subtype_confidence'] = summary.get('subtype_confidence_level', None)
 
             # Extras
             try:
@@ -1838,9 +1902,9 @@ def _export_results_table(results: List[Tuple], output_dir: Path) -> Optional[Pa
             row['type'] = 'nan'
             row['subtype'] = 'nan'
             row['z'] = 'nan'
-            row['z_se'] = 'nan'
+            row['z_err'] = 'nan'
             row['age'] = 'nan'
-            row['age_se'] = 'nan'
+            row['age_err'] = 'nan'
             row['rlap_ccc_penalized'] = 'nan'
             row['match_quality'] = 'nan'
             row['type_confidence'] = 'nan'
@@ -2033,12 +2097,21 @@ def main(args: argparse.Namespace) -> int:
             print(f"   Error Handling: {'Stop on first failure' if args.stop_on_error else 'Continue on failures (default)'}")
             print("")
         
+        # Decide parallelism BEFORE any template loading (avoid fork-after-init on POSIX)
+        use_parallel = int(getattr(args, 'workers', 0) or 0) != 0
+        max_workers = int(args.workers or 0)
+        if max_workers < 0:
+            try:
+                max_workers = os.cpu_count() or 1
+            except Exception:
+                max_workers = 1
+        
         # ============================================================================
         # OPTIMIZATION: Load templates ONCE for the entire batch
         # Also: adapt templates directory to profile when not explicitly provided
         # ============================================================================
-        if not is_quiet and not brief_mode:
-            print("Loading templates once for entire batch...")
+        if (not use_parallel) and (not is_quiet) and (not brief_mode):
+            print("Loading templates once for entire batch (sequential mode)...")
         # Start wall-clock timer before heavy work (template load + processing)
         start_time = time.time()
         # Resolve effective templates directory based on profile if none provided
@@ -2058,26 +2131,21 @@ def main(args: argparse.Namespace) -> int:
 
         template_manager = BatchTemplateManager(effective_templates_dir, verbose=args.verbose, profile_id=active_profile_id)
         
-        if not template_manager.load_templates_once():
-            print("[ERROR] Failed to load templates", file=sys.stderr)
-            return 1
+        # In sequential mode, preload templates in the parent process.
+        # In parallel mode, defer loading to worker initializer to avoid fork-safety issues.
+        if not use_parallel:
+            if not template_manager.load_templates_once():
+                print("[ERROR] Failed to load templates", file=sys.stderr)
+                return 1
         
-        if not is_quiet and not brief_mode:
-            print(f"[SUCCESS] Templates loaded in {template_manager.load_time:.2f}s")
-            print(f"Ready to process {len(input_files)} spectra with {template_manager.template_count} templates")
-            print("")
+            if not is_quiet and not brief_mode:
+                print(f"[SUCCESS] Templates loaded in {template_manager.load_time:.2f}s")
+                print(f"Ready to process {len(input_files)} spectra with {template_manager.template_count} templates")
+                print("")
         
         # Process spectra (parallel or sequential)
         results: List[Tuple[str, bool, str, Dict[str, Any]]] = []
         failed_count = 0
-
-        use_parallel = int(getattr(args, 'workers', 0) or 0) != 0
-        max_workers = int(args.workers or 0)
-        if max_workers < 0:
-            try:
-                max_workers = os.cpu_count() or 1
-            except Exception:
-                max_workers = 1
 
         if use_parallel:
             # In parallel mode, default to brief output even if user didn't pass --brief
@@ -2110,12 +2178,25 @@ def main(args: argparse.Namespace) -> int:
             processed = 0
             progress_every = max(10, len(items) // 10)  # ~10 updates
             try:
-                with ProcessPoolExecutor(max_workers=max_workers,
-                                         initializer=_mp_worker_initializer,
-                                         initargs=(template_manager.templates_dir,
-                                                   getattr(args, 'type_filter', None),
-                                                   getattr(args, 'template_filter', None),
-                                                   getattr(args, 'profile_id', None))) as ex:
+                # Ensure single-thread BLAS in parent before spawning workers
+                try:
+                    os.environ.setdefault('OMP_NUM_THREADS', '1')
+                    os.environ.setdefault('MKL_NUM_THREADS', '1')
+                except Exception:
+                    pass
+                # Use spawn context on POSIX to avoid fork-after-HDF5/MKL hangs
+                ctx = mp.get_context('spawn') if os.name != 'nt' else None
+                executor_kwargs = dict(
+                    max_workers=max_workers,
+                    initializer=_mp_worker_initializer,
+                    initargs=(template_manager.templates_dir,
+                              getattr(args, 'type_filter', None),
+                              getattr(args, 'template_filter', None),
+                              getattr(args, 'profile_id', None))
+                )
+                if ctx is not None:
+                    executor_kwargs['mp_context'] = ctx
+                with ProcessPoolExecutor(**executor_kwargs) as ex:
                     collected: List[Tuple[int, Tuple[str, bool, str, Dict[str, Any]]]] = []
                     futures = []
                     for idx, item in enumerate(items):
@@ -2167,7 +2248,9 @@ def main(args: argparse.Namespace) -> int:
                                         match_quality = 'N/A'
                                         type_conf = 'N/A'
                                     type_conf = str(type_conf).title() if type_conf else 'N/A'
-                                    flags_str = f" MatchQual={match_quality} TypeConf={type_conf}"
+                                    subtype_conf = summary.get('subtype_confidence_level', None)
+                                    subtype_conf = str(subtype_conf).title() if subtype_conf else 'N/A'
+                                    flags_str = f" MatchQual={match_quality} TypeConf={type_conf} SubtypeConf={subtype_conf}"
                                     print(f"[{processed}/{len(items)}] {name}: {type_display} z={float(z_value):.6f}{age_str} RLAP-CCC={float(metric_value):.1f}{flags_str}")
                                 except Exception:
                                     print(f"[{processed}/{len(items)}] {name}: {type_display}")
@@ -2243,7 +2326,9 @@ def main(args: argparse.Namespace) -> int:
                                 match_quality = 'N/A'
                                 type_conf = 'N/A'
                             type_conf = str(type_conf).title() if type_conf else 'N/A'
-                            flags_str = f" MatchQual={match_quality} TypeConf={type_conf}"
+                            subtype_conf = summary.get('subtype_confidence_level', None)
+                            subtype_conf = str(subtype_conf).title() if subtype_conf else 'N/A'
+                            flags_str = f" MatchQual={match_quality} TypeConf={type_conf} SubtypeConf={subtype_conf}"
                             print(f"[{i}/{len(input_files)}] {name}: {type_display} z={float(z_value):.6f}{age_str} {metric_str}{flags_str}")
                         else:
                             z_value = summary.get('winning_subtype_redshift', redshift)
@@ -2257,7 +2342,9 @@ def main(args: argparse.Namespace) -> int:
                                 match_quality = 'N/A'
                                 type_conf = 'N/A'
                             type_conf = str(type_conf).title() if type_conf else 'N/A'
-                            flags_str = f" MatchQual={match_quality} TypeConf={type_conf}"
+                            subtype_conf = summary.get('subtype_confidence_level', None)
+                            subtype_conf = str(subtype_conf).title() if subtype_conf else 'N/A'
+                            flags_str = f" MatchQual={match_quality} TypeConf={type_conf} SubtypeConf={subtype_conf}"
                             print(f"      {name}: {type_display} z={float(z_value):.6f}{age_str} RLAP-CCC={best_metric_value:.1f}{flags_str} {z_marker}")
         else:
             # Sequential fallback (current behavior)

@@ -8,8 +8,8 @@ over template-by-template processing.
 
 import numpy as np
 
-# Global scaling for redshift uncertainties (empirical). Use 3/8 for Tonry & Davis.
-Z_K = 0.5
+# Global scaling for redshift uncertainties; fixed to 1.0 (no configurability).
+Z_K = 1.0
 from typing import List, Dict, Tuple, Any, Optional
 from scipy.signal import find_peaks
 import logging
@@ -174,8 +174,24 @@ class VectorizedPeakFinder:
             template_rms = peak_data['template_rms']
             
             for peak_idx in peaks:
-                # Derive lag at this correlation peak (bins relative to zero-lag center)
-                peak_lag = int(peak_idx) - self.mid
+                # Derive refined lag at this correlation peak (bins relative to zero-lag center)
+                # Use a local quadratic fit around the peak on the normalized correlation, 
+                # mirroring the legacy approach for initial centering.
+                try:
+                    fit_indices = (np.arange(int(peak_idx) - 2, int(peak_idx) + 3) % self.NW_grid).astype(int)
+                    y_fit0 = correlation[fit_indices]
+                    a0, b0, c0 = np.polyfit(fit_indices.astype(float), y_fit0, 2)
+                    if abs(a0) < 1e-12:
+                        ctr0 = float(peak_idx)
+                    else:
+                        ctr0 = -b0 / (2.0 * a0)
+                        # Guardrail: avoid excessive extrapolation
+                        if abs(ctr0 - float(peak_idx)) > max(3, int(np.ceil(0.5 * (fit_indices[-1] - fit_indices[0])))):
+                            ctr0 = float(peak_idx)
+                except Exception:
+                    ctr0 = float(peak_idx)
+
+                peak_lag = ctr0 - self.mid
                 
                 # Get overlap after shifting template to this lag
                 template_flux = template_meta.get('flux', np.array([]))
@@ -198,7 +214,8 @@ class VectorizedPeakFinder:
                     'template_name': template_name,
                     'template_meta': template_meta,
                     'template_rms': template_rms,
-                    'peak_idx': int(peak_idx),
+                    # Use integer index only for initial trimming window hints
+                    'peak_idx': int(np.clip(int(round(ctr0)), 0, self.NW_grid - 1)),
                     'correlation': correlation,
                     'lag_for_shifting_template': float(peak_lag),
                     'lap': float(lap),
@@ -273,8 +290,8 @@ class VectorizedPeakFinder:
                 work_t = np.pad(work_t, (0, pad_size), mode='constant')
             
             # Apply apodization
-            work_d = apodize(work_d, 10)  # 10% apodization
-            work_t = apodize(work_t, 10)
+            work_d = apodize(work_d, 0, len(work_d) - 1, percent=10.0)  # 10% apodization
+            work_t = apodize(work_t, 0, len(work_t) - 1, percent=10.0)
             
             # Pad to power of 2 for FFT efficiency
             work_d = pad_to_NW(work_d, self.NW_grid)
@@ -352,7 +369,8 @@ class VectorizedPeakFinder:
                 if sqrt_arg >= 0:
                     width = np.sqrt(sqrt_arg)  # Gaussian σ in pixel units
                     fwhm_pix = 2.355 * width   # Convert σ → FWHM
-                    z_width = fwhm_pix * self.DWLOG_grid  # Δz (small-angle approx)
+                    # Include Jacobian dz/dlag = (1+z) * DWLOG_grid
+                    z_width = fwhm_pix * self.DWLOG_grid * (1.0 + z_est)
                 else:
                     width = 0.0
                     z_width = 0.0

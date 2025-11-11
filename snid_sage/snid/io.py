@@ -589,9 +589,9 @@ def write_detailed_result(result: Any, filename: str) -> None:
                     
                     f.write(f"{tp:<10} {count:7d} {fraction:10.2f} {slope:10.4f} "
                            f"{type_stats.get('z_mean', 0.0):10.4f} "
-                           f"{type_stats.get('z_std', 0.0):10.4f} "
-                           f"{type_stats.get('age_enhanced', 0.0):10.3f} "
-                           f"{type_stats.get('age_std', 0.0):10.3f}\n")
+                           f"{type_stats.get('z_err', 0.0):10.4f} "
+                           f"{type_stats.get('age_mean', 0.0):10.3f} "
+                           f"{type_stats.get('age_err', 0.0):10.3f}\n")
                 
                 # Write subtype statistics
                 for sub, sub_stats in type_subtype_stats.items():
@@ -603,9 +603,9 @@ def write_detailed_result(result: Any, filename: str) -> None:
                         
                         f.write(f"{sub:<10} {count:7d} {fraction:10.2f} {0.0:10.4f} "
                                f"{sub_stats.get('z_mean', 0.0):10.4f} "
-                               f"{sub_stats.get('z_std', 0.0):10.4f} "
-                               f"{sub_stats.get('age_enhanced', 0.0):10.3f} "
-                               f"{sub_stats.get('age_std', 0.0):10.3f}\n")
+                               f"{sub_stats.get('z_err', 0.0):10.4f} "
+                               f"{sub_stats.get('age_mean', 0.0):10.3f} "
+                               f"{sub_stats.get('age_err', 0.0):10.3f}\n")
         f.write("\n")
         
         # Ordered template listings - use winning cluster if available, otherwise best matches

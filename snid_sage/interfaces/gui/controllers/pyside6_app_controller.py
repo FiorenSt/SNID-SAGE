@@ -970,7 +970,7 @@ class PySide6AppController(QtCore.QObject):
             
             progress_callback("Processing analysis results...", 90)
 
-            # Verbose logging of SE components for cluster and winning subtype (if available)
+            # Verbose logging of error (unbiased weighted SD) for cluster and winning subtype (if available)
             try:
                 if analysis_kwargs.get('verbose', False) and hasattr(self, 'snid_results') and self.snid_results:
                     clres = getattr(self.snid_results, 'clustering_results', None)
@@ -979,7 +979,7 @@ class PySide6AppController(QtCore.QObject):
                         if winning_cluster:
                             matches = winning_cluster.get('matches', []) or []
                             # Cluster-level
-                            from snid_sage.shared.utils.math_utils import get_best_metric_value, weighted_redshift_se_components
+                            from snid_sage.shared.utils.math_utils import get_best_metric_value, weighted_redshift_error
                             redshifts_with_errors = []
                             redshift_errors = []
                             metric_values = []
@@ -994,10 +994,8 @@ class PySide6AppController(QtCore.QObject):
                                     except Exception:
                                         metric_values.append(float(m.get('rlap', 0.0) or 0.0))
                             if redshifts_with_errors:
-                                se_sample, se_prop, se_chosen = weighted_redshift_se_components(
-                                    redshifts_with_errors, redshift_errors, metric_values)
-                                _LOGGER.info(
-                                    f"[Cluster SE] sample={se_sample:.6g}, prop={se_prop:.6g}, chosen={se_chosen:.6g}")
+                                z_err = weighted_redshift_error(redshifts_with_errors, redshift_errors, metric_values)
+                                _LOGGER.info(f"[Cluster z_err] {z_err:.6g}")
 
                             # Winning subtype-level
                             winning_type = winning_cluster.get('type', '')
@@ -1026,9 +1024,8 @@ class PySide6AppController(QtCore.QObject):
                                             except Exception:
                                                 metrics.append(float(m.get('rlap', 0.0) or 0.0))
                                 if z_vals:
-                                    se_sample, se_prop, se_chosen = weighted_redshift_se_components(z_vals, z_errs, metrics)
-                                    _LOGGER.info(
-                                        f"[Winning subtype {best_subtype} SE] sample={se_sample:.6g}, prop={se_prop:.6g}, chosen={se_chosen:.6g}")
+                                    z_err = weighted_redshift_error(z_vals, z_errs, metrics)
+                                    _LOGGER.info(f"[Winning subtype {best_subtype} z_err] {z_err:.6g}")
             except Exception:
                 pass
             

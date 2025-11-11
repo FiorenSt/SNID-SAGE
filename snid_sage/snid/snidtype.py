@@ -22,9 +22,9 @@ from collections import Counter, defaultdict
 import logging
 from snid_sage.shared.utils.math_utils.weighted_statistics import (
     estimate_weighted_redshift,
-    weighted_redshift_se,
+    weighted_redshift_error,
     estimate_weighted_epoch,
-    weighted_epoch_se,
+    weighted_epoch_error,
 )
 
 # ----------------------------------------------------------------------
@@ -405,9 +405,9 @@ def compute_type_subtype_stats(matches: List[Dict[str, Any]]) -> Dict[str, Any]:
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         rlap_metrics = np.array([get_best_metric_value(m) for m in all_matches])
         
-        # Weighted mean and SE using canonical weights
+        # Weighted mean and error using canonical weights (unbiased weighted SD)
         z_mean = estimate_weighted_redshift(z_vals, z_errs, rlap_metrics)
-        z_std = weighted_redshift_se(z_vals, z_errs, rlap_metrics)
+        z_err = weighted_redshift_error(z_vals, z_errs, rlap_metrics)
         
         # Age statistics
         age_vals = []
@@ -429,13 +429,13 @@ def compute_type_subtype_stats(matches: List[Dict[str, Any]]) -> Dict[str, Any]:
             age_rlap_metrics = np.array(age_rlap_metrics)
             age_z_errs = np.array(age_z_errs)
             age_mean = estimate_weighted_epoch(age_vals, age_z_errs, age_rlap_metrics)
-            age_std = weighted_epoch_se(age_vals, age_z_errs, age_rlap_metrics)
+            age_err = weighted_epoch_error(age_vals, age_z_errs, age_rlap_metrics)
         else:
-            age_mean = age_std = 0.0
+            age_mean = age_err = 0.0
         
         stats[tp]['_all'] = {
-            'z_mean': z_mean, 'z_std': z_std,
-            'age_mean': age_mean, 'age_std': age_std,
+            'z_mean': z_mean, 'z_err': z_err,
+            'age_mean': age_mean, 'age_err': age_err,
             'count': len(all_matches)
         }
         
@@ -450,7 +450,7 @@ def compute_type_subtype_stats(matches: List[Dict[str, Any]]) -> Dict[str, Any]:
             rlap_metrics = np.array([get_best_metric_value(m) for m in sub_matches])
             
             z_mean = estimate_weighted_redshift(z_vals, z_errs, rlap_metrics)
-            z_std = weighted_redshift_se(z_vals, z_errs, rlap_metrics)
+            z_err = weighted_redshift_error(z_vals, z_errs, rlap_metrics)
             
             # Age statistics
             age_vals = []
@@ -472,13 +472,13 @@ def compute_type_subtype_stats(matches: List[Dict[str, Any]]) -> Dict[str, Any]:
                 age_rlap_metrics = np.array(age_rlap_metrics)
                 age_z_errs = np.array(age_z_errs)
                 age_mean = estimate_weighted_epoch(age_vals, age_z_errs, age_rlap_metrics)
-                age_std = weighted_epoch_se(age_vals, age_z_errs, age_rlap_metrics)
+                age_err = weighted_epoch_error(age_vals, age_z_errs, age_rlap_metrics)
             else:
-                age_mean = age_std = 0.0
+                age_mean = age_err = 0.0
             
             stats[tp][sub] = {
-                'z_mean': z_mean, 'z_std': z_std,
-                'age_mean': age_mean, 'age_std': age_std,
+                'z_mean': z_mean, 'z_err': z_err,
+                'age_mean': age_mean, 'age_err': age_err,
                 'count': len(sub_matches)
             }
     

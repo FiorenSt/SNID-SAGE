@@ -18,8 +18,8 @@ import math  # Added for batch processing
 
 import numpy as np
 
-# Global scaling for redshift uncertainties (empirical). Use 3/8 for Tonry & Davis.
-Z_K = 0.5
+# Global scaling for redshift uncertainties; fixed to 1.0 (no configurability).
+Z_K = 1.0
 import matplotlib.pyplot as plt
 import os
 from scipy.signal import find_peaks, peak_prominences
@@ -728,7 +728,8 @@ def _process_template_peaks(
                     if sqrt_arg >= 0:
                         width = np.sqrt(sqrt_arg)  # Gaussian σ in pixel units
                         fwhm_pix = 2.355 * width   # Convert σ → FWHM
-                        z_width = fwhm_pix * DWLOG_grid  # Δz (small-angle approx)
+                        # Include Jacobian dz/dlag = (1+z) * DWLOG_grid
+                        z_width = fwhm_pix * DWLOG_grid * (1.0 + z_est)
                     else:
                         width = 0.0
                         z_width = 0.0
@@ -1295,15 +1296,16 @@ def _process_forced_redshift_match(
                 if right_idx > left_idx:
                     fwhm_pixels = float(right_idx - left_idx)
                     width = fwhm_pixels / 2.35
-                    # Use same small-angle mapping as main path: w_z ≈ FWHM_pix * DWLOG_grid
-                    z_width = fwhm_pixels * DWLOG_grid
+                    # Include Jacobian dz/dlag = (1+z) * DWLOG_grid
+                    z_width = fwhm_pixels * DWLOG_grid * (1.0 + z_est)
         except:
             pass
         
         # Conservative fallback estimate (assume a modest FWHM in pixel units)
         if width == 0.0:
             fwhm_pixels = 2.0 * 2.35
-            z_width = fwhm_pixels * DWLOG_grid
+            # Include Jacobian with forced redshift
+            z_width = fwhm_pixels * DWLOG_grid * (1.0 + z_est)
         
         # Calculate R value and final rlap
         arms_raw, _ = aspart(cross_power_peak, k1, k2, k3, k4, 0)
@@ -2197,7 +2199,7 @@ def run_snid_analysis(
         
         # Extract weighted redshift from the best cluster
         weighted_redshift = best_cluster.get('enhanced_redshift', result.initial_redshift)
-        weighted_uncertainty = best_cluster.get('weighted_redshift_se', 0.01)
+        weighted_error = best_cluster.get('weighted_redshift_err', 0.01)
         
         if 'gamma' in type_data:
             # Use new cluster-aware subtype determination
@@ -2232,9 +2234,9 @@ def run_snid_analysis(
                 'statistics': {
                     'getzt': {
                         'z_hybrid': weighted_redshift,
-                        'z_hybrid_uncertainty': weighted_uncertainty,
+                        'z_hybrid_error': weighted_error,
                         'age_enhanced': 0.0, 
-                        'age_enhanced_uncertainty': 0.0
+                        'age_enhanced_error': 0.0
                     },
                     'fractions': {'type_fractions': {winning_type: 1.0}, 'subtype_fractions': {}},
                     'slopes': {'type_slopes': {}},
@@ -2257,7 +2259,7 @@ def run_snid_analysis(
             # Ensure weighted redshift variables are available for fallback case too
             if 'weighted_redshift' not in locals():
                 weighted_redshift = best_cluster.get('enhanced_redshift', result.initial_redshift)
-                weighted_uncertainty = best_cluster.get('weighted_redshift_se', 0.01)
+                weighted_error = best_cluster.get('weighted_redshift_err', 0.01)
             
             type_determination = {
                 'success': True,
@@ -2273,9 +2275,9 @@ def run_snid_analysis(
                 'statistics': {
                     'getzt': {
                         'z_hybrid': weighted_redshift,
-                        'z_hybrid_uncertainty': weighted_uncertainty,
+                        'z_hybrid_error': weighted_error,
                         'age_enhanced': 0.0, 
-                        'age_enhanced_uncertainty': 0.0
+                        'age_enhanced_error': 0.0
                     },
                     'fractions': {'type_fractions': {winning_type: 1.0}, 'subtype_fractions': {}},
                     'slopes': {'type_slopes': {}},
@@ -2323,17 +2325,18 @@ def run_snid_analysis(
                 from snid_sage.shared.utils.math_utils import (
                     estimate_weighted_redshift,
                     get_best_metric_value,
+                    weighted_redshift_error,
                 )
                 rlap_ccc_values = [get_best_metric_value(m) for m in filtered_matches]
                 redshift_errors = [m.get('redshift_error', 0.0) for m in filtered_matches]
                 weighted_redshift = estimate_weighted_redshift(
                     redshifts, redshift_errors, rlap_ccc_values
                 )
-                # For simple path, report cluster scatter via SD if needed later; here keep as z_hybrid_uncertainty
-                weighted_uncertainty = 0.01
+                # Compute uncertainty as unbiased weighted SD for the simple path
+                weighted_error = weighted_redshift_error(redshifts, redshift_errors, rlap_ccc_values)
             else:
                 weighted_redshift = result.initial_redshift
-                weighted_uncertainty = 0.0
+                weighted_error = 0.0
             
             type_determination = {
                 'success': True,
@@ -2348,9 +2351,9 @@ def run_snid_analysis(
                 'statistics': {
                     'getzt': {
                         'z_hybrid': weighted_redshift,
-                        'z_hybrid_uncertainty': weighted_uncertainty,
+                        'z_hybrid_error': weighted_error,
                         'age_enhanced': 0.0, 
-                        'age_enhanced_uncertainty': 0.0
+                        'age_enhanced_error': 0.0
                     },
                     'fractions': {'type_fractions': {consensus_type: 1.0}, 'subtype_fractions': {}},
                     'slopes': {'type_slopes': {}},
@@ -2379,9 +2382,9 @@ def run_snid_analysis(
                 'statistics': {
                     'getzt': {
                         'z_mean': result.initial_redshift, 
-                        'z_std': 0.0, 
+                        'z_err': 0.0, 
                         'age_mean': 0.0, 
-                        'age_std': 0.0
+                        'age_err': 0.0
                     },
                     'fractions': {'type_fractions': {}, 'subtype_fractions': {}},
                     'slopes': {'type_slopes': {}},
@@ -2408,22 +2411,22 @@ def run_snid_analysis(
         else:
             result.consensus_redshift = getzt_stats.get('z_mean', result.initial_redshift)
         
-        # Special handling for forced redshift mode where z_std would be zero
+        # Special handling for forced redshift mode where z_err would be zero
         if forced_redshift is not None:
-            # In forced mode, use average of individual redshift errors instead of z_std
+            # In forced mode, use average of individual redshift errors instead of z_err
             individual_errors = [m.get('redshift_error', 0.0) for m in filtered_matches]
             if individual_errors and any(err > 0 for err in individual_errors):
                 result.consensus_redshift_error = np.mean([err for err in individual_errors if err > 0])
             else:
                 result.consensus_redshift_error = 0.0
         else:
-            if 'z_hybrid_uncertainty' in getzt_stats:
-                result.consensus_redshift_error = getzt_stats['z_hybrid_uncertainty']
+            if 'z_hybrid_error' in getzt_stats:
+                result.consensus_redshift_error = getzt_stats['z_hybrid_error']
             else:
-                result.consensus_redshift_error = getzt_stats.get('z_std', 0.01)
+                result.consensus_redshift_error = getzt_stats.get('z_err', 0.01)
         result.consensus_z_median = result.consensus_redshift
         result.consensus_age = getzt_stats.get('age_enhanced', 0.0)
-        result.consensus_age_error = getzt_stats.get('age_std', 0.0)
+        result.consensus_age_error = getzt_stats.get('age_enhanced_error', getzt_stats.get('age_err', 0.0))
         
         result.consensus_type = type_determination['consensus_type']
         result.best_subtype = type_determination['consensus_subtype']

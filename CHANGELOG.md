@@ -11,6 +11,7 @@ All notable changes to SNID SAGE will be documented in this file.
   - Create and manage user templates that complement the default library
   - Streamlined import, inspection, and metadata handling for custom templates
 - Added profile onir/optical swap in GUI
+- Replaced all “standard error (SE)” reporting with unbiased weighted standard deviation (error)
 
 ## [0.9.1] - 2025-10-08
 

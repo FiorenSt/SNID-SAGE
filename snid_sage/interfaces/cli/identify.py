@@ -22,8 +22,8 @@ from snid_sage.snid.io import read_spectrum
 from snid_sage.shared.utils.math_utils import (
     estimate_weighted_redshift,
     estimate_weighted_epoch,
-    weighted_redshift_se,
-    weighted_epoch_se,
+    weighted_redshift_error,
+    weighted_epoch_error,
     get_best_metric_value
 )
 
@@ -525,32 +525,25 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                     ages_for_estimation.append(age)
                     age_metric_values.append(metric_val)
             
-            # Weighted redshift mean and SE
+            # Weighted redshift mean and error (unbiased weighted SD)
             if redshifts_with_errors:
                 z_final = estimate_weighted_redshift(redshifts_with_errors, redshift_errors, metric_values)
-                z_se = weighted_redshift_se(redshifts_with_errors, redshift_errors, metric_values)
+                z_err = weighted_redshift_error(redshifts_with_errors, redshift_errors, metric_values)
                 summary['cluster_redshift_weighted'] = z_final
-                summary['cluster_redshift_se_weighted'] = z_se
-                try:
-                    from snid_sage.shared.utils.math_utils import weighted_redshift_se_components
-                    se_sample, se_prop, se_chosen = weighted_redshift_se_components(redshifts_with_errors, redshift_errors, metric_values)
-                    logging.getLogger('snid_sage.snid.identify').info(
-                        f"Cluster z SEs: sample={se_sample:.6g}, prop={se_prop:.6g}, chosen={se_chosen:.6g}")
-                except Exception:
-                    pass
+                summary['cluster_redshift_err_weighted'] = z_err
             else:
                 summary['cluster_redshift_weighted'] = np.nan
-                summary['cluster_redshift_se_weighted'] = np.nan
+                summary['cluster_redshift_err_weighted'] = np.nan
 
-            # Weighted epoch mean and SE using the same canonical weights
+            # Weighted epoch mean and error using the same canonical weights
             if ages_for_estimation and redshift_errors:
                 age_final = estimate_weighted_epoch(ages_for_estimation, redshift_errors, age_metric_values)
-                age_se = weighted_epoch_se(ages_for_estimation, redshift_errors, age_metric_values)
+                age_err = weighted_epoch_error(ages_for_estimation, redshift_errors, age_metric_values)
                 summary['cluster_age_weighted'] = age_final
-                summary['cluster_age_se_weighted'] = age_se
+                summary['cluster_age_err_weighted'] = age_err
             else:
                 summary['cluster_age_weighted'] = np.nan
-                summary['cluster_age_se_weighted'] = np.nan
+                summary['cluster_age_err_weighted'] = np.nan
             
             summary['cluster_rlap_mean'] = np.mean(rlaps)
             

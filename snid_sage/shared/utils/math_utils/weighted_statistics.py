@@ -35,16 +35,17 @@ def _weighted_mean(values: np.ndarray, weights: np.ndarray) -> float:
     return float(np.sum(weights * values) / sum_w)
 
 
-def _weighted_mean_se(values: np.ndarray, weights: np.ndarray) -> float:
-    """
-    Standard error (SE) of the weighted mean using arbitrary positive weights.
+ 
 
-    Steps:
-    - Population variance: var_pop = Σ w_i (x_i - μ)^2 / Σ w_i
-    - Effective N: N_eff = (Σ w_i)^2 / Σ (w_i^2)
-    - Sample variance: var_sample = var_pop × N_eff/(N_eff - 1)
-    - SE(mean) = sqrt(var_sample / N_eff)
-    Returns NaN if N_eff ≤ 0 or insufficient data.
+
+def _weighted_sd_unbiased(values: np.ndarray, weights: np.ndarray) -> float:
+    """
+    Unbiased weighted standard deviation:
+      μ = Σ w_i x_i / Σ w_i
+      var_pop = Σ w_i (x_i − μ)^2 / Σ w_i
+      N_eff = (Σ w_i)^2 / Σ w_i^2
+      var_unbiased = var_pop × N_eff / (N_eff − 1)  (for N_eff > 1; else var_pop)
+      sd = sqrt(max(0, var_unbiased))
     """
     if values.size == 0 or weights.size == 0:
         return float('nan')
@@ -57,17 +58,15 @@ def _weighted_mean_se(values: np.ndarray, weights: np.ndarray) -> float:
     if sum_w <= 0 or not np.isfinite(sum_w):
         return float('nan')
     mean = float(np.sum(w * v) / sum_w)
-    dev = v - mean
-    var_pop = float(np.sum(w * (dev ** 2)) / sum_w)
+    var_pop = float(np.sum(w * (v - mean) ** 2) / sum_w)
+    if not np.isfinite(var_pop) or var_pop < 0:
+        return float('nan')
     sum_w_sq = float(np.sum(w ** 2))
-    if sum_w_sq <= 0:
+    if sum_w_sq <= 0 or not np.isfinite(sum_w_sq):
         return float('nan')
     n_eff = (sum_w ** 2) / sum_w_sq
-    if n_eff <= 0:
-        return float('nan')
-    var_sample = var_pop * (n_eff / (n_eff - 1.0)) if n_eff > 1 else var_pop
-    se = float(np.sqrt(var_sample / n_eff))
-    return se
+    var_unbiased = var_pop * (n_eff / (n_eff - 1.0)) if n_eff > 1 else var_pop
+    return float(np.sqrt(max(0.0, var_unbiased)))
 
 
 def estimate_weighted_redshift(
@@ -113,106 +112,59 @@ def estimate_weighted_epoch(
     return _weighted_mean(t[valid], w)
 
 
-def weighted_redshift_se(
+def weighted_redshift_error(
     redshifts: Union[np.ndarray, List[float]],
     redshift_errors: Union[np.ndarray, List[float]],
     rlap_ccc_values: Union[np.ndarray, List[float]]
 ) -> float:
     """
-    Standard error (SE) of the weighted mean redshift using w = (rlapccc)^2 / sigma_z^2.
-    Previously returned sample SD; now returns SE(mean) for stability and interpretability.
-    """
-    # Delegate to components function and return the chosen SE to ensure
-    # consistent behavior across all callers (handles forced-z, zero spread, etc.).
-    _, _, se_chosen = weighted_redshift_se_components(redshifts, redshift_errors, rlap_ccc_values)
-    # Apply a global safety floor to avoid numerically tiny, non-physical values.
-    try:
-        if np.isfinite(se_chosen):
-            return float(max(se_chosen, 1e-6))
-    except Exception:
-        pass
-    return se_chosen
-
-
-def weighted_epoch_se(
-    ages: Union[np.ndarray, List[float]],
-    redshift_errors: Union[np.ndarray, List[float]],
-    rlap_ccc_values: Union[np.ndarray, List[float]]
-) -> float:
-    """
-    Standard error (SE) of the weighted mean age using w = (rlapccc)^2 / sigma_z^2.
-    Previously returned sample SD; now returns SE(mean).
-    """
-    t = np.asarray(ages, dtype=float)
-    sigma = np.asarray(redshift_errors, dtype=float)
-    r = np.asarray(rlap_ccc_values, dtype=float)
-    if not (len(t) == len(sigma) == len(r)):
-        logger.error("Mismatched input lengths for weighted_epoch_se")
-        return float('nan')
-    valid = (np.isfinite(t) & np.isfinite(sigma) & np.isfinite(r) & (sigma > 0))
-    if not np.any(valid):
-        return float('nan')
-    w = compute_cluster_weights(r[valid], sigma[valid])
-    return _weighted_mean_se(t[valid], w)
-
-# Backward-compatible aliases (deprecated):
-# Removed deprecated aliases weighted_redshift_sd/weighted_epoch_sd
-
-def weighted_redshift_se_components(
-    redshifts: Union[np.ndarray, List[float]],
-    redshift_errors: Union[np.ndarray, List[float]],
-    rlap_ccc_values: Union[np.ndarray, List[float]]
-) -> Tuple[float, float, float]:
-    """
-    Return (SE_sample, SE_propagated, SE_chosen) for the weighted mean redshift.
-
-    - SE_sample: standard error from weighted sample dispersion using weights
-                 w = (metric)^2 / sigma^2.
-    - SE_propagated: propagated standard error of the deterministic weighted mean
-                     using the same normalized weights alpha_i = w_i / sum(w).
-                     Var(\\hat{\\mu}) = sum(alpha_i^2 * sigma_i^2).
-    - SE_chosen: selection rule
-        * If no spread or SE_sample <= 0 or non-finite -> use SE_propagated
-        * Else return max(SE_sample, SE_propagated) when SE_propagated finite;
-          otherwise SE_sample.
+    Uncertainty for redshift reported as unbiased weighted SD within the set.
+    Uses weights w = (rlapccc)^2 / sigma_z^2.
+    Single-member rule: return that member's redshift_error.
     """
     z = np.asarray(redshifts, dtype=float)
     sigma = np.asarray(redshift_errors, dtype=float)
     r = np.asarray(rlap_ccc_values, dtype=float)
     if not (len(z) == len(sigma) == len(r)):
-        logger.error("Mismatched input lengths for weighted_redshift_se_components")
-        return float('nan'), float('nan'), float('nan')
-    valid = (np.isfinite(z) & np.isfinite(sigma) & np.isfinite(r) & (sigma > 0))
-    if not np.any(valid):
-        return float('nan'), float('nan'), float('nan')
-    z_v = z[valid]
-    s_v = sigma[valid]
-    r_v = r[valid]
-    w = compute_cluster_weights(r_v, s_v)
+        logger.error("Mismatched input lengths for weighted_redshift_error")
+        return float('nan')
+    valid = (np.isfinite(z) & np.isfinite(sigma) & np.isfinite(r) & (sigma > 0) & (r > 0))
+    n_valid = int(np.sum(valid))
+    if n_valid == 0:
+        return float('nan')
+    if n_valid == 1:
+        return float(sigma[valid][0])
+    w = compute_cluster_weights(r[valid], sigma[valid])
+    return _weighted_sd_unbiased(z[valid], w)
 
-    # Sample-based SE
-    se_sample = _weighted_mean_se(z_v, w)
 
-    # Propagated SE for weighted mean
-    sum_w = float(np.sum(w))
-    if sum_w > 0 and np.isfinite(sum_w):
-        alpha = w / sum_w
-        var_propagated = float(np.sum((alpha ** 2) * (s_v ** 2)))
-        se_propagated = float(np.sqrt(var_propagated))
-    else:
-        se_propagated = float('nan')
+def weighted_epoch_error(
+    ages: Union[np.ndarray, List[float]],
+    redshift_errors: Union[np.ndarray, List[float]],
+    rlap_ccc_values: Union[np.ndarray, List[float]]
+) -> float:
+    """
+    Uncertainty for age reported as unbiased weighted SD within the set.
+    Uses redshift-based weights w = (rlapccc)^2 / sigma_z^2.
+    Single-member rule: return NaN (cannot estimate SD from one point).
+    """
+    t = np.asarray(ages, dtype=float)
+    sigma = np.asarray(redshift_errors, dtype=float)
+    r = np.asarray(rlap_ccc_values, dtype=float)
+    if not (len(t) == len(sigma) == len(r)):
+        logger.error("Mismatched input lengths for weighted_epoch_error")
+        return float('nan')
+    valid = (np.isfinite(t) & np.isfinite(sigma) & np.isfinite(r) & (sigma > 0) & (r > 0))
+    n_valid = int(np.sum(valid))
+    if n_valid == 0:
+        return float('nan')
+    if n_valid == 1:
+        return float('nan')
+    w = compute_cluster_weights(r[valid], sigma[valid])
+    return _weighted_sd_unbiased(t[valid], w)
 
-    try:
-        no_spread = (np.ptp(z_v) <= 1e-9)
-    except Exception:
-        no_spread = False
 
-    if no_spread or not np.isfinite(se_sample) or se_sample <= 0.0:
-        return se_sample, se_propagated, se_propagated
-
-    if np.isfinite(se_propagated):
-        return se_sample, se_propagated, max(se_sample, se_propagated)
-    return se_sample, se_propagated, se_sample
+ 
 
 def calculate_combined_weights(
     rlap_ccc_values: Union[np.ndarray, List[float]],
@@ -321,6 +273,6 @@ __all__ = [
     'compute_cluster_weights',
     'estimate_weighted_redshift',
     'estimate_weighted_epoch',
-    'weighted_redshift_se',
-    'weighted_epoch_se'
+    'weighted_redshift_error',
+    'weighted_epoch_error'
 ]

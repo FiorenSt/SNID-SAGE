@@ -162,57 +162,55 @@ class UnifiedResultsFormatter:
         
         # Calculate enhanced estimates from cluster if available
         enhanced_redshift = result.consensus_redshift
-        enhanced_redshift_error = result.consensus_redshift_error
+        enhanced_redshift_err = result.consensus_redshift_error
         enhanced_age = getattr(result, 'consensus_age', 0)
-        enhanced_age_error = getattr(result, 'consensus_age_error', 0)
+        enhanced_age_err = getattr(result, 'consensus_age_error', 0)
         
         # Store both subtype-specific and full cluster redshift/age for display options
         subtype_redshift = None
-        subtype_redshift_error = None
+        subtype_redshift_err = None
         subtype_template_count = 0
         subtype_age = None
-        subtype_age_error = None
+        subtype_age_err = None
         subtype_age_template_count = 0
         full_cluster_redshift = None
-        full_cluster_redshift_error = None
+        full_cluster_redshift_err = None
         full_cluster_age = enhanced_age
-        full_cluster_age_error = enhanced_age_error
+        full_cluster_age_err = enhanced_age_err
         # No covariance terms: redshift and age are estimated independently
         
         if winning_cluster and cluster_matches:
             # Check if subtype-specific joint estimates are available
             subtype_redshift = winning_cluster.get('subtype_redshift')
-            subtype_redshift_error = winning_cluster.get('subtype_redshift_error')
+            subtype_redshift_err = winning_cluster.get('subtype_redshift_err')
             subtype_template_count = winning_cluster.get('subtype_template_count', 0)
             subtype_age = winning_cluster.get('subtype_age')
-            subtype_age_error = winning_cluster.get('subtype_age_error')
+            subtype_age_err = winning_cluster.get('subtype_age_err')
             subtype_age_template_count = winning_cluster.get('subtype_age_template_count', 0)
             
             # Get full cluster joint estimates
             full_cluster_redshift = winning_cluster.get('enhanced_redshift', result.consensus_redshift)
-            # Accept both keys; prefer new _se
-            full_cluster_redshift_error = winning_cluster.get('weighted_redshift_se', result.consensus_redshift_error)
+            full_cluster_redshift_err = winning_cluster.get('weighted_redshift_err', result.consensus_redshift_error)
             full_cluster_age = winning_cluster.get('cluster_age', enhanced_age)
-            # Prefer new key; fallback to legacy name if present
-            full_cluster_age_error = winning_cluster.get('cluster_age_se', winning_cluster.get('cluster_age_error', enhanced_age_error))
+            full_cluster_age_err = winning_cluster.get('cluster_age_err', enhanced_age_err)
             
             # Use subtype redshift as primary if available and valid, otherwise fall back to cluster redshift
             if (subtype_redshift is not None and not np.isnan(subtype_redshift) and 
-                subtype_redshift_error is not None and not np.isnan(subtype_redshift_error) and
+                subtype_redshift_err is not None and not np.isnan(subtype_redshift_err) and
                 subtype_template_count > 0):
                 enhanced_redshift = subtype_redshift
-                enhanced_redshift_error = subtype_redshift_error
+                enhanced_redshift_err = subtype_redshift_err
             else:
                 # Fall back to full cluster redshift
                 enhanced_redshift = full_cluster_redshift
-                enhanced_redshift_error = full_cluster_redshift_error
+                enhanced_redshift_err = full_cluster_redshift_err
             
             # Use subtype age as primary if available and valid, otherwise fall back to cluster age
             if (subtype_age is not None and not np.isnan(subtype_age) and 
-                subtype_age_error is not None and not np.isnan(subtype_age_error) and
+                subtype_age_err is not None and not np.isnan(subtype_age_err) and
                 subtype_age_template_count > 0):
                 enhanced_age = subtype_age
-                enhanced_age_error = subtype_age_error
+                enhanced_age_err = subtype_age_err
             else:
                 # Calculate enhanced age from ALL cluster matches (fallback behavior)
                 try:
@@ -246,10 +244,10 @@ class UnifiedResultsFormatter:
                             weights = calculate_combined_weights(np.array(rlap_values, dtype=float), np.array(z_errors, dtype=float))
                             # Use canonical weights for age via redshift errors if available (fallback to quality-only)
                             try:
-                                from snid_sage.shared.utils.math_utils import estimate_weighted_epoch, weighted_epoch_se
+                                from snid_sage.shared.utils.math_utils import estimate_weighted_epoch, weighted_epoch_error
                                 # If we don't have redshift errors aligned, keep previous behavior minimally
                                 age_mean = estimate_weighted_epoch(ages, [1.0]*len(ages), rlap_values)
-                                age_total_error = weighted_epoch_se(ages, [1.0]*len(ages), rlap_values)
+                                age_total_error = weighted_epoch_error(ages, [1.0]*len(ages), rlap_values)
                             except Exception:
                                 age_mean = float(np.mean(ages)) if len(ages) else float('nan')
                                 age_total_error = float('nan')
@@ -257,16 +255,16 @@ class UnifiedResultsFormatter:
                             # Fallback to quality-only if no valid z errors
                             from snid_sage.shared.utils.math_utils import apply_exponential_weighting
                             try:
-                                from snid_sage.shared.utils.math_utils import estimate_weighted_epoch, weighted_epoch_se
+                                from snid_sage.shared.utils.math_utils import estimate_weighted_epoch, weighted_epoch_error
                                 age_mean = estimate_weighted_epoch(ages, [1.0]*len(ages), rlap_values)
-                                age_total_error = weighted_epoch_se(ages, [1.0]*len(ages), rlap_values)
+                                age_total_error = weighted_epoch_error(ages, [1.0]*len(ages), rlap_values)
                             except Exception:
                                 age_mean = float(np.mean(ages)) if len(ages) else float('nan')
                                 age_total_error = float('nan')
                         full_cluster_age = age_mean
-                        full_cluster_age_error = age_total_error
+                        full_cluster_age_err = age_total_error
                         enhanced_age = age_mean
-                        enhanced_age_error = age_total_error
+                        enhanced_age_err = age_total_error
                 except ImportError:
                     pass  # Fall back to consensus values
         
@@ -358,15 +356,15 @@ class UnifiedResultsFormatter:
             
             # Enhanced estimates (cluster-weighted when available)
             'enhanced_redshift': enhanced_redshift,
-            'enhanced_redshift_error': enhanced_redshift_error,
+            'enhanced_redshift_err': enhanced_redshift_err,
             'enhanced_age': enhanced_age,
-            'enhanced_age_error': enhanced_age_error,
+            'enhanced_age_err': enhanced_age_err,
             
             # Joint estimation breakdown for display options
             'subtype_redshift': subtype_redshift,
-            'subtype_redshift_error': subtype_redshift_error,
+            'subtype_redshift_err': subtype_redshift_err,
             'subtype_age': subtype_age,
-            'subtype_age_error': subtype_age_error,
+            'subtype_age_err': subtype_age_err,
             'subtype_template_count': subtype_template_count,
             'subtype_age_template_count': subtype_age_template_count,
             'using_subtype_estimates': (subtype_redshift is not None and not np.isnan(subtype_redshift) and 
@@ -375,9 +373,9 @@ class UnifiedResultsFormatter:
             
             # Full cluster joint estimates
             'full_cluster_redshift': full_cluster_redshift,
-            'full_cluster_redshift_error': full_cluster_redshift_error,
+            'full_cluster_redshift_err': full_cluster_redshift_err,
             'full_cluster_age': full_cluster_age,
-            'full_cluster_age_error': full_cluster_age_error,
+            'full_cluster_age_err': full_cluster_age_err,
             
             
             # Legacy compatibility flags  
@@ -679,43 +677,46 @@ class UnifiedResultsFormatter:
             "=" * len(title),
             "",
         ]
-        
-        # Removed file name and best template block per updated summary requirements
-        
-        # Suppress standalone Best Type/Subtype lines; information is shown in tables below
-        
-        # Winning Type (compact header on one line, like subtype)
-        # Keep single blank line before this section
-        header_title = f"{'Type':<6} | {'Match Quality':<13} | Confidence vs next best type"
-        lines.append(header_title)
-        lines.append("-" * len(header_title))
-        # Compose cells with safe fallbacks
-        type_cell = s.get('consensus_type', 'Unknown') or 'Unknown'
-        # Confidence: discrete level and percent (and competitor) when available
-        conf_level = s.get('cluster_confidence_level', '')
-        conf_level = conf_level.title() if conf_level else ''
-        conf_pct = s.get('cluster_confidence_pct', None)
-        second_best_type = s.get('cluster_second_best_type', 'N/A')
-        if isinstance(conf_pct, (int, float)):
-            try:
-                conf_pct_val = float(conf_pct)
-                if np.isfinite(conf_pct_val):
-                    if second_best_type and second_best_type != 'N/A':
-                        conf_cell = f"{conf_level or 'N/A'} (+{conf_pct_val:.1f}%, vs {second_best_type})"
-                    else:
-                        conf_cell = f"{conf_level or 'N/A'} (+{conf_pct_val:.1f}%)"
-                else:
-                    conf_cell = conf_level or 'N/A'
-            except Exception:
-                conf_cell = conf_level or 'N/A'
-        else:
-            conf_cell = conf_level or 'N/A'
-        qual_cell = s.get('cluster_quality_level', '')
-        qual_cell = qual_cell.title() if qual_cell else 'N/A'
-        lines.append(f"{type_cell:<6} | {qual_cell:<13} | {conf_cell}")
-        # Extra blank line before subtype table for clearer separation
-        lines.append("")
-        
+        # Copy-ready compact line with labels shown at the top
+        try:
+            def _finite(x):
+                return isinstance(x, (int, float)) and np.isfinite(float(x))
+            # Preferred values (subtype → cluster-weighted → originals)
+            z_val = s.get('subtype_redshift', None)
+            z_err_val = s.get('subtype_redshift_err', None)
+            if not _finite(z_val):
+                z_val = s.get('enhanced_redshift', s.get('redshift', None))
+            if not _finite(z_err_val):
+                z_err_val = s.get('enhanced_redshift_err', s.get('redshift_error', None))
+            age_val = s.get('subtype_age', None)
+            age_err_val = s.get('subtype_age_err', None)
+            if not _finite(age_val):
+                age_val = s.get('enhanced_age', None)
+            if not _finite(age_err_val):
+                age_err_val = s.get('enhanced_age_err', None)
+            type_txt = s.get('consensus_type', 'Unknown') or 'Unknown'
+            subtype_txt = s.get('consensus_subtype', 'Unknown') or 'Unknown'
+            # Header aligned with values
+            copy_header = (
+                f"{'Type':<6} {'Subtype':<10} "
+                f"{'z':>10} {'z_err':>10} "
+                f"{'age [d]':>10} {'age_err [d]':>12}"
+            )
+            lines.append(copy_header)
+            lines.append("-" * len(copy_header))
+            z_txt = f"{float(z_val):.6f}" if _finite(z_val) else "N/A"
+            z_err_txt = f"{float(z_err_val):.6f}" if _finite(z_err_val) else "N/A"
+            age_txt = f"{float(age_val):.1f}" if _finite(age_val) else "N/A"
+            age_err_txt = f"{float(age_err_val):.1f}" if _finite(age_err_val) else "N/A"
+            lines.append(
+                f"{type_txt:<6} {subtype_txt:<10} "
+                f"{z_txt:>10} {z_err_txt:>10} "
+                f"{age_txt:>10} {age_err_txt:>12}"
+            )
+            lines.append("")
+        except Exception:
+            pass
+
         # Subtype summary table (winner first, then by Top-5 weighted score)
         # Build aggregates from template_matches limited to winning type
         def _weighted_mean_sd(values: List[float], weights: List[float]) -> Tuple[Optional[float], Optional[float]]:
@@ -798,28 +799,27 @@ class UnifiedResultsFormatter:
         # Use canonical weighting/statistics from math_utils for consistency
         from snid_sage.shared.utils.math_utils.weighted_statistics import (
             estimate_weighted_redshift,
-            weighted_redshift_se,
+            weighted_redshift_error,
             estimate_weighted_epoch,
-            weighted_epoch_se,
+            weighted_epoch_error,
         )
 
         for st, agg in subtypes.items():
-            # Weighted mean and SE for redshift
+            # Weighted mean and unbiased SD (error) for redshift
             z_mean = estimate_weighted_redshift(agg['z_vals'], agg['z_errs'], agg['metrics'])
-            z_se = weighted_redshift_se(agg['z_vals'], agg['z_errs'], agg['metrics'])
-            # Weighted mean and SE for age using same redshift-error weights
+            z_err = weighted_redshift_error(agg['z_vals'], agg['z_errs'], agg['metrics'])
+            # Weighted mean and unbiased SD (error) for age using same redshift-error weights
             age_mean = estimate_weighted_epoch(agg['age_vals'], agg['z_errs'], agg['metrics'])
-            age_se = weighted_epoch_se(agg['age_vals'], agg['z_errs'], agg['metrics'])
+            age_err = weighted_epoch_error(agg['age_vals'], agg['z_errs'], agg['metrics'])
 
-            # If there are fewer than 2 valid samples contributing, SE is undefined → use NaN
+            # If there are fewer than 2 valid samples contributing for age, return NaN (no dispersion).
             try:
                 z_vals_arr = np.asarray(agg['z_vals'], dtype=float)
                 z_errs_arr = np.asarray(agg['z_errs'], dtype=float)
                 metrics_arr_chk = np.asarray(agg['metrics'], dtype=float)
                 valid_z = (np.isfinite(z_vals_arr) & np.isfinite(z_errs_arr) & (z_errs_arr > 0) &
                            np.isfinite(metrics_arr_chk) & (metrics_arr_chk > 0))
-                if np.sum(valid_z) < 2:
-                    z_se = float('nan')
+                # Do not override z_err for single-member case: keep σz via weighted_redshift_error
             except Exception:
                 pass
 
@@ -830,7 +830,7 @@ class UnifiedResultsFormatter:
                 valid_age = (np.isfinite(age_vals_arr) & np.isfinite(z_errs_arr) & (z_errs_arr > 0) &
                              np.isfinite(metrics_arr_chk) & (metrics_arr_chk > 0))
                 if np.sum(valid_age) < 2:
-                    age_se = float('nan')
+                    age_err = float('nan')
             except Exception:
                 pass
 
@@ -863,14 +863,14 @@ class UnifiedResultsFormatter:
             subtype_rows.append({
                 'subtype': st,
                 'z_mean': z_mean,
-                'z_se': z_se,
+                'z_err': z_err,
                 'age_mean': age_mean,
-                'age_se': age_se,
+                'age_err': age_err,
                 'rank_score': rank_score
             })
         
         if subtype_rows:
-            # Compact Winning Subtype summary (penalized top-5 RLAP-CCC; relative % improvement flagging)
+            # Classification Summary (Type + Subtype confidence)
             try:
                 winner = s.get('consensus_subtype', '') or ''
                 # Find winner score and the best runner-up score
@@ -892,9 +892,7 @@ class UnifiedResultsFormatter:
                         break
                 # Compute percent advantage like type-level confidence
                 if runner_score is None:
-                    # No competitor
-                    level = "No Comp"
-                    conf_txt = "No competitor"
+                    sub_conf_txt = "No Comp"
                 else:
                     margin = winner_score - runner_score
                     # Use competitor score as denominator for percent improvement (consistent with type-level)
@@ -909,14 +907,46 @@ class UnifiedResultsFormatter:
                         level = "Low"
                     else:
                         level = "Very Low"
-                    conf_txt = f"{level} (+{pct:.1f}% vs {runner_up})"
+                    sub_conf_txt = f"{level} (+{pct:.1f}% vs {runner_up})"
                 
-                # Add an extra blank line to separate the two compact tables visually
+                # Build Type cells
+                type_cell = s.get('consensus_type', 'Unknown') or 'Unknown'
+                conf_level = s.get('cluster_confidence_level', '')
+                conf_level = conf_level.title() if conf_level else ''
+                conf_pct = s.get('cluster_confidence_pct', None)
+                second_best_type = s.get('cluster_second_best_type', 'N/A')
+                if isinstance(conf_pct, (int, float)) and np.isfinite(float(conf_pct)):
+                    type_conf_cell = f"{conf_level or 'N/A'} (+{float(conf_pct):.1f}%{', vs ' + second_best_type if second_best_type and second_best_type != 'N/A' else ''})"
+                else:
+                    type_conf_cell = conf_level or 'N/A'
+                qual_cell = (s.get('cluster_quality_level', '') or '').title() or 'N/A'
+                
+                # Render combined summary table with aligned columns
+                category_w = 8
+                label_w = 10
+                quality_w = 13
                 lines.append("")
-                header = f"{'Subtype':<10} | Confidence vs next best subtype"
-                lines.append(header)
-                lines.append("-" * len(header))
-                lines.append(f"{(winner or 'Unknown'):<10} | {conf_txt}")
+                lines.append("Classification Summary")
+                lines.append("----------------------")
+                header_cs = (
+                    f"{'Category':<{category_w}} | "
+                    f"{'Label':<{label_w}} | "
+                    f"{'Match Quality':<{quality_w}} | "
+                    f"Confidence vs next best"
+                )
+                lines.append(header_cs)
+                lines.append(
+                    f"{'Type':<{category_w}} | "
+                    f"{type_cell:<{label_w}} | "
+                    f"{qual_cell:<{quality_w}} | "
+                    f"{type_conf_cell}"
+                )
+                lines.append(
+                    f"{'Subtype':<{category_w}} | "
+                    f"{winner:<{label_w}} | "
+                    f"{'—':<{quality_w}} | "
+                    f"{sub_conf_txt}"
+                )
                 lines.append("")
             except Exception:
                 # Gracefully skip if anything goes wrong
@@ -924,8 +954,6 @@ class UnifiedResultsFormatter:
             # No per-subtype detail table (removed per updated requirements)
             lines.append("")
         
-        # Clustering overview removed per updated summary requirements
-
         
         # Template matches - show ALL from winning cluster with detailed info and improved formatting
         if s['template_matches']:
@@ -1031,13 +1059,22 @@ class UnifiedResultsFormatter:
         # Format type display
         type_display = f"{s['consensus_type']} {s['consensus_subtype']}".strip()
         
-        # Use enhanced redshift if clustering was used
-        if s['has_clustering']:
-            redshift = s['enhanced_redshift']
-            z_marker = "🎯"  # Cluster analysis marker
-        else:
-            redshift = s['redshift']
-            z_marker = ""
+        # Prefer subtype-specific estimates; fall back to enhanced/consensus
+        def _finite(x):
+            try:
+                return isinstance(x, (int, float)) and np.isfinite(float(x))
+            except Exception:
+                return False
+        
+        z_val = s.get('subtype_redshift', None)
+        if not _finite(z_val):
+            z_val = s.get('enhanced_redshift', s.get('redshift', None))
+        
+        age_val = s.get('subtype_age', None)
+        if not _finite(age_val):
+            age_val = s.get('enhanced_age', None)
+        
+        z_marker = "🎯" if s.get('has_clustering') else ""
         
         # Get best metric value
         if s['template_matches']:
@@ -1045,7 +1082,10 @@ class UnifiedResultsFormatter:
         else:
             best_metric = s['rlap']
         
-        return f"{self.spectrum_name}: {type_display} z={redshift:.6f} {self.metric_name}={best_metric:.1f} {z_marker}"
+        age_str = f" age={float(age_val):.1f}" if _finite(age_val) else ""
+        z_txt = f"{float(z_val):.6f}" if _finite(z_val) else "N/A"
+        
+        return f"{self.spectrum_name}: {type_display} z={z_txt}{age_str} {self.metric_name}={best_metric:.1f} {z_marker}"
     
     def save_to_file(self, filename: str, format_type: str = 'txt'):
         """Save results to file in specified format"""
