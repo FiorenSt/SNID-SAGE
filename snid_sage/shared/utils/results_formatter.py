@@ -486,16 +486,16 @@ class UnifiedResultsFormatter:
                 if penalized is not None:
                     if penalized > 10.0:
                         q_cat = 'High'
-                        q_desc = f'Excellent match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                        q_desc = f'Excellent match quality (Q: {penalized:.1f})'
                     elif penalized >= 4.0:
                         q_cat = 'Medium'
-                        q_desc = f'Good match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                        q_desc = f'Good match quality (Q: {penalized:.1f})'
                     elif penalized >= 2.5:
                         q_cat = 'Low'
-                        q_desc = f'Poor match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                        q_desc = f'Poor match quality (Q: {penalized:.1f})'
                     else:
                         q_cat = 'Very Low'
-                        q_desc = f'Very poor match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                        q_desc = f'Very poor match quality (Q: {penalized:.1f})'
                     summary['cluster_quality_level'] = q_cat
                     summary['cluster_quality_description'] = q_desc
                     summary['cluster_penalized_score'] = penalized
@@ -538,16 +538,16 @@ class UnifiedResultsFormatter:
                     # Map to quality
                     if penalized > 10.0:
                         q_cat = 'High'
-                        q_desc = f'Excellent match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                        q_desc = f'Excellent match quality (Q: {penalized:.1f})'
                     elif penalized >= 4.0:
                         q_cat = 'Medium'
-                        q_desc = f'Good match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                        q_desc = f'Good match quality (Q: {penalized:.1f})'
                     elif penalized >= 2.5:
                         q_cat = 'Low'
-                        q_desc = f'Poor match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                        q_desc = f'Poor match quality (Q: {penalized:.1f})'
                     else:
                         q_cat = 'Very Low'
-                        q_desc = f'Very poor match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                        q_desc = f'Very poor match quality (Q: {penalized:.1f})'
                     summary['cluster_quality_level'] = q_cat
                     summary['cluster_quality_description'] = q_desc + ' [No clustering]'
                     summary['cluster_penalized_score'] = penalized
@@ -672,9 +672,11 @@ class UnifiedResultsFormatter:
         
         # Build display summary
         title = "SNID-SAGE CLASSIFICATION RESULTS"
+        title_bar = "=" * len(title)
         lines = [
+            title_bar,
             title,
-            "=" * len(title),
+            title_bar,
             "",
         ]
         # Copy-ready compact line with labels shown at the top
@@ -696,22 +698,32 @@ class UnifiedResultsFormatter:
                 age_err_val = s.get('enhanced_age_err', None)
             type_txt = s.get('consensus_type', 'Unknown') or 'Unknown'
             subtype_txt = s.get('consensus_subtype', 'Unknown') or 'Unknown'
-            # Header aligned with values
-            copy_header = (
-                f"{'Type':<6} {'Subtype':<10} "
-                f"{'z':>10} {'z_err':>10} "
-                f"{'age [d]':>10} {'age_err [d]':>12}"
-            )
-            lines.append(copy_header)
-            lines.append("-" * len(copy_header))
+            # Prepare value strings
             z_txt = f"{float(z_val):.6f}" if _finite(z_val) else "N/A"
             z_err_txt = f"{float(z_err_val):.6f}" if _finite(z_err_val) else "N/A"
             age_txt = f"{float(age_val):.1f}" if _finite(age_val) else "N/A"
             age_err_txt = f"{float(age_err_val):.1f}" if _finite(age_err_val) else "N/A"
+            # Column widths: keep headers and values using the same width for alignment
+            type_w = max(6, len('Type'), len(type_txt))
+            subtype_w = max(12, len('Subtype'), len(subtype_txt))
+            z_w = max(8, len('z'), len(z_txt))
+            zerr_w = max(10, len('z_err'), len(z_err_txt))
+            age_w = max(8, len('age [d]'), len(age_txt))
+            ageerr_w = max(12, len('age_err [d]'), len(age_err_txt))
+            # Render header and row using vertical separators for robust alignment
+            header_with_pipes = (
+                f"| {'Type':<{type_w}} | {'Subtype':<{subtype_w}} | "
+                f"{'z':>{z_w}} | {'z_err':>{zerr_w}} | "
+                f"{'age [d]':>{age_w}} | {'age_err [d]':>{ageerr_w}} |"
+            )
+            separator_line = "-" * len(header_with_pipes)
+            lines.append(separator_line)
+            lines.append(header_with_pipes)
+            lines.append(separator_line)
             lines.append(
-                f"{type_txt:<6} {subtype_txt:<10} "
-                f"{z_txt:>10} {z_err_txt:>10} "
-                f"{age_txt:>10} {age_err_txt:>12}"
+                f"| {type_txt:<{type_w}} | {subtype_txt:<{subtype_w}} | "
+                f"{z_txt:>{z_w}} | {z_err_txt:>{zerr_w}} | "
+                f"{age_txt:>{age_w}} | {age_err_txt:>{ageerr_w}} |"
             )
             lines.append("")
         except Exception:
@@ -926,25 +938,29 @@ class UnifiedResultsFormatter:
                 label_w = 10
                 quality_w = 13
                 lines.append("")
-                lines.append("Classification Summary")
-                lines.append("----------------------")
+                sep = "  "
+                sep_wide = "   "
                 header_cs = (
-                    f"{'Category':<{category_w}} | "
-                    f"{'Label':<{label_w}} | "
-                    f"{'Match Quality':<{quality_w}} | "
+                    f"{'Category':<{category_w}}{sep_wide}"
+                    f"{'Label':<{label_w}}{sep}"
+                    f"{'Match Quality':<{quality_w}}{sep_wide}"
                     f"Confidence vs next best"
                 )
+                # Add horizontal separators above and below the header
+                bar_cs = "-" * len(header_cs)
+                lines.append(bar_cs)
                 lines.append(header_cs)
+                lines.append(bar_cs)
                 lines.append(
-                    f"{'Type':<{category_w}} | "
-                    f"{type_cell:<{label_w}} | "
-                    f"{qual_cell:<{quality_w}} | "
+                    f"{'Type':<{category_w}}{sep_wide}"
+                    f"{type_cell:<{label_w}}{sep}"
+                    f"{qual_cell:<{quality_w}}{sep_wide}"
                     f"{type_conf_cell}"
                 )
                 lines.append(
-                    f"{'Subtype':<{category_w}} | "
-                    f"{winner:<{label_w}} | "
-                    f"{'—':<{quality_w}} | "
+                    f"{'Subtype':<{category_w}}{sep_wide}"
+                    f"{winner:<{label_w}}{sep}"
+                    f"{'—':<{quality_w}}{sep_wide}"
                     f"{sub_conf_txt}"
                 )
                 lines.append("")
@@ -957,7 +973,13 @@ class UnifiedResultsFormatter:
         
         # Template matches - show ALL from winning cluster with detailed info and improved formatting
         if s['template_matches']:
-            cluster_note = f" (from {s['cluster_label']})" if s['has_clustering'] else ""
+            # Build cluster note; avoid nested parentheses in label like '(Auto-Selected)'
+            if s['has_clustering']:
+                raw_label = s.get('cluster_label', '') or ''
+                label_display = raw_label.replace("(Auto-Selected)", "- Auto-Selected")
+                cluster_note = f" (from {label_display})"
+            else:
+                cluster_note = ""
 
             # Determine display metric name from first match (RLAP-CCC if available, else RLAP)
             try:
@@ -988,6 +1010,7 @@ class UnifiedResultsFormatter:
 
             lines.extend([
                 f"TEMPLATE MATCHES{cluster_note}:",
+                "-" * len(header),
                 header,
                 "-" * len(header),
             ])

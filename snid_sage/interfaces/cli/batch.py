@@ -696,6 +696,21 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                         if c.get('type', '') != winning_type:
                             competitor = c
                             break
+                    # Expose competitor (second-best TYPE) subtype estimates for CSV export
+                    if competitor:
+                        try:
+                            # Name of the competitor subtype
+                            summary['second_best_type_subtype'] = (
+                                competitor.get('subtype_info', {}).get('best_subtype')
+                            )
+                            # These keys are present on each cluster candidate
+                            summary['second_best_type_subtype_z'] = competitor.get('subtype_redshift')
+                            summary['second_best_type_subtype_z_err'] = competitor.get('subtype_redshift_err')
+                            summary['second_best_type_subtype_age'] = competitor.get('subtype_age')
+                            summary['second_best_type_subtype_age_err'] = competitor.get('subtype_age_err')
+                        except Exception:
+                            # Leave unset on failure; exporter will emit 'nan'
+                            pass
 
         except Exception:
             pass
@@ -920,7 +935,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
     # Fallback to old approach only if no clustering available
     else:
         summary['cluster_method'] = 'No clustering'
-        # Compute a type-level match quality from penalized top-5 RLAP-CCC
+        # Compute a type-level match quality from Q
         try:
             from snid_sage.shared.utils.math_utils import get_best_metric_value, compute_cluster_weights
             active = []
@@ -953,16 +968,16 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 summary['cluster_penalized_score'] = penalized
                 if penalized > 10.0:
                     summary['cluster_quality_category'] = 'High'
-                    summary['cluster_quality_description'] = f'Excellent match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                    summary['cluster_quality_description'] = f'Excellent match quality (Q: {penalized:.1f})'
                 elif penalized >= 4.0:
                     summary['cluster_quality_category'] = 'Medium'
-                    summary['cluster_quality_description'] = f'Good match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                    summary['cluster_quality_description'] = f'Good match quality (Q: {penalized:.1f})'
                 elif penalized >= 2.5:
                     summary['cluster_quality_category'] = 'Low'
-                    summary['cluster_quality_description'] = f'Poor match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                    summary['cluster_quality_description'] = f'Poor match quality (Q: {penalized:.1f})'
                 else:
                     summary['cluster_quality_category'] = 'Very Low'
-                    summary['cluster_quality_description'] = f'Very poor match quality (penalized top-5 RLAP-CCC: {penalized:.1f})'
+                    summary['cluster_quality_description'] = f'Very poor match quality (Q: {penalized:.1f})'
         except Exception:
             pass
         
@@ -1470,7 +1485,7 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
         report.append("INDIVIDUAL SPECTRUM RESULTS")
         report.append("-"*50)
         report.append("Each spectrum represents a different astronomical object.")
-        report.append("Results are sorted by analysis quality (penalized top-5 RLAP-CCC) - highest quality first.")
+        report.append("Results are sorted by Q (analysis quality) - highest first.")
         report.append("")
         
         # Header (winning subtype focused)
@@ -1573,7 +1588,7 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
         report.append("")
         report.append("")
         
-        # Detailed analysis (sorted by penalized top-5 RLAP-CCC - highest quality first)
+        # Detailed analysis (sorted by Q - highest first)
         report.append("DETAILED INDIVIDUAL ANALYSIS")
         report.append("-"*50)
         report.append("Detailed results for each spectrum (sorted by analysis quality):")
@@ -1656,10 +1671,10 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
             else:
                 report.append("   Redshift Mode: Search within zmin/zmax")
             
-            # Show penalized top-5 RLAP-CCC (winning subtype) when available; fallback to best metric
+            # Show Q (winning subtype) when available; fallback to best metric
             metric_value = summary.get('winning_subtype_penalized_score', None)
             if isinstance(metric_value, (int, float)) and np.isfinite(metric_value):
-                report.append(f"   Penalized top-5 RLAP-CCC (analysis quality): {metric_value:.2f}")
+                report.append(f"   Q (analysis quality): {metric_value:.2f}")
             else:
                 from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
                 metric_value = get_best_metric_value(summary)
@@ -1806,7 +1821,7 @@ def _export_results_table(results: List[Tuple], output_dir: Path) -> Optional[Pa
         'z_err',
         'age',
         'age_err',
-        'rlap_ccc_penalized',
+        'Q_cluster',
         'match_quality',
         'type_confidence',
         'subtype_confidence',
@@ -1816,6 +1831,11 @@ def _export_results_table(results: List[Tuple], output_dir: Path) -> Optional[Pa
         'zfixed',
         # Second-best competitor info near the end for readability
         'second_best_type',
+        'second_best_type_subtype',
+        'second_best_type_subtype_z',
+        'second_best_type_subtype_z_err',
+        'second_best_type_subtype_age',
+        'second_best_type_subtype_age_err',
         'success',
         'error'
     ]
@@ -1840,6 +1860,7 @@ def _export_results_table(results: List[Tuple], output_dir: Path) -> Optional[Pa
                     txt = ''
                 return 'nan' if (txt == '' or txt.upper() == 'N/A') else val
             row['second_best_type'] = _nan_if_missing(summary.get('cluster_second_best_type', None))
+            row['second_best_type_subtype'] = _nan_if_missing(summary.get('second_best_type_subtype', None))
             # Runner-up subtype within the winning cluster
             row['second_best_subtype'] = _nan_if_missing(summary.get('winning_second_best_subtype', None))
 
@@ -1873,11 +1894,38 @@ def _export_results_table(results: List[Tuple], output_dir: Path) -> Optional[Pa
             row['age'] = age_est
             row['age_err'] = age_err_est
 
+            # Competitor (second-best TYPE) subtype estimates
+            comp_z = summary.get('second_best_type_subtype_z')
+            comp_z_err = summary.get('second_best_type_subtype_z_err')
+            comp_age = summary.get('second_best_type_subtype_age')
+            comp_age_err = summary.get('second_best_type_subtype_age_err')
+
+            if not (isinstance(comp_z, (int, float)) and np.isfinite(comp_z)):
+                comp_z = 'nan'
+            if not (isinstance(comp_z_err, (int, float)) and np.isfinite(comp_z_err) and (float(comp_z_err) > 0.0)):
+                comp_z_err = 'nan'
+            if not (isinstance(comp_age, (int, float)) and np.isfinite(comp_age)):
+                comp_age = 'nan'
+            if not (isinstance(comp_age_err, (int, float)) and np.isfinite(comp_age_err) and (float(comp_age_err) > 0.0)):
+                comp_age_err = 'nan'
+
+            row['second_best_type_subtype_z'] = comp_z
+            row['second_best_type_subtype_z_err'] = comp_z_err
+            row['second_best_type_subtype_age'] = comp_age
+            row['second_best_type_subtype_age_err'] = comp_age_err
+
             # Analysis quality metrics
-            try:
-                row['rlap_ccc_penalized'] = summary.get('winning_subtype_penalized_score', get_best_metric_value(summary))
-            except Exception:
-                row['rlap_ccc_penalized'] = summary.get('rlap', None)
+            # Prefer cluster-level Q when available; fallback to subtype Q; then best metric
+            q_cluster = summary.get('cluster_penalized_score', None)
+            if not isinstance(q_cluster, (int, float)) or not np.isfinite(q_cluster):
+                q_cluster = summary.get('winning_subtype_penalized_score', None)
+            if not isinstance(q_cluster, (int, float)) or not np.isfinite(q_cluster):
+                try:
+                    from snid_sage.shared.utils.math_utils import get_best_metric_value
+                    q_cluster = get_best_metric_value(summary)
+                except Exception:
+                    q_cluster = summary.get('rlap', None)
+            row['Q_cluster'] = q_cluster
 
             row['match_quality'] = summary.get('cluster_quality_category', None)
             if not summary.get('has_clustering'):
@@ -1905,7 +1953,7 @@ def _export_results_table(results: List[Tuple], output_dir: Path) -> Optional[Pa
             row['z_err'] = 'nan'
             row['age'] = 'nan'
             row['age_err'] = 'nan'
-            row['rlap_ccc_penalized'] = 'nan'
+            row['Q_cluster'] = 'nan'
             row['match_quality'] = 'nan'
             row['type_confidence'] = 'nan'
             row['subtype_confidence'] = 'nan'
@@ -1915,6 +1963,11 @@ def _export_results_table(results: List[Tuple], output_dir: Path) -> Optional[Pa
             # Fill competitor columns with nan on failures as requested
             row['second_best_type'] = 'nan'
             row['second_best_subtype'] = 'nan'
+            row['second_best_type_subtype'] = 'nan'
+            row['second_best_type_subtype_z'] = 'nan'
+            row['second_best_type_subtype_z_err'] = 'nan'
+            row['second_best_type_subtype_age'] = 'nan'
+            row['second_best_type_subtype_age_err'] = 'nan'
             row['success'] = False
             row['error'] = message
 

@@ -1394,16 +1394,16 @@ def _calculate_absolute_quality(winning_cluster_info: Dict[str, Any], metric_nam
     #  - High: > 10.0
     if penalized_score > 10.0:
         quality_category = 'High'
-        quality_description = f'Excellent match quality (penalized top-5 {metric_name}: {penalized_score:.1f})'
+        quality_description = f'Excellent match quality (Q: {penalized_score:.1f})'
     elif penalized_score >= 4.0:
         quality_category = 'Medium'
-        quality_description = f'Good match quality (penalized top-5 {metric_name}: {penalized_score:.1f})'
+        quality_description = f'Good match quality (Q: {penalized_score:.1f})'
     elif penalized_score >= 2.5:
         quality_category = 'Low'
-        quality_description = f'Poor match quality (penalized top-5 {metric_name}: {penalized_score:.1f})'
+        quality_description = f'Poor match quality (Q: {penalized_score:.1f})'
     else:
         quality_category = 'Very Low'
-        quality_description = f'Very poor match quality (penalized top-5 {metric_name}: {penalized_score:.1f})'
+        quality_description = f'Very poor match quality (Q: {penalized_score:.1f})'
     
     # Add penalty information if applicable
     if penalty_factor < 1.0:

@@ -115,7 +115,7 @@ def build_enhanced_context(snid_results: Union[Dict[str, Any], Any],
                     },
                     'n_types_clustered': n_types_clustered,
                     'total_candidates': total_candidates,
-                    'clustering_method': 'Type-specific GMM with top-5 RLAP-CCC selection'
+                    'clustering_method': 'Type-specific GMM with Q selection'
                 }
                 
                 # Add subtype composition within cluster
