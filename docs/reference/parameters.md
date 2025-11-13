@@ -19,7 +19,8 @@ Unified reference of configurable parameters across GUI and CLI.
 | template_filter | list[str] or null | None | `--template-filter` | Only use specified template names |
 | exclude_templates | list[str] or null | None | `--exclude-templates` | Exclude specified template names |
 | wavelength_tolerance | float | 10.0 | — | Matching tolerance in Å for config-based workflows |
-| emclip_z | float | -1.0 | `--emclip-z` | Redshift for emission line clipping (-1 disables) |
+| emclip | bool | False | `--emclip` (batch) | Auto host emission clipping using per-entry redshift (skips if none) |
+| emclip_z | float | -1.0 | `--emclip-z` | Redshift for emission line clipping (-1 disables; masking only, does not force analysis redshift) |
 | emwidth | float | 40.0 | `--emwidth` | Emission line clipping width (Å) |
 
 ### Processing
@@ -39,6 +40,7 @@ Unified reference of configurable parameters across GUI and CLI.
 | savgol_order | int | 3 | `--savgol-order` | Savitzky–Golay polynomial order |
 | aband_remove | bool | False | `--aband-remove` | Remove telluric A-band |
 | skyclip | bool | False | `--skyclip` | Clip sky emission lines |
+| emclip | bool | False | `--emclip` (batch) | Use per-entry/forced redshift for emission clipping (does not force analysis redshift) |
 | wavelength_masks | list[range] or null | None | `--wavelength-masks WMIN:WMAX ...` | Wavelength ranges to mask (e.g., 6550:6600) |
 | apodize_percent | float | 10.0 | `--apodize-percent` | Percentage of spectrum ends to apodize |
 

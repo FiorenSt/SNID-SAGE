@@ -14,7 +14,7 @@ Notes:
 
 ### Analysis
 - Redshift/age bounds; thresholds (rlapmin, lapmin, fraction_coverage)
-- Output limits; emission clipping (emclip_z, emwidth)
+- Output limits; emission clipping (emclip, emclip_z, emwidth)
 
 ### Processing
 - Flattening/smoothing/median filters; A-band removal; skyline clipping; apodization

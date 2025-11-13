@@ -109,13 +109,29 @@ sage batch --list-csv input.csv --path-column "Spectrum Path" --redshift-column 
 | `--template-filter NAME...` | Restrict to specific templates |
 | `--zmin FLOAT` | Min redshift (default: -0.01) |
 | `--zmax FLOAT` | Max redshift (default: 1.0) |
+| `--age-min FLOAT` / `--age-max FLOAT` | Template age bounds (days) |
 | `--forced-redshift FLOAT` | Force a fixed redshift for all spectra |
+| `--profile {optical,onir}` | Analysis profile (default: config/optical) |
 | `--list-csv FILE` | CSV list of spectra (columns: path[, redshift]) |
 | `--path-column NAME` | Column for paths in `--list-csv` (default: path) |
 | `--redshift-column NAME` | Column for redshift in `--list-csv` (default: redshift) |
 | `--rlapmin FLOAT` | Minimum RLAP (default: 4.0) |
 | `--lapmin FLOAT` | Minimum overlap fraction (default: 0.3) |
 | `--rlap-ccc-threshold FLOAT` | Clustering quality threshold (default: 1.8) |
+| `--type-filter TYPE...` | Restrict templates to these types |
+| `--template-filter NAME...` | Only use specified template names |
+| `--exclude-templates NAME...` | Exclude specified template names |
+| `--workers INT` | Parallel workers: 0=sequential, -1=all cores, N=fixed |
+| `--no-plots` | Do not generate plots |
+| `--savgol-window INT` | Savitzky–Golay window (0 disables) |
+| `--savgol-order INT` | Savitzky–Golay polynomial order |
+| `--aband-remove` | Remove telluric O2 A-band (7550–7700 Å) |
+| `--skyclip` | Clip sky emission lines (±emwidth Å) |
+| `--emclip` | Auto host emission clipping using per-entry/forced z when provided (does not force analysis redshift) |
+| `--emclip-z FLOAT` | Fixed redshift for emission clipping (-1 disables; masking only, does not force analysis redshift) |
+| `--emwidth FLOAT` | Emission/sky clipping half-width in Å (default: 40) |
+| `--wavelength-masks WMIN:WMAX ...` | Additional mask ranges (e.g., 6550:6600) |
+| `--apodize-percent FLOAT` | Apodization percent (default: 10) |
 | `--minimal` / `--complete` | Output modes |
 | `--brief` / `--full` | Console verbosity modes |
 | `--no-progress` | Disable progress output |

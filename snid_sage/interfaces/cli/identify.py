@@ -296,6 +296,11 @@ Examples:
         help="Clip sky emission lines"
     )
     preproc_group.add_argument(
+        "--emclip",
+        action="store_true",
+        help="Clip host emission lines using forced redshift when provided; skipped if none"
+    )
+    preproc_group.add_argument(
         "--emclip-z", 
         type=float, 
         default=-1.0, 
@@ -861,6 +866,24 @@ def main(args: argparse.Namespace) -> int:
 
         # Preprocess spectrum with grid validation/auto-clipping
         try:
+            # Determine effective emclip_z for single-spectrum:
+            # 1) If --emclip-z >= 0: use that value
+            # 2) Else if --emclip and --forced-redshift provided: use forced redshift
+            # 3) Else: disable (-1)
+            try:
+                fixed_emclip_z = float(getattr(args, 'emclip_z', -1.0))
+            except Exception:
+                fixed_emclip_z = -1.0
+            effective_emclip_z = fixed_emclip_z if fixed_emclip_z >= 0.0 else -1.0
+            if effective_emclip_z < 0.0 and bool(getattr(args, 'emclip', False)):
+                z_candidate = getattr(args, 'forced_redshift', None)
+                if isinstance(z_candidate, (int, float)):
+                    try:
+                        zf = float(z_candidate)
+                        if np.isfinite(zf):
+                            effective_emclip_z = zf
+                    except Exception:
+                        effective_emclip_z = -1.0
             processed_spectrum, preprocessing_trace = preprocess_spectrum(
                 args.spectrum_path,
                 spike_masking=getattr(args, 'spike_masking', True),
@@ -875,7 +898,7 @@ def main(args: argparse.Namespace) -> int:
                 savgol_order=args.savgol_order,
                 aband_remove=args.aband_remove,
                 skyclip=args.skyclip,
-                emclip_z=args.emclip_z,
+                emclip_z=effective_emclip_z,
                 emwidth=args.emwidth,
                 wavelength_masks=args.wavelength_masks,
                 apodize_percent=args.apodize_percent,

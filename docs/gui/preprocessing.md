@@ -26,7 +26,8 @@ Open via: Preprocessing → Manual wizard
 |  | Savitzky–Golay order | `savgol_order` | 3 | `--savgol-order` | |
 | 3. Telluric and sky | Remove A-band | `aband_remove` | False | `--aband-remove` | Masks ~7550–7700 Å |
 |  | Sky line clipping | `skyclip` | False | `--skyclip` | |
-|  | Emission clipping z | `emclip_z` | -1.0 | `--emclip-z` | -1 disables |
+|  | Emission clipping (auto) | — | — | `--emclip` | Uses per-entry/forced z; does not force analysis redshift |
+|  | Emission clipping z | `emclip_z` | -1.0 | `--emclip-z` | -1 disables; masking only (does not force z) |
 |  | Emission width (Å) | `emwidth` | 40.0 | `--emwidth` | |
 | 4. Apodization | Apodize percent (%) | `apodize_percent` | 10.0 | `--apodize-percent` | Typical 5–15% |
 | 5. Masks | Custom wavelength masks | `wavelength_masks` | None | `--wavelength-masks` | e.g. 6550:6600 7600:7700 |
@@ -44,6 +45,8 @@ sage spectrum.dat --output-dir results/ ; \
   sage spectrum.dat --savgol-window 11 --savgol-order 3 ; \
   sage spectrum.dat --aband-remove --skyclip ; \
   sage spectrum.dat --emclip-z 0.02 --emwidth 40 ; \
+  # In batch, auto emission clipping uses per-row z when present
+  sage batch --list-csv list.csv --emclip --output-dir results/ ; \
   sage spectrum.dat --wavelength-masks 6550:6600 7600:7700
 ```
 

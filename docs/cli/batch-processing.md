@@ -29,6 +29,8 @@ Notes:
 - The CSV must include a path column; redshift is optional.
 - Relative paths in the CSV are resolved relative to the CSV file's directory.
 - When a row has a redshift value, analysis is performed at that fixed redshift for that spectrum; otherwise the global search range is used.
+ - Emission clipping: `--emclip` uses the row's redshift when present (skips otherwise). Use `--emclip-z` to force a fixed clipping redshift for all rows.
+- `--emclip`/`--emclip-z` only control masking; to fix the analysis redshift use `--forced-redshift`.
 
 ## Modes
 
@@ -54,6 +56,19 @@ Notes:
 | `--brief` / `--full` | Toggle concise vs detailed console output |
 | `--no-progress` | Disable progress output |
 | `--workers INT` | Parallel workers: 0=sequential (default), -1=all cores, N=fixed |
+
+### Preprocessing
+
+| Option | Description |
+|---|---|
+| `--savgol-window INT` / `--savgol-order INT` | Savitzky–Golay smoothing (0 disables) |
+| `--aband-remove` | Remove telluric O2 A-band (7550–7700 Å) |
+| `--skyclip` | Clip sky emission lines (±emwidth Å) |
+| `--emclip` | Auto host emission clipping using per-row/forced z (does not force analysis redshift) |
+| `--emclip-z FLOAT` | Fixed redshift for emission clipping (-1 disables; masking only) |
+| `--emwidth FLOAT` | Clipping half-width in Å (default: 40) |
+| `--wavelength-masks WMIN:WMAX ...` | Additional mask ranges |
+| `--apodize-percent FLOAT` | Apodization percent (default: 10) |
 
 ```powershell
 # Redshift search range

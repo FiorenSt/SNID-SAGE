@@ -365,14 +365,44 @@ def preprocess_spectrum(
                 _LOG.debug(f"    Applied immediate sky line clipping (±{float(emwidth):.1f} Å; GUI-equivalent)")
         except Exception:
             pass
+        # Queue host emission line masks for mask-aware log-grid clipping (consistent with GUI/manual)
         if emclip_z >= 0:
-            # Keep current behavior for host emission clipping (narrow features)
-            wave, flux = clip_host_emission_lines(wave, flux, emclip_z, emwidth)
-            _LOG.debug(f"    Applied emission line clipping at z={emclip_z}")
+            try:
+                rest_lines = (3727.3, 4861.3, 4958.9, 5006.8, 6548.1, 6562.8, 6583.6, 6716.4, 6730.8)
+                w = float(emwidth)
+                for l in rest_lines:
+                    ll = l * (1.0 + float(emclip_z))
+                    pending_masks.append((ll - w, ll + w))
+                _LOG.debug(f"    Queued host emission masks at z={emclip_z} (±{w:.1f} Å) for log-grid masking")
+            except Exception:
+                pass
         if wavelength_masks:
             _LOG.debug(f"    Detected {len(wavelength_masks)} user masks")
-        # Merge all masks for later log-grid masking
-        all_masks = list(wavelength_masks or []) + pending_masks
+        # Clamp all mask ranges to the observed wavelength coverage to avoid edge artifacts
+        try:
+            obs_min = float(np.nanmin(wave))
+            obs_max = float(np.nanmax(wave))
+        except Exception:
+            obs_min, obs_max = None, None
+        def _clamp_masks(masks: list[tuple[float, float]]) -> list[tuple[float, float]]:
+            if not masks or obs_min is None or obs_max is None:
+                return list(masks or [])
+            clamped: list[tuple[float, float]] = []
+            for a, b in masks:
+                try:
+                    lo = max(float(a), obs_min)
+                    hi = min(float(b), obs_max)
+                    if hi > lo:
+                        clamped.append((lo, hi))
+                except Exception:
+                    # If parsing fails, keep original (safer than dropping silently)
+                    clamped.append((a, b))
+            return clamped
+        user_masks = list(wavelength_masks or [])
+        user_masks_clamped = _clamp_masks(user_masks)
+        pending_masks_clamped = _clamp_masks(pending_masks)
+        # Merge all masks for later log-grid masking (user first, then auto-generated)
+        all_masks = user_masks_clamped + pending_masks_clamped
         trace["pending_mask_ranges"] = all_masks
         _LOG.info("Step 1: Applied clipping setup (masks queued for log-grid)")
     else:

@@ -349,13 +349,33 @@ def process_single_spectrum_optimized(
         try:
             # Resolve active profile id: CLI only (ignore config/env)
             active_profile_id = getattr(args, 'profile_id', None) or 'optical'
+            # Determine effective emission-clipping redshift for this item
+            # Priority: explicit --emclip-z >= 0 → use fixed value for all
+            # Else if --emclip flag → use per-entry forced redshift when available; otherwise skip
+            # Else → disabled
+            try:
+                fixed_emclip_z = float(getattr(args, 'emclip_z', -1.0))
+            except Exception:
+                fixed_emclip_z = -1.0
+            effective_emclip_z = fixed_emclip_z if fixed_emclip_z >= 0.0 else -1.0
+            if effective_emclip_z < 0.0 and bool(getattr(args, 'emclip', False)):
+                z_candidate = forced_redshift_override
+                if z_candidate is None:
+                    z_candidate = getattr(args, 'forced_redshift', None)
+                if isinstance(z_candidate, (int, float)):
+                    try:
+                        zf = float(z_candidate)
+                        if np.isfinite(zf):
+                            effective_emclip_z = zf
+                    except Exception:
+                        effective_emclip_z = -1.0
             processed_spectrum, _ = preprocess_spectrum(
                 spectrum_path=spectrum_path,
                 savgol_window=getattr(args, 'savgol_window', 0),
                 savgol_order=getattr(args, 'savgol_order', 3),
                 aband_remove=getattr(args, 'aband_remove', False),
                 skyclip=getattr(args, 'skyclip', False),
-                emclip_z=getattr(args, 'emclip_z', -1.0),
+                emclip_z=effective_emclip_z,
                 emwidth=getattr(args, 'emwidth', 40.0),
                 wavelength_masks=getattr(args, 'wavelength_masks', None),
                 apodize_percent=getattr(args, 'apodize_percent', 10.0),
@@ -1366,6 +1386,11 @@ Examples:
         help="Add masks around common sky emission lines (±emwidth Å)"
     )
     preproc_group.add_argument(
+        "--emclip",
+        action="store_true",
+        help="Clip host emission lines using per-entry redshift when available; skipped if no redshift"
+    )
+    preproc_group.add_argument(
         "--emclip-z",
         type=float,
         default=-1.0,
@@ -2224,6 +2249,16 @@ def main(args: argparse.Namespace) -> int:
                 'no_plots': bool(getattr(args, 'no_plots', False)),
                 'templates_dir': template_manager.templates_dir,
                 'profile_id': getattr(args, 'profile_id', None),
+                # --- Preprocessing flags needed inside worker processes ---
+                'savgol_window': int(getattr(args, 'savgol_window', 0)),
+                'savgol_order': int(getattr(args, 'savgol_order', 3)),
+                'aband_remove': bool(getattr(args, 'aband_remove', False)),
+                'skyclip': bool(getattr(args, 'skyclip', False)),
+                'emclip': bool(getattr(args, 'emclip', False)),
+                'emclip_z': float(getattr(args, 'emclip_z', -1.0)),
+                'emwidth': float(getattr(args, 'emwidth', 40.0)),
+                'wavelength_masks': getattr(args, 'wavelength_masks', None),
+                'apodize_percent': float(getattr(args, 'apodize_percent', 10.0)),
             }
 
             # Submit all tasks at once; each task is ~30s so overhead is negligible
