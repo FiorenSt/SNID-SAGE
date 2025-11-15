@@ -160,6 +160,16 @@ class UnifiedResultsFormatter:
             getattr(result, 'filtered_matches', []) or getattr(result, 'best_matches', [])
         )
         
+        # Detect forced-redshift runs from match metadata
+        is_forced_redshift_run = False
+        try:
+            for m in (active_matches or []):
+                if bool(m.get('forced_redshift', False)):
+                    is_forced_redshift_run = True
+                    break
+        except Exception:
+            is_forced_redshift_run = False
+        
         # Calculate enhanced estimates from cluster if available
         enhanced_redshift = result.consensus_redshift
         enhanced_redshift_err = result.consensus_redshift_error
@@ -267,6 +277,15 @@ class UnifiedResultsFormatter:
                         enhanced_age_err = age_total_error
                 except ImportError:
                     pass  # Fall back to consensus values
+        
+        # If this is a forced-redshift run, report NaN for redshift uncertainty in all enhanced fields
+        if is_forced_redshift_run:
+            try:
+                enhanced_redshift_err = float('nan')
+                subtype_redshift_err = float('nan') if subtype_redshift_err is not None else None
+                full_cluster_redshift_err = float('nan') if full_cluster_redshift_err is not None else None
+            except Exception:
+                pass
         
         # Calculate subtype information for the active cluster (not the original result)
         subtype_confidence = 0
@@ -699,10 +718,10 @@ class UnifiedResultsFormatter:
             type_txt = s.get('consensus_type', 'Unknown') or 'Unknown'
             subtype_txt = s.get('consensus_subtype', 'Unknown') or 'Unknown'
             # Prepare value strings
-            z_txt = f"{float(z_val):.6f}" if _finite(z_val) else "N/A"
-            z_err_txt = f"{float(z_err_val):.6f}" if _finite(z_err_val) else "N/A"
-            age_txt = f"{float(age_val):.1f}" if _finite(age_val) else "N/A"
-            age_err_txt = f"{float(age_err_val):.1f}" if _finite(age_err_val) else "N/A"
+            z_txt = f"{float(z_val):.6f}" if _finite(z_val) else "nan"
+            z_err_txt = f"{float(z_err_val):.6f}" if _finite(z_err_val) else "nan"
+            age_txt = f"{float(age_val):.1f}" if _finite(age_val) else "nan"
+            age_err_txt = f"{float(age_err_val):.1f}" if _finite(age_err_val) else "nan"
             # Column widths: keep headers and values using the same width for alignment
             type_w = max(6, len('Type'), len(type_txt))
             subtype_w = max(12, len('Subtype'), len(subtype_txt))
@@ -1027,15 +1046,15 @@ class UnifiedResultsFormatter:
                 full_type = (match['full_type'] or '')[:type_w]
                 subtype = (match['subtype'] or '')[:subtype_w]
 
-                if isinstance(redshift_error_val, (int, float)) and redshift_error_val > 0:
+                if isinstance(redshift_error_val, (int, float)) and np.isfinite(redshift_error_val) and redshift_error_val > 0:
                     redshift_error_str = f"{redshift_error_val:.6f}"
                 else:
-                    redshift_error_str = "N/A"
+                    redshift_error_str = "nan"
 
-                if isinstance(age_val, (int, float)):
+                if isinstance(age_val, (int, float)) and np.isfinite(age_val):
                     age_str = f"{age_val:.1f}"
                 else:
-                    age_str = "N/A"
+                    age_str = "nan"
 
                 lines.append(
                     f"{match['rank']:>{rank_w}} "
@@ -1106,7 +1125,7 @@ class UnifiedResultsFormatter:
             best_metric = s['rlap']
         
         age_str = f" age={float(age_val):.1f}" if _finite(age_val) else ""
-        z_txt = f"{float(z_val):.6f}" if _finite(z_val) else "N/A"
+        z_txt = f"{float(z_val):.6f}" if _finite(z_val) else "nan"
         
         return f"{self.spectrum_name}: {type_display} z={z_txt}{age_str} {self.metric_name}={best_metric:.1f} {z_marker}"
     

@@ -933,6 +933,16 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
             except Exception:
                 pass
             
+            # If this is a forced-redshift run, clear reported redshift uncertainties to NaN
+            try:
+                if any(bool(m.get('forced_redshift', False)) for m in (cluster_matches or [])):
+                    if 'cluster_redshift_err_weighted' in summary:
+                        summary['cluster_redshift_err_weighted'] = np.nan
+                    if 'winning_subtype_redshift_err' in summary:
+                        summary['winning_subtype_redshift_err'] = np.nan
+            except Exception:
+                pass
+            
             # Subtype composition within cluster (GUI-style)
             from collections import Counter
             subtypes = []
@@ -1636,7 +1646,7 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
             if isinstance(age_mean, (int, float)) and np.isfinite(age_mean):
                 age_txt = f"{age_mean:.1f}"
             else:
-                age_txt = f"{summary.get('age', float('nan')):.1f}" if isinstance(summary.get('age', None), (int, float)) else "N/A"
+                age_txt = f"{summary.get('age', float('nan')):.1f}" if isinstance(summary.get('age', None), (int, float)) else "nan"
             agese_txt = f" (Err={age_se:.1f})" if isinstance(age_se, (int, float)) and np.isfinite(age_se) else ""
             report.append(f"   Winning Subtype Estimates: z={z_txt}{zse_txt}; age={age_txt}{agese_txt}")
             

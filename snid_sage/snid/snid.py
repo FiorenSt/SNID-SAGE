@@ -920,15 +920,8 @@ def _run_forced_redshift_analysis_optimized(
     
     # Use unified storage for loading templates (same as normal analysis)
     try:
-        # Default behavior: exclude Galaxy templates from forced analysis unless explicitly requested.
+        # Load all templates unless explicit filters are provided by the caller
         effective_type_filter = type_filter
-        if (not effective_type_filter) and (not template_filter):
-            effective_type_filter = [
-                # Include all known main types except Galaxy/NotSN flat galaxy aliases
-                'Ia', 'Ib', 'Ic', 'II', 'SLSN', 'LFBOT', 'TDE', 'KN', 'GAP', 'Star', 'AGN'
-            ]
-        elif (not effective_type_filter) and template_filter:
-            _LOG.info("Forced analysis: preserving explicit template selection; skipping default Galaxy exclusion")
         # Use the same profile as current analysis for template loading
         profile = _resolve_active_profile(profile_id)
         # Use provided directory as-is; profile-specific index selection happens in storage layer
@@ -1628,19 +1621,8 @@ def run_snid_analysis(
         # ============================================================================
         # STEP 7a: OPTIONAL FILTERING BY AGE AND TYPE
         # ============================================================================
-        # Default behavior: exclude Galaxy templates from full analysis unless explicitly requested.
-        # If specific template names were provided, skip the default Galaxy exclusion.
-        if not type_filter and not template_filter:
-            pre_count = len(templates)
-            templates = [
-                t for t in templates
-                if (str(t.get('type', '')) not in ('Galaxy', 'Gal') and
-                    not str(t.get('type', '')).startswith('Gal-'))
-            ]
-            if len(templates) < pre_count:
-                _LOG.info(f"Step 7a: Default exclusion of Galaxy templates: {pre_count} -> {len(templates)}")
-        elif not type_filter and template_filter:
-            _LOG.info("Step 7a: Skipping default Galaxy exclusion due to explicit template selection")
+        # No default exclusion: include Galaxy templates unless user provided explicit filters
+        # (age and explicit type/template filters are applied below)
 
         original_count = len(templates)
         
@@ -2443,12 +2425,8 @@ def run_snid_analysis(
         
         # Special handling for forced redshift mode where z_err would be zero
         if forced_redshift is not None:
-            # In forced mode, use average of individual redshift errors instead of z_err
-            individual_errors = [m.get('redshift_error', 0.0) for m in filtered_matches]
-            if individual_errors and any(err > 0 for err in individual_errors):
-                result.consensus_redshift_error = np.mean([err for err in individual_errors if err > 0])
-            else:
-                result.consensus_redshift_error = 0.0
+            # In forced mode, do not report a fitted uncertainty for redshift
+            result.consensus_redshift_error = float('nan')
         else:
             if 'z_hybrid_error' in getzt_stats:
                 result.consensus_redshift_error = getzt_stats['z_hybrid_error']
