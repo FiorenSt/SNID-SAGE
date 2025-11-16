@@ -674,7 +674,14 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
                         t_f = np.asarray(t_flux, dtype=float)
                         finite_t = np.isfinite(t_w) & np.isfinite(t_f)
                         t_w, t_f = t_w[finite_t], t_f[finite_t]
-                        self.overlay_ax.plot(t_w, t_f, color='#E74C3C', linewidth=1.0, alpha=0.9, label='Template')
+                        self.overlay_ax.plot(
+                            t_w,
+                            t_f,
+                            color='#E74C3C',
+                            linewidth=1.0,
+                            alpha=0.8,
+                            label='Template',
+                        )
                 except Exception:
                     pass
             

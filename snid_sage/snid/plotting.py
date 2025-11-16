@@ -1417,7 +1417,8 @@ def plot_flux_comparison(match: Dict[str, Any], result: Any,
                 template_flux,
                 color='#E74C3C',
                 linewidth=2,
-                label='Template'
+                label='Template',
+                alpha=0.8,
             )
             template_plotted = True
         
@@ -1443,7 +1444,8 @@ def plot_flux_comparison(match: Dict[str, Any], result: Any,
                     template_flux_reconstructed,
                     color='#E74C3C',
                     linewidth=2,
-                    label='Template'
+                    label='Template',
+                    alpha=0.8,
                 )
                 template_plotted = True
         
@@ -1465,8 +1467,14 @@ def plot_flux_comparison(match: Dict[str, Any], result: Any,
                 
                 # Plot without any amplitude rescaling to match GUI behavior
                 if len(plot_flux) > 0:
-                    ax.plot(plot_wave, plot_flux, color='#E74C3C', linewidth=2,
-                           label='Template')
+                    ax.plot(
+                        plot_wave,
+                        plot_flux,
+                        color='#E74C3C',
+                        linewidth=2,
+                        label='Template',
+                        alpha=0.8,
+                    )
                     template_plotted = True
                            
     except Exception as e:
@@ -1684,7 +1692,8 @@ def plot_flat_comparison(match: Dict[str, Any], result: Any,
                 template_flux,
                 color='#E74C3C',
                 linewidth=2,
-                label='Template'
+                label='Template',
+                alpha=0.8,
             )
             template_plotted = True
         
@@ -1701,8 +1710,10 @@ def plot_flat_comparison(match: Dict[str, Any], result: Any,
                 ax.plot(
                     input_wave, 
                     template_flux_proc,
-                    color='#E74C3C', linewidth=2, 
-                    label='Template'
+                    color='#E74C3C',
+                    linewidth=2, 
+                    label='Template',
+                    alpha=0.8,
                 )
                 template_plotted = True
                            

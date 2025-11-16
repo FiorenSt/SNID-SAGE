@@ -774,8 +774,15 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
                     if t_wave is not None and t_flux is not None:
                         # Clean template name to remove _epoch_X suffix
                         template_name = clean_template_name(match.get('name', 'Unknown'))
-                        ax.plot(t_wave, t_flux, color='#E74C3C', linewidth=1.0, alpha=0.9,
-                               label=f"Template: {template_name}", zorder=3)
+                        ax.plot(
+                            t_wave,
+                            t_flux,
+                            color='#E74C3C',
+                            linewidth=1.0,
+                            alpha=0.8,
+                            label=f"Template: {template_name}",
+                            zorder=3,
+                        )
                         
                 except Exception as e:
                     _LOGGER.debug(f"Error plotting template match {idx+1}: {e}")

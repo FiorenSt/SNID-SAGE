@@ -882,8 +882,8 @@ class PySide6PlotManager:
                 downsample=1,
             )
             
-            # Plot template spectrum (red)
-            template_pen = pg.mkPen(color='#E74C3C', width=2)  # Red for template
+            # Plot template spectrum (red, slightly transparent so it doesn't obscure observed)
+            template_pen = pg.mkPen(color=(231, 76, 60, int(255 * 0.8)), width=2)  # RGBA with alpha≈0.8
             template_curve = self.plot_item.plot(
                 template_wave,
                 template_flux,
