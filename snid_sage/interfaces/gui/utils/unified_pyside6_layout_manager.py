@@ -613,6 +613,14 @@ class UnifiedPySide6LayoutManager:
                                 "font-weight: normal !important; font-family: 'Segoe UI', Arial, sans-serif !important; "
                                 "line-height: 1.0 !important;"
                             )
+                        # Reset configuration/analysis status label so it does not show 'Analysis Complete'
+                        if hasattr(gui_instance, 'config_status_label'):
+                            gui_instance.config_status_label.setText("Default SNID parameters loaded")
+                            gui_instance.config_status_label.setStyleSheet(
+                                "font-style: italic; color: #475569; font-size: 10px !important; "
+                                "font-weight: normal !important; font-family: 'Segoe UI', Arial, sans-serif !important; "
+                                "line-height: 1.0 !important;"
+                            )
                         if hasattr(gui_instance, 'status_label'):
                             gui_instance.status_label.setText("Spectrum loaded - ready to preprocess")
                         # Ensure spectrum plot without overlays in Flux view

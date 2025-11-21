@@ -406,6 +406,14 @@ class PySide6EventHandlers(QtCore.QObject):
                         "font-weight: normal !important; font-family: 'Segoe UI', Arial, sans-serif !important; "
                         "line-height: 1.0 !important;"
                     )
+                # Also reset the configuration/analysis status label so it no longer shows 'Analysis Complete'
+                if hasattr(self.main_window, 'config_status_label'):
+                    self.main_window.config_status_label.setText("Default SNID parameters loaded")
+                    self.main_window.config_status_label.setStyleSheet(
+                        "font-style: italic; color: #475569; font-size: 10px !important; "
+                        "font-weight: normal !important; font-family: 'Segoe UI', Arial, sans-serif !important; "
+                        "line-height: 1.0 !important;"
+                    )
                 if hasattr(self.main_window, 'status_label'):
                     self.main_window.status_label.setText("Spectrum loaded - ready to preprocess")
 

@@ -1296,16 +1296,18 @@ Examples:
     # Analysis parameters
     analysis_group = parser.add_argument_group("Analysis Parameters")
     analysis_group.add_argument(
-        "--zmin", 
-        type=float, 
+        "--zmin",
+        type=float,
         default=-0.01,
         help="Minimum redshift to consider"
     )
+    # NOTE: zmax default is resolved after parsing so it can depend on the selected profile.
+    # When omitted, we use 2.5 for ONIR and 1.0 for optical (or other profiles).
     analysis_group.add_argument(
-        "--zmax", 
-        type=float, 
-        default=1,
-        help="Maximum redshift to consider"
+        "--zmax",
+        type=float,
+        default=None,
+        help="Maximum redshift to consider (default: 1.0 for optical, 2.5 for ONIR)"
     )
     analysis_group.add_argument(
         "--rlapmin",
@@ -2205,6 +2207,17 @@ def main(args: argparse.Namespace) -> int:
         # Resolve effective templates directory based on profile if none provided
         effective_templates_dir = getattr(args, 'templates_dir', None)
         active_profile_id = getattr(args, 'profile_id', None)
+
+        # ----------------------------------------------------------------------
+        # Profile-aware defaults for redshift range when user did not override
+        # ----------------------------------------------------------------------
+        if getattr(args, 'zmax', None) is None:
+            try:
+                pid = (active_profile_id or '').strip().lower()
+            except Exception:
+                pid = ''
+            # Align CLI batch behavior with GUI: ONIR extends up to z≈2.5 by default
+            args.zmax = 2.5 if pid == 'onir' else 1.0
         if not effective_templates_dir:
             try:
                 from importlib import resources
