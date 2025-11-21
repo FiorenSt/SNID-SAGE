@@ -632,28 +632,48 @@ class TemplateService:
 
     # ---- Internals ----
     def _rebin_to_standard_grid(self, wave: np.ndarray, flux: np.ndarray, *, grid: Optional[StandardGrid] = None) -> np.ndarray:
-        """Rebin flux onto the (optionally provided) standard logarithmic grid by interpolation in log space."""
+        """Rebin flux onto the (optionally provided) standard logarithmic grid.
+
+        Behaviour
+        ---------
+        - If ``wave`` is already on the target SNID grid (same length and values
+          within a tight tolerance), we **trust the caller's preprocessing** and
+          return ``flux`` (as float) without any further rebinning or scaling.
+        - Otherwise, we interpolate onto the target grid in log‑λ with **no
+          additional normalisation**; the caller is responsible for any
+          flattening/apodization.
+        """
         # Guard inputs
         wave = np.asarray(wave, dtype=float)
         flux = np.asarray(flux, dtype=float)
         # Enforce strictly positive wavelengths
         mask = np.isfinite(wave) & np.isfinite(flux) & (wave > 0)
         wave, flux = wave[mask], flux[mask]
-        if wave.size < 2:
-            # Not enough data to interpolate; pad with median
-            out = np.full(self._standard_wave.shape, np.median(flux) if flux.size else 0.0, dtype=float)
-            return out
-        # Interpolate flux in log-lambda domain
-        logw = np.log(wave)
         g = grid or self._standard_grid
         target_wave = StandardGrid(g.num_points, g.min_wave, g.max_wave).wavelength()
+
+        if wave.size < 2:
+            # Not enough data to interpolate; pad with median on the target grid
+            out = np.full(target_wave.shape, np.median(flux) if flux.size else 0.0, dtype=float)
+            return out
+
+        # Fast path: spectrum already on the target log grid (e.g. from
+        # advanced/simple preprocessing). In that case we should not touch
+        # scaling or shape at all – just coerce to float dtype.
+        if wave.size == target_wave.size:
+            try:
+                if np.allclose(wave, target_wave, rtol=1e-6, atol=1e-3):
+                    return flux.astype(float, copy=False)
+            except Exception:
+                # If the comparison fails for any reason, fall back to the
+                # generic interpolation path below.
+                pass
+
+        # Generic path: interpolate flux in log-lambda domain (no re‑scaling)
+        logw = np.log(wave)
         target_logw = np.log(target_wave)
         # Use linear interpolation in log space; out-of-bounds filled with nearest value
         rebinned = np.interp(target_logw, logw, flux, left=float(flux[0]), right=float(flux[-1]))
-        # Normalize by median to emulate flattened spectra expectation
-        med = float(np.median(rebinned)) if rebinned.size else 1.0
-        if med != 0.0 and np.isfinite(med):
-            rebinned = rebinned / med
         return rebinned.astype(float, copy=False)
 
     def _ensure_user_h5_for_type(self, ttype: str, *, target_dir: Optional[Path] = None, profile_id: Optional[str] = None, grid: Optional[StandardGrid] = None) -> Path:
@@ -916,7 +936,13 @@ class TemplateService:
 
     @staticmethod
     def _read_json(path: Path) -> Optional[Dict[str, Any]]:
+        """Safely read a JSON file.
+
+        Accepts a ``Path`` or ``None``; ``None`` is treated as “no file”.
+        """
         try:
+            if path is None:
+                return None
             if path.exists():
                 with open(path, "r", encoding="utf-8") as f:
                     return json.load(f)

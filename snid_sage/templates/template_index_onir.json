@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1761936657.5681412,
-  "template_count": 470,
+  "template_count": 471,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 2048,
@@ -3300,6 +3300,13 @@
       "redshift": 0.0,
       "epochs": 2,
       "storage_file": "templates_II_onir.hdf5"
+    },
+    "sn2013fsEarly": {
+      "type": "II",
+      "subtype": "II-flash",
+      "redshift": 0.011855,
+      "epochs": 4,
+      "storage_file": "templates_II_onir.hdf5"
     }
   },
   "by_type": {
@@ -3653,7 +3660,7 @@
       ]
     },
     "II": {
-      "count": 106,
+      "count": 107,
       "storage_file": "templates_II_onir.hdf5",
       "template_names": [
         "ASASSN-14ha",
@@ -3761,7 +3768,8 @@
         "sn2018ldu",
         "sn2019asz",
         "sn2019bao",
-        "sn1998SEarly"
+        "sn1998SEarly",
+        "sn2013fsEarly"
       ]
     },
     "KN": {

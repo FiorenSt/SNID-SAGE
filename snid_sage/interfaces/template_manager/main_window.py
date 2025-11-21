@@ -345,13 +345,19 @@ class SNIDTemplateManagerGUI(QtWidgets.QMainWindow):
             _LOGGER.warning(f"Source change failed: {e}")
 
     def _on_profile_changed(self, profile_id: Optional[str]) -> None:
-        """Switch active profile in the service and reload lists."""
+        """Switch active profile in the service and reload lists/widgets."""
         try:
             if not profile_id:
                 return
             from .services.template_service import get_template_service
             svc = get_template_service()
             svc.set_active_profile(profile_id)
+            # Ensure advanced preprocessing dialog picks up the same profile
+            try:
+                import os
+                os.environ['SNID_SAGE_ACTIVE_PROFILE'] = profile_id
+            except Exception:
+                pass
             # Reload indices and filters immediately
             self.template_tree.load_templates()
             # Repopulate type filter for the active profile and current source
@@ -383,8 +389,15 @@ class SNIDTemplateManagerGUI(QtWidgets.QMainWindow):
             self._filter_templates()
             # Refresh creator/manager widgets if they rely on service state
             try:
+                # Refresh Manage tab empty-state
                 if hasattr(self, 'manager_widget') and hasattr(self.manager_widget, 'update_empty_state'):
                     self.manager_widget.update_empty_state()
+            except Exception:
+                pass
+            # Notify creator widget so it can refresh its type/subtype metadata
+            try:
+                if hasattr(self, 'creator_widget') and hasattr(self.creator_widget, 'refresh_profile_metadata'):
+                    self.creator_widget.refresh_profile_metadata(profile_id)
             except Exception:
                 pass
         except Exception as e:

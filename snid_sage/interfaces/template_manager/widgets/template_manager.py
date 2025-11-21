@@ -178,7 +178,49 @@ class TemplateManagerWidget(QtWidgets.QWidget):
         self.edit_name.setText(template_name)
         self.edit_type.setCurrentText(template_info.get('type', 'Other'))
         self.edit_subtype.setText(template_info.get('subtype', ''))
-        self.edit_age.setValue(template_info.get('age', 0.0))
+
+        # Derive the current age from the underlying HDF5 whenever possible,
+        # rather than defaulting to 0.0. For multi-epoch templates the HDF5
+        # group stores the latest epoch age in the top-level "age" attribute.
+        current_age = 0.0
+        try:
+            from pathlib import Path
+            import h5py  # type: ignore[import]
+            from ..services.template_service import get_template_service
+
+            svc = get_template_service()
+            user_idx = svc.get_user_index() or {}
+            meta = (user_idx.get('templates') or {}).get(template_name)
+            if isinstance(meta, dict):
+                storage_file = str(meta.get('storage_file', '')).strip()
+                if storage_file:
+                    storage_path = Path(storage_file)
+                    if not storage_path.is_absolute():
+                        # When relative, interpret relative to configured user dir
+                        user_dir = svc.get_user_templates_dir()
+                        if user_dir:
+                            storage_path = Path(user_dir) / storage_path
+                    if storage_path.exists():
+                        with h5py.File(storage_path, "r") as f:
+                            if "templates" in f and template_name in f["templates"]:
+                                g = f["templates"][template_name]
+                                try:
+                                    current_age = float(g.attrs.get("age", 0.0))
+                                except Exception:
+                                    current_age = 0.0
+            # Fallback to whatever was provided in template_info if HDF5 lookup fails
+            if current_age == 0.0 and "age" in template_info:
+                try:
+                    current_age = float(template_info.get("age", 0.0) or 0.0)
+                except Exception:
+                    current_age = 0.0
+        except Exception:
+            current_age = template_info.get('age', 0.0)
+
+        try:
+            self.edit_age.setValue(current_age)
+        except Exception:
+            self.edit_age.setValue(0.0)
         # Disable editing controls if this is a built-in template (not in user index)
         try:
             svc = get_template_service()

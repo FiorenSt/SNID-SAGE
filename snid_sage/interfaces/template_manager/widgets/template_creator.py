@@ -48,8 +48,85 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.current_spectrum = None
+        # Track whether we're explicitly adding an epoch to an existing user template
+        self._adding_to_existing: bool = False
         self.layout_manager = get_template_layout_manager()
         self.setup_ui()
+
+    def refresh_profile_metadata(self, profile_id: Optional[str] = None) -> None:
+        """Refresh type/subtype metadata when the active profile changes.
+
+        This keeps the Create tab in sync with the Optical/ONIR toggle so that
+        available types and known subtypes reflect the selected profile.
+        """
+        try:
+            svc = get_template_service()
+            try:
+                active_pid = profile_id or svc.get_active_profile()
+            except Exception:
+                active_pid = None
+
+            # Refresh type combo
+            try:
+                self.type_combo.blockSignals(True)
+                self.type_combo.clear()
+                by_type = svc.get_merged_index(profile_id=active_pid).get('by_type', {})
+                dynamic_types = sorted(list(by_type.keys()))
+                if dynamic_types:
+                    self.type_combo.addItems(dynamic_types)
+                else:
+                    self.type_combo.addItems(["Ia", "Ib", "Ic", "II", "AGN", "Galaxy", "Star"])
+                # Re-add sentinel for new type
+                if self._TYPE_NEW_LABEL not in [self.type_combo.itemText(i) for i in range(self.type_combo.count())]:
+                    self.type_combo.addItem(self._TYPE_NEW_LABEL)
+                # Clear current selection so the user explicitly picks a type
+                try:
+                    self.type_combo.setEditText("")
+                    if self.type_combo.lineEdit():
+                        self.type_combo.lineEdit().setPlaceholderText("Select or enter a type")
+                except Exception:
+                    pass
+            finally:
+                try:
+                    self.type_combo.blockSignals(False)
+                except Exception:
+                    pass
+
+            # Refresh subtype map from the built-in index for this profile
+            self._subtypes_by_type = {}
+            try:
+                builtin = svc.get_builtin_index(profile_id=active_pid)
+                for name, meta in (builtin.get('templates') or {}).items():
+                    ttype = (meta or {}).get('type', 'Unknown')
+                    st = (meta or {}).get('subtype', 'Unknown')
+                    bucket = self._subtypes_by_type.setdefault(ttype, [])
+                    if isinstance(st, str) and st not in bucket:
+                        bucket.append(st)
+                for k in list(self._subtypes_by_type.keys()):
+                    self._subtypes_by_type[k].sort()
+            except Exception:
+                self._subtypes_by_type = {}
+
+            # Reset subtype combo to locked/empty state until a type is chosen
+            try:
+                self.subtype_combo.blockSignals(True)
+                self.subtype_combo.clear()
+                self.subtype_combo.setEnabled(False)
+                self.subtype_combo.setEditText("")
+                if self.subtype_combo.lineEdit():
+                    self.subtype_combo.lineEdit().setPlaceholderText("Select type first")
+            finally:
+                try:
+                    self.subtype_combo.blockSignals(False)
+                except Exception:
+                    pass
+
+            # Also clear any "adding to existing" state when profile changes
+            self._adding_to_existing = False
+            self.existing_notice.setVisible(False)
+        except Exception:
+            # Fail silently; the user can still type types/subtypes manually
+            pass
         
     def setup_ui(self):
         """Setup the template creation interface"""
@@ -94,10 +171,14 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
         name_row_layout.addWidget(pick_existing_btn)
         self.type_combo = QtWidgets.QComboBox()
         self.type_combo.setEditable(True)
-        # Populate dynamically from merged index
+        # Populate dynamically from merged index for the ACTIVE profile
         try:
             svc = get_template_service()
-            by_type = svc.get_merged_index().get('by_type', {})
+            try:
+                active_pid = svc.get_active_profile()
+            except Exception:
+                active_pid = None
+            by_type = svc.get_merged_index(profile_id=active_pid).get('by_type', {})
             dynamic_types = sorted(list(by_type.keys()))
             if dynamic_types:
                 self.type_combo.addItems(dynamic_types)
@@ -121,7 +202,11 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
         self._subtypes_by_type: Dict[str, List[str]] = {}
         try:
             svc = get_template_service()
-            builtin = svc.get_builtin_index()
+            try:
+                active_pid = svc.get_active_profile()
+            except Exception:
+                active_pid = None
+            builtin = svc.get_builtin_index(profile_id=active_pid)
             for name, meta in (builtin.get('templates') or {}).items():
                 ttype = (meta or {}).get('type', 'Unknown')
                 st = (meta or {}).get('subtype', 'Unknown')
@@ -428,6 +513,11 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
                 wave=wave,
                 flux=flux,
                 profile_id=active_pid,
+                # When we're explicitly targeting an existing user template
+                # (picked from the list or matched in the user index), require
+                # that this spectrum be combined as an extra epoch rather than
+                # creating a suffixed clone.
+                combine_only=bool(self._adding_to_existing),
             )
             
             if success:
@@ -474,6 +564,15 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
         self.age_spinbox.setValue(0.0)
         self.redshift_spinbox.setValue(0.0)
         self.current_spectrum = None
+        # Reset "add to existing" mode and unlock fields
+        self._adding_to_existing = False
+        try:
+            self.type_combo.setEnabled(True)
+            self.subtype_combo.setEnabled(True)
+            self.redshift_spinbox.setEnabled(True)
+            self.existing_notice.setVisible(False)
+        except Exception:
+            pass
         self._update_actions_enabled()
         
     def _load_spectrum(self, file_path: str) -> Tuple[np.ndarray, np.ndarray]:
@@ -604,7 +703,12 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
         try:
             from ..services.template_service import get_template_service
             svc = get_template_service()
-            user_idx = svc.get_user_index() or {}
+            # Restrict to user templates for the ACTIVE profile (optical / ONIR)
+            try:
+                active_pid = svc.get_active_profile()
+            except Exception:
+                active_pid = None
+            user_idx = svc.get_user_index(profile_id=active_pid) or {}
             names = sorted(list((user_idx.get('templates') or {}).keys()))
         except Exception:
             names = []
@@ -632,6 +736,8 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
                 self.redshift_spinbox.setValue(rz)
                 self.redshift_spinbox.setEnabled(False)
                 self.existing_notice.setVisible(True)
+                # Mark that we are explicitly adding an epoch to an existing template
+                self._adding_to_existing = True
             except Exception:
                 pass
 
@@ -645,13 +751,19 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
                 self.subtype_combo.setEnabled(True)
                 self.redshift_spinbox.setEnabled(True)
                 self.existing_notice.setVisible(False)
+                self._adding_to_existing = False
             except Exception:
                 pass
             return
         try:
             from ..services.template_service import get_template_service
             svc = get_template_service()
-            meta = (svc.get_user_index().get('templates') or {}).get(name)
+            # Only consider user templates for the ACTIVE profile (optical / ONIR)
+            try:
+                active_pid = svc.get_active_profile()
+            except Exception:
+                active_pid = None
+            meta = (svc.get_user_index(profile_id=active_pid).get('templates') or {}).get(name)
             if isinstance(meta, dict):
                 # Existing: lock to stored type/subtype
                 self.type_combo.setEditText(meta.get('type', ''))
@@ -666,12 +778,15 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
                 self.redshift_spinbox.setValue(rz)
                 self.redshift_spinbox.setEnabled(False)
                 self.existing_notice.setVisible(True)
+                # Name matches an existing user template → add epoch to it
+                self._adding_to_existing = True
             else:
                 # New: unlock and reset subtype choices for current type
                 self.type_combo.setEnabled(True)
                 self.subtype_combo.setEnabled(True)
                 self.redshift_spinbox.setEnabled(True)
                 self.existing_notice.setVisible(False)
+                self._adding_to_existing = False
         except Exception:
             pass
 
