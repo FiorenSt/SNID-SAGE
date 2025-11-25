@@ -33,7 +33,8 @@ from .preprocessing import (
     init_wavelength_grid, get_grid_params,
     medfilt,
     clip_aband, clip_sky_lines, clip_host_emission_lines, pad_to_NW,
-    apply_wavelength_mask, log_rebin, fit_continuum, apodize, unflatten_on_loggrid, prep_template
+    apply_wavelength_mask, log_rebin, fit_continuum, apodize, unflatten_on_loggrid, prep_template,
+    enforce_positive_flux,
 )
 from .fft_tools import (
     apply_filter as bandpass,
@@ -288,13 +289,14 @@ def preprocess_spectrum(
         _LOG.warning(msg)
         raise SpectrumProcessingError(msg)
 
-    # Clip to grid if spectrum extends beyond bounds
+    # Clip to grid if spectrum extends beyond bounds (normal, non-fatal behaviour)
     if clip_to_grid and ((wmin < gmin) or (wmax > gmax)):
         mask = (wave >= gmin) & (wave <= gmax)
         prev_len = len(wave)
         wave = wave[mask]
         flux = flux[mask]
-        _LOG.warning(
+        # Log as INFO so normal CLI (quiet) hides it; visible with --verbose/--debug
+        _LOG.info(
             f"Step 0b: Clipped spectrum to grid bounds {gmin:.0f}-{gmax:.0f} Å "
             f"(kept {len(wave)}/{prev_len} points)"
         )
@@ -302,6 +304,23 @@ def preprocess_spectrum(
         trace["step0b_wave"], trace["step0b_flux"] = wave.copy(), flux.copy()
     else:
         trace["step0b_clipped_to_grid"] = False
+    
+    # ------------------------------------------------------------------------
+    # STEP 0c: ENFORCE POSITIVE FLUX FOR DOWNSTREAM CONTINUUM FITTING
+    # ------------------------------------------------------------------------
+    try:
+        flux, flux_offset = enforce_positive_flux(flux)
+    except Exception as e:
+        _LOG.warning("Step 0c: Positive-flux enforcement failed (%s); proceeding without shift", e)
+        flux_offset = 0.0
+    trace["flux_offset"] = float(flux_offset)
+    if flux_offset != 0.0:
+        _LOG.info(
+            "Step 0c: Shifted spectrum flux up by %.6g to remove non-positive values "
+            "before smoothing, log-rebinning and continuum fitting",
+            flux_offset,
+        )
+        trace["step0c_wave"], trace["step0c_flux"] = wave.copy(), flux.copy()
     
     # ============================================================================
     # STEP 0a: EARLY SPIKE MASKING (optional default)

@@ -41,6 +41,7 @@ except ImportError:
 
 # Import core SNID functionality
 from snid_sage.snid.snid import run_snid as python_snid, preprocess_spectrum, run_snid_analysis
+from snid_sage.snid.preprocessing import enforce_positive_flux
 from snid_sage.shared.exceptions.core_exceptions import SpectrumProcessingError
 
 # Import configuration and utilities
@@ -266,6 +267,14 @@ class PySide6AppController(QtCore.QObject):
             from snid_sage.shared.utils.data_io.spectrum_loader import load_spectrum
             
             self.original_wave, self.original_flux = load_spectrum(file_path)
+            # Ensure flux is strictly positive for downstream SNID preprocessing/continuum.
+            try:
+                shifted_flux, flux_offset = enforce_positive_flux(self.original_flux)
+            except Exception as e:
+                _LOGGER.warning(f"Positive-flux enforcement failed at load stage ({e}); proceeding with raw flux")
+                shifted_flux, flux_offset = self.original_flux, 0.0
+            self.original_flux = shifted_flux
+            self.flux_offset = float(flux_offset)
             
             # Store the file path
             self.current_file_path = file_path
@@ -274,6 +283,12 @@ class PySide6AppController(QtCore.QObject):
             _LOGGER.info(f"✅ Spectrum data: {len(self.original_wave)} points, "
                         f"wavelength range {self.original_wave[0]:.1f}-{self.original_wave[-1]:.1f} Å")
             _LOGGER.info(f"✅ Flux range: {np.min(self.original_flux):.2e} to {np.max(self.original_flux):.2e}")
+            if self.flux_offset != 0.0:
+                _LOGGER.info(
+                    "✅ Applied flux offset of %.6g at load stage to remove non-positive values "
+                    "before any preprocessing or continuum fitting",
+                    self.flux_offset,
+                )
             
             # Early grid range check based on active profile (optical or onir)
             try:
@@ -322,6 +337,37 @@ class PySide6AppController(QtCore.QObject):
                             if clicked is switch_btn:
                                 return self.switch_active_profile('onir', reload_current_file=True, show_notice=True)
                             elif clicked is clip_btn:
+                                # User explicitly requested clipping to the **optical** grid.
+                                # Clip the *loaded* spectrum immediately so:
+                                #   - The main GUI plot only shows the optical range
+                                #   - Advanced preprocessing starts from the clipped range
+                                #   - All downstream normalization/log-rebin steps see only optical data
+                                try:
+                                    import numpy as _np
+                                    w_arr = _np.asarray(self.original_wave, dtype=float)
+                                    f_arr = _np.asarray(self.original_flux, dtype=float)
+                                    clip_mask = (w_arr >= gmin) & (w_arr <= gmax)
+                                    if _np.any(clip_mask):
+                                        w_clipped = w_arr[clip_mask]
+                                        f_clipped = f_arr[clip_mask]
+                                        self.original_wave = w_clipped
+                                        self.original_flux = f_clipped
+                                        # Recompute bounds for subsequent overlap checks and logging
+                                        wmin = float(_np.min(w_clipped))
+                                        wmax = float(_np.max(w_clipped))
+                                        _LOGGER.info(
+                                            "User selected 'Clip in Optical' – spectrum clipped at load "
+                                            "to %.1f–%.1f Å inside grid %.0f–%.0f Å (profile: %s)",
+                                            wmin, wmax, gmin, gmax, active_pid,
+                                        )
+                                    else:
+                                        _LOGGER.warning(
+                                            "User selected 'Clip in Optical' but no samples fall within "
+                                            "grid %.0f–%.0f Å; keeping full wavelength range",
+                                            gmin, gmax,
+                                        )
+                                except Exception as clip_err:
+                                    _LOGGER.warning(f"Failed to clip spectrum to optical grid at load: {clip_err}")
                                 suppress_clip_info = True
                             else:
                                 return False

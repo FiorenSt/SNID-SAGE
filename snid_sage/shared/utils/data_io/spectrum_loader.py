@@ -481,7 +481,8 @@ def _validate_and_clean_arrays(wavelength: np.ndarray, flux: np.ndarray) -> Tupl
         n_bad = np.sum(~mask)
         
         if n_bad > 0:
-            warnings.warn(f"Removed {n_bad} non-finite data points")
+            # Log as info so it respects global verbosity (hidden in quiet mode, visible with --verbose)
+            _LOGGER.info(f"Removed {n_bad} non-finite data points")
             wavelength = wavelength[mask]
             flux = flux[mask]
     except TypeError as e:

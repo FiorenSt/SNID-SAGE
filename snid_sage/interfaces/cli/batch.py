@@ -1529,7 +1529,7 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
         header = (
             f"{'Spectrum':<16} {'Type':<7} {'Subtype':<12} "
             f"{'z':<10} {'z_err':<10} {'Age':<8} {'Age_err':<8} "
-            f"{'RLAP-CCC':<10} {'MatchQual':<10} {'TypeConf':<10} {'zFixed':<6} {'Status':<1}"
+            f"{'Q_cluster':<10} {'MatchQual':<10} {'TypeConf':<10} {'zFixed':<6} {'Status':<1}"
         )
         report.append(header)
         report.append("-" * len(header))
@@ -2177,7 +2177,7 @@ def main(args: argparse.Namespace) -> int:
             print(f"   Files: {len(input_files)} spectra")
             print(f"   Mode: {mode}")
             print(f"   Analysis: GUI-style cluster-aware (winning cluster)")
-            print(f"   Sorting: All results/plots sorted by RLAP-CCC (highest quality first)")
+            print(f"   Sorting: All results/plots sorted by Q_cluster (weighted top-5 metric, highest quality first)")
             print(f"   Output: {args.output_dir}")
             print(f"   Redshift Range: {args.zmin:.6f} to {args.zmax:.6f}")
             if args.forced_redshift is not None:
@@ -2340,7 +2340,7 @@ def main(args: argparse.Namespace) -> int:
                                 age_value = summary.get('winning_subtype_age', None)
                                 if not (isinstance(age_value, (int, float)) and np.isfinite(age_value)):
                                     age_value = summary.get('cluster_age_weighted', summary.get('age', None))
-                                # Penalized top-5 RLAP-CCC (winning subtype); fallback to best metric
+                                # Penalized top-5 Q_cluster (winning subtype); fallback to best metric
                                 metric_value = summary.get('winning_subtype_penalized_score', None)
                                 if not (isinstance(metric_value, (int, float)) and np.isfinite(metric_value)):
                                     try:
@@ -2362,7 +2362,7 @@ def main(args: argparse.Namespace) -> int:
                                     subtype_conf = summary.get('subtype_confidence_level', None)
                                     subtype_conf = str(subtype_conf).title() if subtype_conf else 'N/A'
                                     flags_str = f" MatchQual={match_quality} TypeConf={type_conf} SubtypeConf={subtype_conf}"
-                                    print(f"[{processed}/{len(items)}] {name}: {type_display} z={float(z_value):.6f}{age_str} RLAP-CCC={float(metric_value):.1f}{flags_str}")
+                                    print(f"[{processed}/{len(items)}] {name}: {type_display} z={float(z_value):.6f}{age_str} Q_cluster={float(metric_value):.1f}{flags_str}")
                                 except Exception:
                                     print(f"[{processed}/{len(items)}] {name}: {type_display}")
                             else:
@@ -2417,14 +2417,14 @@ def main(args: argparse.Namespace) -> int:
                         else:
                             redshift = summary.get('redshift', 0)
                             z_marker = ""
-                        # Penalized top-5; fallback to best metric
+                        # Penalized top-5 cluster Q; fallback to best metric
                         from snid_sage.shared.utils.math_utils import get_best_metric_value
                         best_metric_value = summary.get('winning_subtype_penalized_score', None)
                         if not (isinstance(best_metric_value, (int, float)) and np.isfinite(best_metric_value)):
                             best_metric_value = get_best_metric_value(summary)
                         type_display = f"{consensus_type} {consensus_subtype}".strip()
                         if brief_mode:
-                            metric_str = f"RLAP-CCC={best_metric_value:.1f}"
+                            metric_str = f"Q_cluster={best_metric_value:.1f}"
                             # Preferred subtype z/age
                             z_value = summary.get('winning_subtype_redshift', redshift)
                             age_value = summary.get('winning_subtype_age', summary.get('age', None))
@@ -2456,7 +2456,7 @@ def main(args: argparse.Namespace) -> int:
                             subtype_conf = summary.get('subtype_confidence_level', None)
                             subtype_conf = str(subtype_conf).title() if subtype_conf else 'N/A'
                             flags_str = f" MatchQual={match_quality} TypeConf={type_conf} SubtypeConf={subtype_conf}"
-                            print(f"      {name}: {type_display} z={float(z_value):.6f}{age_str} RLAP-CCC={best_metric_value:.1f}{flags_str} {z_marker}")
+                            print(f"      {name}: {type_display} z={float(z_value):.6f}{age_str} Q_cluster={best_metric_value:.1f}{flags_str} {z_marker}")
         else:
             # Sequential fallback (current behavior)
             if not is_quiet and not brief_mode:
@@ -2571,7 +2571,7 @@ def main(args: argparse.Namespace) -> int:
             print(f"Individual results in: {output_dir}/")
             if args.complete:
                 print("   3D Plots: Static PNG files with optimized viewing angle")
-                print("   Top 5 templates: Sorted by RLAP-CCC (highest quality first)")
+                print("   Top 5 templates: Sorted by Q_cluster (weighted top-5 metric, highest quality first)")
             
         return 0 if failed_count == 0 else 1
         

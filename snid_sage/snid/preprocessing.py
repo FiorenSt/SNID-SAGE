@@ -19,13 +19,101 @@ import numpy as np
 from numpy.typing import NDArray
 from typing import List, Tuple, Optional, Dict
 import logging
-import numpy as np
-from numpy.typing import NDArray
-from typing import Tuple
 from numpy import ma
 
 
 _LOG = logging.getLogger("snid.preprocessing")
+
+
+def enforce_positive_flux(
+    flux: NDArray[np.floating],
+    *,
+    eps_fraction: float = 1e-6,
+) -> Tuple[NDArray[np.floating], float]:
+    """
+    Ensure that a flux array is strictly positive everywhere.
+
+    This helper is designed for the SNID continuum fitter, which assumes
+    non–negative real flux values when placing knots and taking log10
+    averages.  It is intentionally unconditional: if *any* finite sample
+    is ≤ 0, we shift the entire spectrum upward by a constant offset.
+
+    Parameters
+    ----------
+    flux : array_like
+        Input flux array (may contain negative/zero values and NaNs).
+    eps_fraction : float, optional
+        Small fractional safety margin relative to a robust flux scale
+        (default 1e-6).  This avoids edge–case zeros after shifting.
+
+    Returns
+    -------
+    shifted_flux : np.ndarray
+        Flux array guaranteed to satisfy shifted_flux > 0 wherever the
+        original data were finite.
+    offset : float
+        Constant added to the input flux (0.0 if no shift was required).
+    """
+    f = np.asarray(flux, dtype=float)
+    if f.size == 0:
+        return f.copy(), 0.0
+
+    finite_mask = np.isfinite(f)
+    if not np.any(finite_mask):
+        return f.copy(), 0.0
+
+    f_finite = f[finite_mask]
+
+    # If fewer than 1% of finite samples are negative, treat this as a
+    # normal fluxed spectrum and leave it unchanged. The continuum fitter
+    # already ignores isolated negatives via its flux>0 masks.
+    neg_frac = float(np.mean(f_finite < 0.0))
+    if neg_frac < 0.01:
+        return f.copy(), 0.0
+
+    fmin = float(np.min(f_finite))
+    if fmin > 0.0:
+        # Already strictly positive; nothing to do.
+        return f.copy(), 0.0
+
+    # Robust scale for choosing a tiny positive epsilon.
+    abs_vals = np.abs(f_finite)
+    scale = float(np.median(abs_vals))
+    if scale <= 0.0:
+        # Fallback to max amplitude or 1.0 to avoid eps=0.
+        scale = float(np.max(abs_vals)) if np.max(abs_vals) > 0.0 else 1.0
+
+    # Guard against a *single* very deep negative outlier dominating fmin.
+    # We clip the negative tail at -k * scale when determining the offset so that
+    # continuum fitting still sees a strictly positive spectrum, but one or two
+    # pathological pixels do not force an enormous upward shift that flattens all
+    # real features (common in very long/high-resolution spectra).
+    k = 1.2
+    try:
+        neg_clip_level = -k * scale
+        f_finite_clipped = f_finite.copy()
+        deep_neg_mask = f_finite_clipped < neg_clip_level
+        if np.any(deep_neg_mask):
+            _LOG.debug(
+                "enforce_positive_flux: clipping %d deep negative sample(s) below %.3g "
+                "to %.3g before computing offset",
+                int(np.count_nonzero(deep_neg_mask)),
+                float(f_finite_clipped[deep_neg_mask].min()),
+                float(neg_clip_level),
+            )
+            f_finite_clipped[deep_neg_mask] = neg_clip_level
+        fmin = float(np.min(f_finite_clipped))
+    except Exception:
+        # Fall back to the original minimum if clipping fails for any reason.
+        fmin = float(np.min(f_finite))
+
+    eps = float(eps_fraction) * scale
+    if eps < 0.0:
+        eps = 0.0
+
+    offset = -fmin + eps
+    shifted = f + offset
+    return shifted, float(offset)
 
 # ------------------------------------------------------------------
 # global logarithmic grid
@@ -900,6 +988,19 @@ def flatten_spectrum(wave: np.ndarray, flux: np.ndarray,
     Returns:
         Dict containing processed wavelength and flux arrays
     """
+    # Ensure flux satisfies the ≥0 requirement expected by the SNID continuum fitter.
+    try:
+        flux, flux_offset = enforce_positive_flux(flux)
+        if flux_offset != 0.0:
+            _LOG.info(
+                "flatten_spectrum: shifted template flux up by %.6g "
+                "to remove non-positive values before continuum fitting",
+                flux_offset,
+            )
+    except Exception as e:
+        _LOG.warning("flatten_spectrum: positive-flux enforcement failed (%s); proceeding without shift", e)
+        flux_offset = 0.0
+
     # Apply apodization if requested (requires valid region indices)
     if apodize_percent > 0:
         try:
@@ -939,5 +1040,6 @@ __all__ = [
     "clip_aband", "clip_sky_lines", "clip_host_emission_lines",
     "apply_wavelength_mask",
     "log_rebin", "log_rebin_maskaware", "fit_continuum", "fit_continuum_spline", "apodize", "unflatten_on_loggrid", "prep_template", "flatten_spectrum",
+    "enforce_positive_flux",
     "log_rebin_interpolate", "compute_mask_on_loggrid", "log_rebin_interpolate_masked_only",
 ]

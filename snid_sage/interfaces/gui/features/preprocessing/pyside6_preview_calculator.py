@@ -31,10 +31,14 @@ from PySide6 import QtCore
 try:
     from snid_sage.snid.preprocessing import (
         savgol_filter_fixed,
-        clip_aband, clip_sky_lines,
-        log_rebin, log_rebin_maskaware,
-        fit_continuum, fit_continuum_spline,
+        clip_aband,
+        clip_sky_lines,
+        log_rebin,
+        log_rebin_maskaware,
+        fit_continuum,
+        fit_continuum_spline,
         apodize,
+        apply_spike_mask,
     )
     # Import wavelength grid constants - use same source as dialog
     from snid_sage.snid.snid import NW, MINW, MAXW
@@ -107,8 +111,45 @@ class PySide6PreviewCalculator(QtCore.QObject):
     
     def reset(self):
         """Reset calculator to original spectrum state"""
-        self.current_wave = self.original_wave.copy()
-        self.current_flux = self.original_flux.copy()
+        # Start from original spectrum
+        base_wave = self.original_wave.copy()
+        base_flux = self.original_flux.copy()
+
+        # Apply the same early spike masking operator used by the core
+        # preprocess_spectrum() pipeline so that quick and advanced
+        # preprocessing see an identical de-spiked spectrum.
+        if SNID_AVAILABLE:
+            try:
+                cleaned_wave, cleaned_flux, spike_info = apply_spike_mask(
+                    base_wave,
+                    base_flux,
+                    floor_z=50.0,
+                    neg_floor_z=100.0,  # match preprocess_spectrum: 2 * spike_floor_z
+                    baseline_window=501,
+                    baseline_width=None,
+                    rel_edge_ratio=2.0,
+                    min_separation=2,
+                    max_removals=None,
+                    min_abs_resid=None,
+                )
+                self.current_wave = cleaned_wave
+                self.current_flux = cleaned_flux
+                # Optionally keep diagnostics for future use
+                try:
+                    self.spike_info = dict(spike_info or {})
+                except Exception:
+                    self.spike_info = {"removed_indices": None, "core_indices": None}
+            except Exception:
+                # On any error, fall back to the raw spectrum without spike masking
+                self.current_wave = base_wave
+                self.current_flux = base_flux
+                self.spike_info = {"removed_indices": None, "core_indices": None}
+        else:
+            # When SNID core is unavailable, skip automatic spike masking
+            self.current_wave = base_wave
+            self.current_flux = base_flux
+            self.spike_info = {"removed_indices": None, "core_indices": None}
+
         self.applied_steps = []
         self.stored_continuum = None  # Reset stored continuum
         self.continuum_method = None

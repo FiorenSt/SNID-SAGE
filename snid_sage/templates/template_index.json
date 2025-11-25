@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1751831068.0201683,
-  "template_count": 652,
+  "template_count": 660,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -3710,7 +3710,7 @@
       "type": "Ib",
       "subtype": "Ib-norm",
       "redshift": 0.0,
-      "epochs": 16,
+      "epochs": 13,
       "storage_file": "templates_Ib.hdf5"
     },
     "LSQ15rw": {
@@ -3967,7 +3967,7 @@
     },
     "sn2009er": {
       "type": "Ib",
-      "subtype": "Ib-norm",
+      "subtype": "Ib-pec",
       "redshift": 0.0,
       "epochs": 8,
       "storage_file": "templates_Ib.hdf5"
@@ -4282,7 +4282,7 @@
     },
     "sn2005ek": {
       "type": "Ic",
-      "subtype": "Ic",
+      "subtype": "Ic-pec",
       "redshift": 0.0,
       "epochs": 6,
       "storage_file": "templates_Ic.hdf5"
@@ -4573,6 +4573,62 @@
       "redshift": 0.011855,
       "epochs": 4,
       "storage_file": "templates_II.hdf5"
+    },
+    "sn2023ljf": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.015,
+      "epochs": 9,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2022nyo": {
+      "type": "Ib",
+      "subtype": "Ib-pec",
+      "redshift": 0.010637,
+      "epochs": 5,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2021ukt": {
+      "type": "Ib",
+      "subtype": "Ib-pec",
+      "redshift": 0.012886,
+      "epochs": 12,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2021njk": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.012952,
+      "epochs": 8,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2021hen": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.021125,
+      "epochs": 6,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2020hvp": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.005247,
+      "epochs": 16,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2019odp": {
+      "type": "Ib",
+      "subtype": "Ib-pec",
+      "redshift": 0.014353,
+      "epochs": 32,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2016bau": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.003856,
+      "epochs": 19,
+      "storage_file": "templates_Ib.hdf5"
     }
   },
   "by_type": {
@@ -5167,7 +5223,7 @@
       ]
     },
     "Ib": {
-      "count": 42,
+      "count": 50,
       "storage_file": "templates_Ib.hdf5",
       "template_names": [
         "LSQ15rw",
@@ -5211,7 +5267,15 @@
         "sn2009iz",
         "sn2009jf",
         "sn2016frp",
-        "sn2018beh"
+        "sn2018beh",
+        "sn2023ljf",
+        "sn2022nyo",
+        "sn2021ukt",
+        "sn2021njk",
+        "sn2021hen",
+        "sn2020hvp",
+        "sn2019odp",
+        "sn2016bau"
       ]
     },
     "Galaxy": {
