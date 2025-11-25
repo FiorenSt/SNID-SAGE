@@ -2,7 +2,7 @@
 # Professional documentation site using MkDocs Material
 
 site_name: SNID SAGE Documentation
-site_description: SuperNova IDentification with Spectrum Analysis and Guided Enhancement - Complete Documentation
+site_description: SuperNova IDentification – Spectral Analysis and Guided Exploration - Complete Documentation
 site_author: SNID SAGE Development Team
 site_url: https://fiorenst.github.io/SNID-SAGE
 

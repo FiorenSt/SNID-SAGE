@@ -1,6 +1,6 @@
 """
-SNID-SAGE: Supernova Identification
-------------------------------
+SNID SAGE: SuperNova IDentification – Spectral Analysis and Guided Exploration
+------------------------------------------------------------------------------
 
 Core SNID pipeline implementing template matching using cross-correlation techniques
 to identify the type, age and redshift of supernova spectra.
@@ -3085,7 +3085,9 @@ if __name__ == "__main__":
     import sys
     from pathlib import Path
 
-    parser = argparse.ArgumentParser(description="SNID-SAGE: Supernova Identification")
+    parser = argparse.ArgumentParser(
+        description="SNID SAGE: SuperNova IDentification – Spectral Analysis and Guided Exploration"
+    )
     
     # Required arguments
     parser.add_argument("spectrum_path", help="Path to the input spectrum file")

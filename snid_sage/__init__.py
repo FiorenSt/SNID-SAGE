@@ -1,5 +1,5 @@
 """
-SNID SAGE - SuperNova IDentification with Spectrum Analysis and Guided Enhancement
+SNID SAGE - SuperNova IDentification – Spectral Analysis and Guided Exploration
 ================================================================================
 
 A comprehensive Python package for supernova spectrum identification and analysis,

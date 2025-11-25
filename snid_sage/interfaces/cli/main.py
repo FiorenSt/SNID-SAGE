@@ -66,7 +66,7 @@ def _start_update_check_nonblocking() -> None:
 def create_parser() -> argparse.ArgumentParser:
     """Create the main argument parser."""
     parser = argparse.ArgumentParser(
-        description="SNID SAGE: SuperNova IDentification with Spectrum Analysis and Guided Enhancement",
+        description="SNID SAGE: SuperNova IDentification – Spectral Analysis and Guided Exploration",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         epilog="Developed by Fiorenzo Stoppa, based on the original Fortran SNID by Stéphane Blondin & John L. Tonry"
     )

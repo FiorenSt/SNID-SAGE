@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "snid-sage"
 dynamic = ["version"]
-description = "SNID SAGE - SuperNova IDentification with Spectrum Analysis and Guided Enhancement"
+description = "SNID SAGE - SuperNova IDentification – Spectral Analysis and Guided Exploration"
 readme = "README.md"
 license = "MIT"
 authors = [
