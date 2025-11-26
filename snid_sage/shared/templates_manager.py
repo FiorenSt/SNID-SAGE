@@ -121,8 +121,10 @@ def get_templates_base_dir() -> Path:
         _LOG.debug(f"Using override template directory from {_ENV_DIR_OVERRIDE}: {base}")
         return _ensure_writable_dir(base)
 
-    # Default: per-user data directory (e.g., %LOCALAPPDATA% on Windows)
-    root = Path(user_data_dir("snid-sage", "FiorenSt"))
+    # Default: per-user data directory. We intentionally avoid a personal
+    # author/vendor name here so the on-disk path is neutral, e.g. on Windows:
+    #   %LOCALAPPDATA%/snid-sage/templates
+    root = Path(user_data_dir("snid-sage"))
     base = root / "templates"
     _LOG.debug(f"Using default template directory: {base}")
     return _ensure_writable_dir(base)

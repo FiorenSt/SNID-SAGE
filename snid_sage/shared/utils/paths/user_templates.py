@@ -56,15 +56,21 @@ def get_default_user_templates_dir() -> Optional[Path]:
     """
     Return the recommended default User Templates directory.
 
-    By default this is a ``User_templates`` subfolder next to the managed
-    built-in templates directory resolved by the centralized templates manager.
+    By default this is a ``user_templates`` sibling directory next to the
+    managed built-in templates directory resolved by the centralized templates
+    manager, e.g. on Windows:
+
+        %LOCALAPPDATA%/snid-sage/user_templates
+
     The directory is not created here; callers may choose to create it.
     """
     try:
-        from snid_sage.shared.templates_manager import get_templates_dir
+        from snid_sage.shared.templates_manager import get_templates_base_dir
 
-        base = Path(get_templates_dir())
-        return base / "User_templates"
+        base = Path(get_templates_base_dir())
+        # ``base`` is typically ".../snid-sage/templates"; we want a stable,
+        # cross-platform sibling directory ".../snid-sage/user_templates".
+        return base.parent / "user_templates"
     except Exception:
         return None
 
@@ -116,14 +122,23 @@ def discover_legacy_user_templates() -> List[Path]:
     if current and current.exists() and _is_writable_dir(current):
         candidates.append(current)
 
-    # 1) Sibling to built-ins (managed templates/User_templates)
+    # 1) Siblings to built-ins:
+    #    - New default:   .../snid-sage/user_templates
+    #    - Old default:   .../snid-sage/templates/User_templates
     try:
-        from snid_sage.shared.templates_manager import get_templates_dir
+        from snid_sage.shared.templates_manager import get_templates_base_dir
 
-        tpl_dir = Path(get_templates_dir())
-        p = tpl_dir / 'User_templates'
-        if p.exists() and _is_writable_dir(p):
-            candidates.append(p)
+        tpl_base = Path(get_templates_base_dir())
+
+        # New default (preferred)
+        new_default = tpl_base.parent / 'user_templates'
+        if new_default.exists() and _is_writable_dir(new_default):
+            candidates.append(new_default)
+
+        # Legacy location under the templates directory
+        legacy_sibling = tpl_base / 'User_templates'
+        if legacy_sibling.exists() and _is_writable_dir(legacy_sibling):
+            candidates.append(legacy_sibling)
     except Exception:
         pass
 
@@ -135,12 +150,18 @@ def discover_legacy_user_templates() -> List[Path]:
     except Exception:
         pass
 
-    # 3) App config dir templates/User_templates
+    # 3) App config dir templates/User_templates (legacy) and user_templates (new)
     try:
         cm = ConfigurationManager()
-        appdata = Path(cm.config_dir) / 'templates' / 'User_templates'
-        if appdata.exists() and _is_writable_dir(appdata):
-            candidates.append(appdata)
+        cfg_root = Path(cm.config_dir)
+
+        legacy_appdata = cfg_root / 'templates' / 'User_templates'
+        if legacy_appdata.exists() and _is_writable_dir(legacy_appdata):
+            candidates.append(legacy_appdata)
+
+        new_appdata = cfg_root / 'user_templates'
+        if new_appdata.exists() and _is_writable_dir(new_appdata):
+            candidates.append(new_appdata)
     except Exception:
         pass
 
