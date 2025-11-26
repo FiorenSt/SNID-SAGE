@@ -48,7 +48,8 @@ recursive-exclude results *
 recursive-exclude site *
 recursive-exclude docs *
 
-# Exclude individual template files (too many for TestPyPI)
+# Exclude large template HDF5 files from sdist (shipped via GitHub Release archive)
+recursive-exclude snid_sage/templates *.hdf5
 recursive-exclude snid_sage/templates/Individual_templates *
 
 # Exclude OS files

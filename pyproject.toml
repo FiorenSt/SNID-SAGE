@@ -96,7 +96,7 @@ snid-sage-templates = "snid_sage.interfaces.template_manager.launcher:main"
 snid-sage-download-templates = "snid_sage.shared.templates_manager:cli_download_templates_main"
 
 [tool.setuptools]
-include-package-data = true
+include-package-data = false
 
 [tool.setuptools.packages.find]
 include = ["snid_sage*"]
