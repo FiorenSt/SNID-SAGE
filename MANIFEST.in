@@ -15,8 +15,6 @@ include DIRECTORY_SCHEMA.md
 recursive-include snid_sage *.py
 
 # Include package data (essential only)
-# Templates: only hdf5 files and json, exclude Individual_templates folder
-recursive-include snid_sage/templates *.hdf5 *.json
 recursive-include snid_sage/data *.fits *.dat *.txt *.ascii *.asci *.flm
 recursive-include snid_sage/images *.png *.ico *.svg
 recursive-include snid_sage/images/twemoji *.svg

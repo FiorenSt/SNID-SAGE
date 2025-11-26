@@ -78,8 +78,8 @@ Process multiple spectra simultaneously with optimized workflows and detailed re
 
 #### Basic Usage
 ```powershell
-sage batch <input_pattern> [templates/] [options]
-sage batch --list-csv <file.csv> [templates/] [options]
+sage batch <input_pattern> [templates_dir] [options]
+sage batch --list-csv <file.csv> [templates_dir] [options]
 ```
 
 #### Examples
@@ -90,8 +90,8 @@ sage batch "data/*.dat" --output-dir batch_results\
 # Process specific files
 sage batch "data/sn2024*.dat" --output-dir results\
 
-# With template directory
-sage batch "data/*.dat" templates/ --output-dir results\
+# With explicit template directory (overrides auto-downloaded bank)
+sage batch "data/*.dat" "D:\SNID_TEMPLATES" --output-dir results\
 
 # List-based batch from CSV (per-row redshift when present)
 sage batch --list-csv "data/spectra_list.csv" --output-dir results\

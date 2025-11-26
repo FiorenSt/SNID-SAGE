@@ -311,7 +311,7 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
     def _find_storage_file(self, storage_file: str, template_info: Dict[str, Any]) -> Optional[str]:
         """Find the full path to a storage file (packaged or user), honoring profile.
 
-        Uses unified packaged folder (snid_sage/templates) for both profiles.
+        Uses the unified managed folder for both profiles.
         """
         profile_id = ((template_info or {}).get('profile_id') or '').strip().lower()
         pkg_folder_order = ['templates']

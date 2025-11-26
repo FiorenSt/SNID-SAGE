@@ -189,7 +189,6 @@ class TemplateTreeWidget(QtWidgets.QTreeWidget):
     def _find_template_index(self) -> Optional[str]:
         """Find the template index file"""
         possible_paths = [
-            "snid_sage/templates/template_index.json",
             "templates/template_index.json",
             "template_index.json"
         ]

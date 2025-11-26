@@ -785,38 +785,37 @@ def _validate_and_fix_templates_dir(templates_dir: Optional[str]) -> str:
     Raises:
         FileNotFoundError: If no valid templates directory can be found
     """
-    # If no templates directory provided, auto-discover
+    log = logging.getLogger("snid_sage.snid.identify")
+
+    # If no templates directory provided, resolve via centralized manager
     if templates_dir is None:
         try:
-            from snid_sage.shared.utils.simple_template_finder import find_templates_directory_or_raise
-            auto_found_dir = find_templates_directory_or_raise()
-            logging.getLogger('snid_sage.snid.identify').info(
-                f"Auto-discovered templates at: {auto_found_dir}"
-            )
+            from snid_sage.shared.templates_manager import get_templates_dir
+
+            auto_found_dir = get_templates_dir()
+            log.info(f"Using built-in templates from: {auto_found_dir}")
             return str(auto_found_dir)
-        except (ImportError, FileNotFoundError):
+        except Exception as exc:
             raise FileNotFoundError(
-                "Could not auto-discover templates directory. Please provide templates_dir explicitly."
-            )
-    
+                "Could not resolve SNID templates directory automatically. "
+                "Ensure you have network access on first run or set SNID_SAGE_TEMPLATE_DIR."
+            ) from exc
+
     # Check if provided directory exists and is valid
     if os.path.exists(templates_dir):
         return templates_dir
-    
-    # Try to auto-find templates directory
+
+    # Provided directory not found – fall back to centralized manager if possible
     try:
-        from snid_sage.shared.utils.simple_template_finder import find_templates_directory_or_raise
-        auto_found_dir = find_templates_directory_or_raise()
-        logging.getLogger('snid_sage.snid.identify').warning(
-            f"Templates directory '{templates_dir}' not found"
-        )
-        logging.getLogger('snid_sage.snid.identify').info(
-            f"Auto-discovered templates at: {auto_found_dir}"
-        )
+        from snid_sage.shared.templates_manager import get_templates_dir
+
+        auto_found_dir = get_templates_dir()
+        log.warning(f"Templates directory '{templates_dir}' not found; "
+                    f"falling back to built-in templates at: {auto_found_dir}")
         return str(auto_found_dir)
-    except (ImportError, FileNotFoundError):
+    except Exception as exc:
         # Fallback failed
-        raise FileNotFoundError(f"Templates directory not found: {templates_dir}")
+        raise FileNotFoundError(f"Templates directory not found: {templates_dir}") from exc
 
 
 def main(args: argparse.Namespace) -> int:

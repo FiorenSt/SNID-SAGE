@@ -2,6 +2,15 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
+## [0.11.0] - 2025-11-26
+
+- Templates distribution refactor:
+  - Removed large `.hdf5` template banks from the `snid-sage` wheel to keep installs small.
+  - Templates are now downloaded once on first use from a versioned GitHub Release archive (`templates-v0.11.0.zip`).
+  - Templates are stored in a managed, user-writable directory (default: platform-specific user data dir; override with `SNID_SAGE_TEMPLATE_DIR`).
+  - Added `snid-sage-download-templates` CLI to pre-download or refresh the template bank explicitly.
+  - All CLI, GUI, and template-manager components now resolve templates via the centralized `templates_manager` instead of assuming `snid_sage/templates` is packaged.
+
 ## [0.10.0] - 2025-11-01
 
 - Added ONIR profile option with extended optical+near-IR coverage

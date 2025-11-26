@@ -60,6 +60,8 @@ dependencies = [
     
     # Version checking
     "packaging>=20.0",
+    # Platform-appropriate user data/cache directories for templates
+    "platformdirs>=3.0.0",
 ]
 
 [project.optional-dependencies]
@@ -91,6 +93,7 @@ sage = "snid_sage.interfaces.cli.main:main"
 snid-sage = "snid_sage.interfaces.gui.launcher:main"
 snid-sage-lines = "snid_sage.interfaces.line_manager.launcher:main"
 snid-sage-templates = "snid_sage.interfaces.template_manager.launcher:main"
+snid-sage-download-templates = "snid_sage.shared.templates_manager:cli_download_templates_main"
 
 [tool.setuptools]
 include-package-data = true
@@ -120,8 +123,6 @@ exclude = [
 
 [tool.setuptools.package-data]
 "snid_sage" = [
-    "templates/*.hdf5", 
-    "templates/*.json",
     "data/*.fits", 
     "data/*.dat", 
     "data/*.txt", 

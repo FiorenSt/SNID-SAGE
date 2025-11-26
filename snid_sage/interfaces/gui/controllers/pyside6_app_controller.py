@@ -155,12 +155,12 @@ class PySide6AppController(QtCore.QObject):
             self.platform_config = None
 
     def _resolve_templates_directory(self, profile_id: Optional[str] = None) -> str:
-        """Resolve a reliable templates directory, preferring packaged banks when config is missing or incomplete.
-
+        """Resolve a reliable templates directory, preferring the lazy-downloaded bank.
+    
         Strategy:
-        - Try configured templates_dir when it exists and appears complete (multiple types in index or multiple HDF5 files)
-        - Otherwise, return packaged directory from the unified folder (snid_sage/templates)
-        - Final fallback: simple_template_finder
+        - Prefer the centralized templates manager (lazy download into a writable cache).
+        - If a configured templates_dir exists and looks complete, honor it instead.
+        - Final fallbacks are only used in dev/legacy environments.
         """
         try:
             active_pid = (profile_id or getattr(self, 'active_profile_id', None) or 'optical')
@@ -203,13 +203,13 @@ class PySide6AppController(QtCore.QObject):
             except Exception:
                 pass
 
-            # 2) Use packaged resources (single unified templates folder)
+            # 2) Prefer centralized templates manager (lazy download + cache)
             try:
-                from importlib import resources
-                with resources.as_file(resources.files('snid_sage') / 'templates') as p:
-                    if p.exists():
-                        _LOGGER.info(f"Using packaged templates directory: {p}")
-                        return str(p)
+                from snid_sage.shared.templates_manager import get_templates_dir
+
+                managed_dir = get_templates_dir()
+                _LOGGER.info(f"Using managed templates directory: {managed_dir}")
+                return str(managed_dir)
             except Exception:
                 pass
 

@@ -16,7 +16,7 @@ For step-by-step workflows and expanded CLI usage, see the [CLI Reference](../cl
 
 ### Data source and overrides
 - The browser lists templates using a merged index:
-  - Base index: `snid_sage/templates/template_index.json`
+  - Base index: the managed built-in bank (lazy-downloaded on first use)
   - User index: `<User Templates Folder>/template_index.user.json`
 - If a per-type user HDF5 exists (e.g., `<User Templates Folder>/templates_Ia.user.hdf5`), entries for that type come exclusively from the user file; base entries for the same type are hidden. This prevents duplicates in the UI and reflects user edits immediately.
 

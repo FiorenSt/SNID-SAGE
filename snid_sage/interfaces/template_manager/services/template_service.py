@@ -37,19 +37,17 @@ except Exception:  # pragma: no cover - defensive import
     get_profile = None  # type: ignore
 
 def _compute_builtin_dir() -> Path:
-    """Resolve the packaged templates directory robustly (installed or dev)."""
-    # Prefer importlib.resources traversal of the installed package
+    """Resolve the built-in templates directory via the centralized manager."""
     try:
-        with resources.as_file(resources.files('snid_sage') / 'templates') as tpl_dir:
-            if tpl_dir.exists():
-                return tpl_dir
+        from snid_sage.shared.templates_manager import get_templates_dir
+
+        return get_templates_dir()
     except Exception:
-        pass
-    # Fallback: use the repo-relative path for editable installs
-    try:
-        return Path(__file__).resolve().parents[3] / "templates"
-    except Exception:
-        return Path("snid_sage/templates").resolve()
+        # Fallback: use the repo-relative path for editable installs
+        try:
+            return Path(__file__).resolve().parents[3] / "templates"
+        except Exception:
+            return Path("snid_sage/templates").resolve()
 
 
 _BUILTIN_DIR = _compute_builtin_dir()

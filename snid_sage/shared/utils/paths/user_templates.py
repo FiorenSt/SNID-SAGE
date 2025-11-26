@@ -13,11 +13,6 @@ from pathlib import Path
 from typing import List, Optional
 import os
 
-try:
-    from importlib import resources
-except Exception:  # pragma: no cover
-    resources = None  # type: ignore
-
 from datetime import datetime
 
 
@@ -85,13 +80,14 @@ def discover_legacy_user_templates() -> List[Path]:
     if current and current.exists() and _is_writable_dir(current):
         candidates.append(current)
 
-    # 1) Sibling to built-ins (snid_sage/templates/User_templates)
+    # 1) Sibling to built-ins (managed templates/User_templates)
     try:
-        if resources is not None:
-            with resources.as_file(resources.files('snid_sage') / 'templates') as tpl_dir:
-                p = (tpl_dir / 'User_templates')
-                if p.exists() and _is_writable_dir(p):
-                    candidates.append(p)
+        from snid_sage.shared.templates_manager import get_templates_dir
+
+        tpl_dir = Path(get_templates_dir())
+        p = tpl_dir / 'User_templates'
+        if p.exists() and _is_writable_dir(p):
+            candidates.append(p)
     except Exception:
         pass
 

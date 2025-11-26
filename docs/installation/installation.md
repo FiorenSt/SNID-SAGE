@@ -24,6 +24,21 @@ Install the latest stable release from PyPI:
 pip install snid-sage
 ```
 
+On first use of any feature that needs the built-in template library (CLI or GUI),
+SNID SAGE will automatically download the templates from GitHub into a local cache
+directory. By default this is a per-user data folder (for example on Windows:
+`%LOCALAPPDATA%\\snid-sage\\templates`).
+
+To override the location (for example to keep templates in the current working
+directory), set the `SNID_SAGE_TEMPLATE_DIR` environment variable before running:
+
+```powershell
+$env:SNID_SAGE_TEMPLATE_DIR="."
+sage identify spectrum.dat --output-dir results
+```
+
+Once downloaded, the templates are reused across runs and you can work offline.
+
 ### Virtual Environment Setup
 
 #### Using venv (Recommended)

@@ -16,160 +16,86 @@ logger = get_logger('simple_template_finder')
 
 def find_templates_directory() -> Optional[Path]:
     """
-    Find the templates directory for both GitHub installations and installed packages.
-    
-    For GitHub installations, templates are in the 'templates' directory at the project root.
-    For installed packages, templates are included in the package data.
-    
-    Returns:
-        Path to templates directory if found, None otherwise
+    Find the templates directory.
+
+    New behavior:
+    - Prefer the centralized templates manager (lazy download into user cache).
+    - Fall back to the previous discovery strategies only for legacy/dev setups.
     """
-    # Strategy 1: Check if we're in an installed package using importlib.resources
+    # Strategy 0: centralized manager (preferred)
+    try:
+        from snid_sage.shared.templates_manager import get_templates_dir
+
+        managed_dir = get_templates_dir()
+        if _validate_templates_directory(Path(managed_dir)):
+            logger.debug(f"✅ Found templates via templates_manager: {managed_dir}")
+            return Path(managed_dir)
+    except Exception as e:
+        logger.debug(f"templates_manager resolution failed: {e}")
+
+    # Legacy strategies retained for development/edge cases -------------------
     try:
         import importlib.resources as pkg_resources
-        
+
         # For Python 3.9+ with improved traversable API
-        if hasattr(pkg_resources, 'files'):
+        if hasattr(pkg_resources, "files"):
             try:
-                # Try to access the templates directory within the installed package
-                # The package name will be snid_sage when installed via pip
-                templates_package = pkg_resources.files('snid_sage') / 'templates'
+                templates_package = pkg_resources.files("snid_sage") / "templates"
                 if templates_package.exists():
-                    # Convert to Path and validate
                     templates_dir = Path(str(templates_package))
                     if _validate_templates_directory(templates_dir):
-                        logger.debug(f"✅ Found templates in installed package (files API): {templates_dir}")
+                        logger.debug(
+                            f"✅ Found templates in installed package (files API): {templates_dir}"
+                        )
                         return templates_dir
             except Exception as e:
                 logger.debug(f"Files API with snid_sage failed: {e}")
-                
-            # Try alternative access methods for different Python versions
-            for pkg_name in ['snid_sage', '.']:
-                try:
-                    templates_package = pkg_resources.files(pkg_name) / 'templates'
-                    if templates_package.exists():
-                        templates_dir = Path(str(templates_package))
-                        if _validate_templates_directory(templates_dir):
-                            logger.debug(f"✅ Found templates in package {pkg_name} (files API): {templates_dir}")
-                            return templates_dir
-                except Exception as e:
-                    logger.debug(f"Files API with {pkg_name} failed: {e}")
-        
+
         # Fallback for older Python versions or if files API fails
-        # Try accessing package resources directly
         for pkg_structure in [
-            ('snid_sage', 'templates/template_index.json'),
-            ('snid_sage.templates', 'template_index.json'), 
+            ("snid_sage", "templates/template_index.json"),
+            ("snid_sage.templates", "template_index.json"),
         ]:
             try:
                 pkg_name, resource_path = pkg_structure
                 with pkg_resources.path(pkg_name, resource_path) as template_path:
-                    if 'templates/' in resource_path:
-                        templates_dir = template_path.parent
-                    else:
-                        templates_dir = template_path.parent
+                    templates_dir = template_path.parent
                     if _validate_templates_directory(templates_dir):
-                        logger.debug(f"✅ Found templates in package {pkg_name} (path API): {templates_dir}")
+                        logger.debug(
+                            f"✅ Found templates in package {pkg_name} (path API): {templates_dir}"
+                        )
                         return templates_dir
             except Exception as e:
                 logger.debug(f"Path API with {pkg_structure} failed: {e}")
-            
+
     except ImportError:
         logger.debug("importlib.resources not available")
-    
-    # Strategy 2: Check site-packages for installed package
-    try:
-        # Look for snid-sage in site-packages
-        for path in sys.path:
-            if 'site-packages' in path:
-                site_packages = Path(path)
-                
-                # Check for different possible installation names
-                for pkg_name in ['snid_sage', 'snid-sage', 'SNID_SAGE']:
-                    pkg_dir = site_packages / pkg_name
-                    if pkg_dir.exists():
-                        templates_dir = pkg_dir / 'templates'
-                        if _validate_templates_directory(templates_dir):
-                            logger.debug(f"✅ Found templates in site-packages: {templates_dir}")
-                            return templates_dir
-    except Exception as e:
-        logger.debug(f"Site-packages search failed: {e}")
-    
-    # Strategy 3: Check current working directory
+
+    # Strategy: Check current working directory and project-relative locations
     cwd = Path.cwd()
-    templates_dir = cwd / 'templates'
-    if _validate_templates_directory(templates_dir):
-        logger.debug(f"✅ Found templates in current directory: {templates_dir}")
-        return templates_dir
-    
-    # Strategy 4: Check relative to snid_sage package in current directory
-    cwd = Path.cwd()
-    templates_dir = cwd / 'snid_sage' / 'templates'
-    if _validate_templates_directory(templates_dir):
-        logger.debug(f"✅ Found templates in current directory snid_sage package: {templates_dir}")
-        return templates_dir
-    
-    # Strategy 5: Find project root by looking for key files
-    current = Path(__file__).resolve().parent
-    for _ in range(10):  # Limit search depth
-        # Look for project markers
-        if any((current / marker).exists() for marker in ['pyproject.toml', 'setup.py', 'README.md']):
-            # Check for snid_sage package structure first
-            templates_dir = current / 'snid_sage' / 'templates'
-            if _validate_templates_directory(templates_dir):
-                logger.debug(f"✅ Found templates in project snid_sage package: {templates_dir}")
-                return templates_dir
-            # Fallback to root templates directory
-            templates_dir = current / 'templates'
-            if _validate_templates_directory(templates_dir):
-                logger.debug(f"✅ Found templates relative to project root: {templates_dir}")
-                return templates_dir
-        current = current.parent
-        if current == current.parent:  # Reached filesystem root
-            break
-    
-    # Strategy 6: Check relative to module location (go up directories)
+    for candidate in [
+        cwd / "templates",
+        cwd / "snid_sage" / "templates",
+    ]:
+        if _validate_templates_directory(candidate):
+            logger.debug(f"✅ Found templates in local path: {candidate}")
+            return candidate
+
+    # Strategy: Walk up for project root
     current = Path(__file__).resolve().parent
     for _ in range(10):
-        # Check for snid_sage package structure
-        templates_dir = current / 'snid_sage' / 'templates'
-        if _validate_templates_directory(templates_dir):
-            logger.debug(f"✅ Found templates in snid_sage package relative to module: {templates_dir}")
-            return templates_dir
-        # Check for templates directory
-        templates_dir = current / 'templates'
-        if _validate_templates_directory(templates_dir):
-            logger.info(f"✅ Found templates relative to module: {templates_dir}")
-            return templates_dir
+        if any((current / marker).exists() for marker in ["pyproject.toml", "setup.py", "README.md"]):
+            for candidate in [
+                current / "snid_sage" / "templates",
+                current / "templates",
+            ]:
+                if _validate_templates_directory(candidate):
+                    logger.debug(f"✅ Found templates relative to project root: {candidate}")
+                    return candidate
         current = current.parent
         if current == current.parent:
             break
-    
-    # Strategy 7: Check common installation paths
-    common_paths = [
-        Path.home() / '.local' / 'lib' / 'python*' / 'site-packages' / 'snid_sage' / 'templates',
-        Path.home() / '.local' / 'share' / 'snid-sage' / 'templates',
-        Path('/usr/local/lib/python*/site-packages/snid_sage/templates'),
-        Path('/usr/share/snid-sage/templates'),
-    ]
-    
-    for template_path in common_paths:
-        # Handle wildcards in path
-        if '*' in str(template_path):
-            parent = template_path.parent
-            pattern = template_path.name
-            try:
-                for candidate in parent.glob(pattern):
-                        if _validate_templates_directory(candidate):
-                            logger.debug(f"✅ Found templates in common path: {candidate}")
-                        return candidate
-            except Exception:
-                continue
-        else:
-            if _validate_templates_directory(template_path):
-                logger.debug(f"✅ Found templates in common path: {template_path}")
-                return template_path
-    
+
     logger.warning("No valid templates directory found")
     return None
 

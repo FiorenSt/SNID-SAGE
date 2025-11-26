@@ -1,0 +1,33 @@
+name: Build templates archive
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-upload-templates-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Derive version from tag
+        run: |
+          # GITHUB_REF_NAME is expected to be like "v0.11.0"
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "SNID_SAGE_VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Create templates archive
+        run: |
+          echo "Building templates archive for version: ${SNID_SAGE_VERSION}"
+          # Zip only the contents of snid_sage/templates so they extract
+          # directly into the managed templates directory.
+          cd snid_sage/templates
+          zip -r "${GITHUB_WORKSPACE}/templates-v${SNID_SAGE_VERSION}.zip" .
+
+      - name: Upload templates archive to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: templates-v${{ env.SNID_SAGE_VERSION }}.zip
+
+
