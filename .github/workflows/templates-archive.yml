@@ -1,8 +1,10 @@
 name: Build templates archive
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
 
 jobs:
   build-and-upload-templates-archive:
