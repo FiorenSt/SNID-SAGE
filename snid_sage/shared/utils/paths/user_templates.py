@@ -15,6 +15,8 @@ import os
 
 from datetime import datetime
 
+from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+
 
 def _is_writable_dir(path: Path) -> bool:
     try:
@@ -50,10 +52,44 @@ def get_user_templates_dir(strict: bool = False) -> Optional[Path]:
     return None
 
 
+def get_default_user_templates_dir() -> Optional[Path]:
+    """
+    Return the recommended default User Templates directory.
+
+    By default this is a ``User_templates`` subfolder next to the managed
+    built-in templates directory resolved by the centralized templates manager.
+    The directory is not created here; callers may choose to create it.
+    """
+    try:
+        from snid_sage.shared.templates_manager import get_templates_dir
+
+        base = Path(get_templates_dir())
+        return base / "User_templates"
+    except Exception:
+        return None
+
+
 def set_user_templates_dir(path: Path) -> None:
-    """Persist the user templates directory into configuration after validation."""
-    if not _is_writable_dir(path):
-        raise PermissionError(f"User templates directory is not writable: {path}")
+    """
+    Persist the user templates directory into configuration after validation.
+
+    Behaviour:
+    - If ``path`` exists, it must be a writable directory.
+    - If it does not exist, its parent must be writable; the directory is then
+      created (along with any missing parents).
+    """
+    path = path.expanduser()
+    if path.exists():
+        if not _is_writable_dir(path):
+            raise PermissionError(f"User templates directory is not writable: {path}")
+    else:
+        parent = path.parent
+        if not parent.exists() or not os.access(parent, os.W_OK):
+            raise PermissionError(
+                f"Cannot create user templates directory; parent is not writable: {parent}"
+            )
+        parent.mkdir(parents=True, exist_ok=True)
+        path.mkdir(parents=True, exist_ok=True)
     try:
         settings_dir = Path.home() / '.snid_sage'
         settings_dir.mkdir(parents=True, exist_ok=True)
@@ -137,6 +173,7 @@ def discover_legacy_user_templates() -> List[Path]:
 
 __all__ = [
     'get_user_templates_dir',
+    'get_default_user_templates_dir',
     'set_user_templates_dir',
     'discover_legacy_user_templates',
 ]

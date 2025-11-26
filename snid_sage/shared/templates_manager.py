@@ -25,11 +25,12 @@ Design notes
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Callable
 import json
 import os
 import sys
 import zipfile
+import time
 
 import requests
 from platformdirs import user_data_dir
@@ -216,7 +217,12 @@ def is_templates_installed(base_dir: Optional[Path] = None) -> bool:
     return _all_files_present(base_dir)
 
 
-def _download_file(url: str, dest: Path, timeout: float = 60.0) -> None:
+def _download_file(
+    url: str,
+    dest: Path,
+    timeout: float = 60.0,
+    progress_cb: Optional[Callable[[int, Optional[int], float], None]] = None,
+) -> None:
     """
     Download a single file from ``url`` to ``dest``.
 
@@ -229,11 +235,31 @@ def _download_file(url: str, dest: Path, timeout: float = 60.0) -> None:
     try:
         with requests.get(url, stream=True, timeout=timeout) as resp:
             resp.raise_for_status()
+
+            total_size: Optional[int]
+            try:
+                total_size = int(resp.headers.get("Content-Length", "0")) or None
+            except Exception:
+                total_size = None
+
+            downloaded = 0
+            start_ts = time.monotonic()
+
             with tmp_path.open("wb") as f:
                 for chunk in resp.iter_content(chunk_size=1024 * 1024):
                     if not chunk:
                         continue
                     f.write(chunk)
+                    downloaded += len(chunk)
+
+                    if progress_cb is not None:
+                        try:
+                            elapsed = max(time.monotonic() - start_ts, 1e-6)
+                            progress_cb(downloaded, total_size, elapsed)
+                        except Exception:
+                            # Never let a cosmetic progress callback break the download
+                            progress_cb = None
+
         tmp_path.replace(dest)
     except Exception as exc:
         # Clean up partial file if present
@@ -258,12 +284,105 @@ def _download_and_extract_archive(base_dir: Path) -> None:
     archive_path = base_dir / archive_name
 
     _LOG.info(f"Downloading SNID SAGE template archive from {archive_url}")
-    _download_file(archive_url, archive_path)
+
+    # Interactive progress bar for download (best-effort, cosmetic only)
+    use_tty_progress = bool(sys.stdout and sys.stdout.isatty())
+
+    def _print_download_progress(downloaded: int, total: Optional[int], elapsed: float) -> None:
+        if not use_tty_progress:
+            return
+
+        # Basic throughput estimate (bytes per second)
+        speed = downloaded / max(elapsed, 1e-6)
+
+        # Human-friendly units
+        def _fmt_size(num_bytes: int) -> str:
+            mb = num_bytes / (1024 * 1024)
+            if mb >= 1024:
+                gb = mb / 1024
+                return f"{gb:5.1f} GB"
+            return f"{mb:5.1f} MB"
+
+        if total is not None and total > 0:
+            frac = min(max(downloaded / total, 0.0), 1.0)
+            bar_width = 30
+            filled = int(bar_width * frac)
+            bar = "#" * filled + "-" * (bar_width - filled)
+            percent = frac * 100.0
+            msg = (
+                f"\r[Downloading] [{bar}] {percent:5.1f}%  "
+                f"{_fmt_size(downloaded)}/{_fmt_size(total)}  "
+                f"{speed / (1024 * 1024):4.2f} MB/s"
+            )
+        else:
+            bar_width = 30
+            # When we don't know total size, just show a spinner-like bar by
+            # mapping bytes to a moving position.
+            idx = (downloaded // (1024 * 1024)) % bar_width  # 1 MB step
+            bar = "".join("#" if i == idx else "-" for i in range(bar_width))
+            msg = (
+                f"\r[Downloading] [{bar}]  "
+                f"{_fmt_size(downloaded)}  "
+                f"{speed / (1024 * 1024):4.2f} MB/s"
+            )
+
+        try:
+            print(msg, end="", flush=True)
+        except Exception:
+            # If stdout is misbehaving, quietly stop trying to update it.
+            # We intentionally do *not* mutate outer-scope flags here to avoid
+            # relying on ``nonlocal`` (which can be fragile across Python
+            # versions); repeated failures are rare and purely cosmetic.
+            return
+
+    _download_file(archive_url, archive_path, progress_cb=_print_download_progress)
+
+    # Ensure we end with a newline after the download progress line
+    if use_tty_progress:
+        try:
+            print()
+        except Exception:
+            pass
 
     _LOG.info(f"Extracting template archive into {base_dir}")
     try:
         with zipfile.ZipFile(archive_path, "r") as zf:
-            zf.extractall(base_dir)
+            members = zf.infolist()
+            total_members = len(members)
+
+            use_tty_extract_progress = bool(sys.stdout and sys.stdout.isatty() and total_members > 0)
+
+            def _print_extract_progress(current_index: int, total: int, name: str) -> None:
+                if not use_tty_extract_progress:
+                    return
+
+                frac = min(max(current_index / total, 0.0), 1.0)
+                bar_width = 30
+                filled = int(bar_width * frac)
+                bar = "#" * filled + "-" * (bar_width - filled)
+                percent = frac * 100.0
+                display_name = name[:30] + "..." if len(name) > 33 else name
+
+                msg = (
+                    f"\r[Extracting]  [{bar}] {percent:5.1f}%  "
+                    f"{current_index:4d}/{total:4d}  {display_name:<33}"
+                )
+                try:
+                    print(msg, end="", flush=True)
+                except Exception:
+                    # Same rationale as in the download progress: if stdout
+                    # misbehaves, simply stop trying to update progress.
+                    return
+
+            for idx, member in enumerate(members, start=1):
+                zf.extract(member, base_dir)
+                _print_extract_progress(idx, total_members, member.filename)
+
+            if use_tty_extract_progress:
+                try:
+                    print()
+                except Exception:
+                    pass
     except Exception as exc:
         raise RuntimeError(f"Failed to extract templates archive {archive_path}: {exc}")
     finally:
@@ -308,24 +427,7 @@ def download_templates_if_needed(force: bool = False) -> Path:
         # Printing is purely cosmetic; never fail download because of it
         pass
 
-    # Lightweight textual progress indicator for interactive consoles
-    try:
-        if sys.stdout is not None and sys.stdout.isatty():
-            bar_width = 30
-            filled = int(bar_width * 0.1)
-            bar = "#" * filled + "-" * (bar_width - filled)
-            print(f"\r[{bar}] Downloading archive...", end="", flush=True)
-    except Exception:
-        pass
-
     _download_and_extract_archive(base_dir)
-
-    # Ensure we end with a newline if we drew a progress indicator
-    try:
-        if sys.stdout is not None and sys.stdout.isatty():
-            print()
-    except Exception:
-        pass
 
     # Record metadata
     _save_meta(
@@ -390,7 +492,6 @@ def cli_download_templates_main(argv: Optional[List[str]] = None) -> int:
 
 __all__ = [
     "TEMPLATE_BANK_VERSION",
-    "TEMPLATES_BASE_URL",
     "TEMPLATES_FILES",
     "get_templates_base_dir",
     "is_templates_installed",

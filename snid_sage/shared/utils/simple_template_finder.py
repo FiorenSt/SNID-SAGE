@@ -152,10 +152,15 @@ def find_templates_directory_or_raise() -> Path:
     if templates_dir is None:
         raise FileNotFoundError(
             "Could not find SNID templates directory.\n"
-            "For GitHub installations, ensure you have cloned the full repository:\n"
-            "  git clone https://github.com/FiorenSt/SNID-SAGE.git\n"
-            "For pip installations, ensure templates were included in the package.\n"
-            "Templates should be in the 'snid_sage/templates/' directory."
+            "\n"
+            "By default, SNID SAGE lazily downloads the managed templates bank\n"
+            "from the GitHub Release into a per-user cache the first time it is\n"
+            "needed. You can trigger this explicitly with:\n"
+            "  snid-sage-download-templates\n"
+            "\n"
+            "If you are working from a Git checkout or custom install, make sure\n"
+            "the templates archive can be downloaded (see README) or that a\n"
+            "valid templates directory is available."
         )
     return templates_dir
 

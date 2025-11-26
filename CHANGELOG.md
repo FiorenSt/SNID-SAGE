@@ -2,6 +2,14 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
+## [0.11.1] - 2025-11-26
+
+- Template lazy-loader and Template Manager fixes:
+  - `snid-sage-templates` now always reads built-in templates (optical + ONIR) from the lazily-downloaded GitHub Release bank via the centralized `templates_manager`, rather than assuming `snid_sage/templates` is packaged.
+  - Fixed ONIR index resolution to prefer the managed templates directory, so ONIR templates reliably appear in the Template Manager.
+  - Introduced a default User Templates folder as a `User_templates` subdirectory next to the managed templates bank, and wired the GUI folder picker to recommend/adopt it by default while still allowing custom locations.
+  - Improved diagnostics and error messages around template discovery and download, including guidance to use `snid-sage-download-templates` when no templates are found.
+
 ## [0.11.0] - 2025-11-26
 
 - Templates distribution refactor:

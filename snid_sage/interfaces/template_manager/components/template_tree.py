@@ -98,13 +98,26 @@ class TemplateTreeWidget(QtWidgets.QTreeWidget):
                     index_data = json.load(f)
                 
             self.clear()
-            
+
             # Group templates by type (defensive against malformed entries)
             by_type = index_data.get('by_type', {}) if isinstance(index_data, dict) else {}
             templates_map = index_data.get('templates', {}) if isinstance(index_data, dict) else {}
 
-            # If Combined yields nothing (e.g., empty user index), fall back to Default
+            # If Combined yields nothing (e.g., empty user index), log and fall back to Default
             if self._source_mode == 'Combined' and (not by_type or len(by_type) == 0):
+                try:
+                    from pathlib import Path as _Path
+                    from snid_sage.shared.templates_manager import get_templates_dir as _get_tpl_dir
+
+                    managed_dir = _Path(_get_tpl_dir())
+                    idx_path = managed_dir / "template_index.json"
+                    _LOGGER.debug(
+                        "Combined templates index is empty; "
+                        f"managed_dir={managed_dir}, index_exists={idx_path.exists()}"
+                    )
+                except Exception:
+                    # Logging is best-effort only
+                    pass
                 try:
                     from snid_sage.interfaces.template_manager.services.template_service import get_template_service
                     fallback_idx = get_template_service().get_builtin_index()

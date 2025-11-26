@@ -8,10 +8,12 @@ from PySide6 import QtWidgets, QtCore
 try:
     from snid_sage.shared.utils.paths.user_templates import (
         discover_legacy_user_templates,
+        get_default_user_templates_dir,
         set_user_templates_dir,
     )
 except Exception:
     discover_legacy_user_templates = None  # type: ignore
+    get_default_user_templates_dir = None  # type: ignore
     set_user_templates_dir = None  # type: ignore
 
 
@@ -60,13 +62,43 @@ class UserTemplatesFolderDialog(QtWidgets.QDialog):
     def _load_candidates(self) -> None:
         self.candidates_list.clear()
         paths: List[Path] = []
+
+        # 1) Recommended sibling to managed built-ins: <managed>/User_templates
+        try:
+            if get_default_user_templates_dir is not None:
+                default_dir = get_default_user_templates_dir()
+                if isinstance(default_dir, Path):
+                    paths.append(default_dir)
+        except Exception:
+            pass
+
+        # 2) Discover legacy/existing user libraries
         try:
             if discover_legacy_user_templates is not None:
-                paths = discover_legacy_user_templates()
+                legacy_paths = discover_legacy_user_templates()
+                paths.extend(legacy_paths or [])
         except Exception:
-            paths = []
+            pass
+
+        # De-duplicate while preserving order
+        seen = set()
+        unique_paths: List[Path] = []
         for p in paths:
+            try:
+                key = str(Path(p).resolve())
+            except Exception:
+                key = str(p)
+            if key in seen:
+                continue
+            seen.add(key)
+            unique_paths.append(Path(p))
+
+        for p in unique_paths:
             self.candidates_list.addItem(str(p))
+
+        # Select the first (typically the recommended) entry by default
+        if self.candidates_list.count() > 0:
+            self.candidates_list.setCurrentRow(0)
 
     def _choose_folder(self) -> None:
         path = QtWidgets.QFileDialog.getExistingDirectory(self, "Select User Templates Folder")

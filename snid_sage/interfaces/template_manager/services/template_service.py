@@ -36,12 +36,20 @@ try:
 except Exception:  # pragma: no cover - defensive import
     get_profile = None  # type: ignore
 
-def _compute_builtin_dir() -> Path:
-    """Resolve the built-in templates directory via the centralized manager."""
+
+def _get_builtin_dir() -> Path:
+    """
+    Resolve the built-in templates directory.
+
+    Preferred behaviour is to delegate to the centralized templates manager,
+    which will lazily download the GitHub Release archive into a per-user
+    cache as needed. For development/editable installs we fall back to the
+    repo-relative ``snid_sage/templates`` tree.
+    """
     try:
         from snid_sage.shared.templates_manager import get_templates_dir
 
-        return get_templates_dir()
+        return Path(get_templates_dir())
     except Exception:
         # Fallback: use the repo-relative path for editable installs
         try:
@@ -50,7 +58,6 @@ def _compute_builtin_dir() -> Path:
             return Path("snid_sage/templates").resolve()
 
 
-_BUILTIN_DIR = _compute_builtin_dir()
 from snid_sage.shared.utils.paths.user_templates import get_user_templates_dir
 
 def _user_index_path(profile_id: Optional[str] = None) -> Optional[Path]:
@@ -65,7 +72,6 @@ def _user_index_path(profile_id: Optional[str] = None) -> Optional[Path]:
     return p / "template_index.user.json"
 
 _USER_INDEX = _user_index_path(None)
-_BUILTIN_INDEX = _BUILTIN_DIR / "template_index.json"
 
 
 @dataclass
@@ -171,8 +177,14 @@ class TemplateService:
 
         When profile_id is provided, filter entries to that profile.
         """
-        # Load optical index
-        optical = self._read_json(_BUILTIN_INDEX) or {
+        # Load optical index from the managed/built-in templates directory
+        try:
+            builtin_dir = _get_builtin_dir()
+            builtin_index_path = builtin_dir / "template_index.json"
+        except Exception:
+            builtin_index_path = None  # type: ignore[assignment]
+
+        optical = self._read_json(builtin_index_path) or {
             "version": "2.0",
             "template_count": 0,
             "templates": {},
@@ -881,7 +893,17 @@ class TemplateService:
 
     def _compute_onir_index_path(self) -> Optional[Path]:
         """Return path to packaged ONIR index if available."""
-        # Prefer unified templates folder with ONIR-named index
+        # Prefer the managed/built-in templates directory first
+        try:
+            base = _get_builtin_dir()
+            for alt in ('template_index_onir.json', 'template_index.onir.json'):
+                idx = base / alt
+                if idx.exists():
+                    return idx
+        except Exception:
+            pass
+
+        # Fallback: installed package resources
         try:
             with resources.as_file(resources.files('snid_sage') / 'templates') as tpl_dir:
                 for alt in ('template_index_onir.json', 'template_index.onir.json'):
@@ -890,7 +912,8 @@ class TemplateService:
                         return idx
         except Exception:
             pass
-        # Fallback to repo-relative unified path
+
+        # Final fallback to repo-relative unified path (editable installs)
         try:
             root = Path(__file__).resolve().parents[3]
             p1 = root / 'snid_sage' / 'templates' / 'template_index_onir.json'
