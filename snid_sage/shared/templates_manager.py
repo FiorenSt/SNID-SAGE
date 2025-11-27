@@ -115,7 +115,10 @@ def _find_packaged_templates_dir() -> Optional[Path]:
     download/state management when available.
 
     Returns ``None`` when no such directory exists (typical for wheel/pip
-    installs where templates are no longer packaged).
+    installs where templates are no longer packaged).  For editable /
+    development installs, we also look for a top-level ``templates`` directory
+    in the project root (next to the ``snid_sage`` package), which is where
+    the git repository ships the built-in bank.
     """
     try:
         import importlib.resources as pkg_resources
@@ -125,10 +128,19 @@ def _find_packaged_templates_dir() -> Optional[Path]:
     try:
         if hasattr(pkg_resources, "files"):
             try:
-                tdir = pkg_resources.files("snid_sage") / "templates"  # type: ignore[attr-defined]
-                tpl_dir = Path(str(tdir))
-                if (tpl_dir / "template_index.json").exists():
-                    return tpl_dir
+                pkg_root_obj = pkg_resources.files("snid_sage")  # type: ignore[attr-defined]
+                pkg_root = Path(str(pkg_root_obj))
+
+                # 1) Classic packaged location: snid_sage/templates
+                tdir = pkg_root / "templates"
+                if (tdir / "template_index.json").exists():
+                    return tdir
+
+                # 2) Editable/dev install: repository ships templates in a
+                #    top-level ``templates`` directory next to ``snid_sage``.
+                repo_templates = pkg_root.parent / "templates"
+                if (repo_templates / "template_index.json").exists():
+                    return repo_templates
             except Exception:
                 pass
     except Exception:
@@ -200,6 +212,11 @@ def _compute_archive_url() -> str:
 
     Advanced users and development installs can override this via the
     ``SNID_SAGE_TEMPLATES_ARCHIVE_URL`` environment variable.
+
+    For *development* installs we deliberately avoid hitting GitHub at all
+    (unless an explicit override URL is provided) and expect a local templates
+    bank (for example the one living under ``SNID-SAGE/templates`` in a git
+    checkout).
     """
     # Env override takes precedence (e.g. dev/testing mirrors)
     override = os.environ.get(_ENV_ARCHIVE_URL_OVERRIDE, "").strip()
@@ -207,19 +224,33 @@ def _compute_archive_url() -> str:
         return override
 
     # Try to derive from installed package version
-    version = TEMPLATE_BANK_VERSION
+    raw_version = TEMPLATE_BANK_VERSION
     try:
         from snid_sage import __version__ as pkg_version  # type: ignore
 
-        version = str(pkg_version)
+        raw_version = str(pkg_version)
     except Exception:
         # Fall back to TEMPLATE_BANK_VERSION when package version is unavailable
         pass
 
-    # Strip any local or dev segments (e.g. 0.11.0.dev3+githash -> 0.11.0)
-    version = version.split("+", 1)[0]
-    if ".dev" in version:
-        version = version.split(".dev", 1)[0]
+    # Detect common "development" style versions:
+    lower = raw_version.lower()
+    is_dev_build = (
+        ".dev" in lower
+        or "+g" in lower
+        or "dirty" in lower
+        or "local" in lower
+        or "unknown" in lower
+    )
+
+    if is_dev_build:
+        # For dev builds, never auto-hit GitHub. Callers should rely on a
+        # pre-populated local templates bank instead (e.g. from a git clone).
+        # We return a dummy URL that will fail fast if reached.
+        return "file://dev-no-remote-templates"
+
+    # Strip any local segments (e.g. 0.11.0+githash -> 0.11.0)
+    version = raw_version.split("+", 1)[0]
 
     return (
         f"https://github.com/FiorenSt/SNID-SAGE/releases/download/"
@@ -241,15 +272,46 @@ def is_templates_installed(base_dir: Optional[Path] = None) -> bool:
     This checks:
     - The presence of the metadata file with matching ``TEMPLATE_BANK_VERSION``.
     - That all expected files in :data:`TEMPLATES_FILES` exist.
+
+    For development installs (e.g. running directly from a git checkout),
+    we are more permissive: if all expected files are present in the resolved
+    templates base directory, we treat the bank as installed even when the
+    metadata file is missing or has a mismatched version.  This avoids
+    repeatedly attempting downloads when ``SNID-SAGE/templates`` from the
+    repository already contains a complete bank.
     """
     if base_dir is None:
         base_dir = get_templates_base_dir()
 
     meta = _load_meta(base_dir)
-    if not meta or str(meta.get("version", "")) != TEMPLATE_BANK_VERSION:
-        return False
+    if meta and str(meta.get("version", "")) == TEMPLATE_BANK_VERSION:
+        return _all_files_present(base_dir)
 
-    return _all_files_present(base_dir)
+    # Development-friendly fallback: for dev builds, accept a bank as
+    # "installed" when all expected files are present, even without a
+    # matching metadata file.
+    try:
+        from snid_sage import __version__ as pkg_version  # type: ignore
+
+        v = str(pkg_version).lower()
+        is_dev = (
+            ".dev" in v
+            or "+g" in v
+            or "dirty" in v
+            or "local" in v
+            or "unknown" in v
+        )
+    except Exception:
+        is_dev = False
+
+    if is_dev and _all_files_present(base_dir):
+        _LOG.debug(
+            "Treating templates as installed for development build: "
+            f"{base_dir} (metadata missing or mismatched, but all files present)"
+        )
+        return True
+
+    return False
 
 
 def _download_file(

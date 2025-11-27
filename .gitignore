@@ -199,6 +199,13 @@ data/
 # Individual template files (large binary files) - exclude the entire folder
 templates/Individual_templates/
 
+# ===== DEV USER TEMPLATE STATE (GIT CLONE / EDITABLE INSTALLS) =====
+# Local user template library and selector when working from a git checkout.
+# These live at the repo root alongside ``templates/`` and should never be
+# committed as they can contain personal or project-specific data.
+/user_templates/
+/user_templates.json
+
 # ===== PLOT & VISUALIZATION FILES =====
 # Generated plot files
 plots/*.pdf
