@@ -341,6 +341,7 @@ RESULTS_IA/
 TESTING_TEMPLATES/
 TESTING_TEMPLATES_NEW/
 WISEREP_RESULTS/
+SNID-SAGE/
 
 # ===== MARKDOWN FILES =====
 # Track markdown files (remove previous global ignore). No entries here on purpose.
