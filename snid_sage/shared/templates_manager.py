@@ -33,9 +33,9 @@ import zipfile
 import time
 
 import requests
-from platformdirs import user_data_dir
 
 from snid_sage.shared.utils.logging import get_logger
+from snid_sage.shared.utils.paths.state_root import get_state_root_dir
 
 _LOG = get_logger("snid_sage.shared.templates_manager")
 
@@ -43,6 +43,13 @@ _LOG = get_logger("snid_sage.shared.templates_manager")
 # Bump this when you intentionally change the template bank contents on GitHub.
 # This is *independent* from the JSON index's own "version" field.
 TEMPLATE_BANK_VERSION: str = "1"
+
+# Latest known SNID SAGE release version that has a templates archive
+# published on GitHub. This is used as a safety fallback when running a
+# development checkout whose version is newer than the latest released
+# templates bank (e.g. 0.12.0.dev while only templates-v0.11.2.zip
+# exists on GitHub).
+TEMPLATES_LAST_KNOWN_RELEASE: str = "0.11.2"
 
 # Files that make up the built-in template bank. Update this list when
 # templates are added/removed/renamed in the GitHub repo.
@@ -112,8 +119,9 @@ def get_templates_base_dir() -> Path:
 
     Resolution order:
     1. If ``SNID_SAGE_TEMPLATE_DIR`` is set, use that (absolute or relative).
-    2. Otherwise, use a platform-appropriate user data dir:
-       ``<user_data_dir>/snid-sage/templates``.
+    2. Otherwise, place templates under ``<state_root>/templates`` where
+       ``state_root`` is resolved via
+       :func:`snid_sage.shared.utils.paths.state_root.get_state_root_dir`.
     """
     override = os.environ.get(_ENV_DIR_OVERRIDE, "").strip()
     if override:
@@ -121,12 +129,13 @@ def get_templates_base_dir() -> Path:
         _LOG.debug(f"Using override template directory from {_ENV_DIR_OVERRIDE}: {base}")
         return _ensure_writable_dir(base)
 
-    # Default: per-user data directory. We intentionally avoid a personal
-    # author/vendor name here so the on-disk path is neutral, e.g. on Windows:
-    #   %LOCALAPPDATA%/snid-sage/templates
-    root = Path(user_data_dir("snid-sage"))
+    # Default: use the shared state root so that, on a fresh installation,
+    # the first directory from which SNID SAGE is run becomes the anchor
+    # for all state (config, templates, user templates, etc.). Existing
+    # installations that already have ``~/.snid_sage`` continue to use it.
+    root = get_state_root_dir()
     base = root / "templates"
-    _LOG.debug(f"Using default template directory: {base}")
+    _LOG.debug(f"Using state-root template directory: {base}")
     return _ensure_writable_dir(base)
 
 
@@ -194,6 +203,21 @@ def _compute_archive_url() -> str:
     )
 
 
+def _compute_fallback_archive_url() -> str:
+    """
+    Compute the URL of the fallback templates ZIP archive.
+
+    This always points to :data:`TEMPLATES_LAST_KNOWN_RELEASE`, which
+    should correspond to the latest GitHub Release that ships a
+    templates-v<version>.zip asset.
+    """
+    version = TEMPLATES_LAST_KNOWN_RELEASE
+    return (
+        f"https://github.com/FiorenSt/SNID-SAGE/releases/download/"
+        f"v{version}/templates-v{version}.zip"
+    )
+
+
 def _all_files_present(base_dir: Path) -> bool:
     for name in TEMPLATES_FILES:
         if not (base_dir / name).exists():
@@ -236,7 +260,25 @@ def _download_file(
 
     try:
         with requests.get(url, stream=True, timeout=timeout) as resp:
-            resp.raise_for_status()
+            try:
+                resp.raise_for_status()
+            except Exception as http_exc:  # pragma: no cover - defensive
+                # Special-case 404 so callers can distinguish "no such
+                # archive for this version" from generic network failures.
+                try:
+                    from requests import HTTPError  # type: ignore
+                except Exception:  # pragma: no cover - ultra-defensive
+                    HTTPError = Exception  # type: ignore
+                if isinstance(http_exc, HTTPError) and getattr(http_exc, "response", None) is not None:
+                    try:
+                        status = http_exc.response.status_code  # type: ignore[assignment]
+                    except Exception:
+                        status = None
+                    if status == 404:
+                        # Let the caller decide how to fall back.
+                        raise FileNotFoundError(f"Template archive not found at {url}") from http_exc
+                # Re-raise other HTTP errors as-is
+                raise
 
             total_size: Optional[int]
             try:
@@ -273,7 +315,7 @@ def _download_file(
         raise RuntimeError(f"Failed to download template file from {url}: {exc}")
 
 
-def _download_and_extract_archive(base_dir: Path) -> None:
+def _download_and_extract_archive(base_dir: Path) -> str:
     """
     Download the templates ZIP archive and extract it into ``base_dir``.
 
@@ -281,7 +323,8 @@ def _download_and_extract_archive(base_dir: Path) -> None:
     existing files with the contents of the archive but does not remove any
     unrelated files that may already reside in ``base_dir``.
     """
-    archive_url = _compute_archive_url()
+    primary_url = _compute_archive_url()
+    archive_url = primary_url
     archive_name = archive_url.rsplit("/", 1)[-1] or "templates.zip"
     archive_path = base_dir / archive_name
 
@@ -337,7 +380,23 @@ def _download_and_extract_archive(base_dir: Path) -> None:
             # versions); repeated failures are rare and purely cosmetic.
             return
 
-    _download_file(archive_url, archive_path, progress_cb=_print_download_progress)
+    try:
+        _download_file(archive_url, archive_path, progress_cb=_print_download_progress)
+    except FileNotFoundError:
+        # Likely a development checkout whose version does not yet have a
+        # published templates archive. Fall back to the latest known
+        # released templates bank so that dev installs remain usable.
+        fallback_url = _compute_fallback_archive_url()
+        fallback_name = fallback_url.rsplit("/", 1)[-1] or "templates.zip"
+        archive_path = base_dir / fallback_name
+        _LOG.warning(
+            "Primary templates archive not found (%s); falling back to "
+            "latest known release at %s",
+            primary_url,
+            fallback_url,
+        )
+        archive_url = fallback_url
+        _download_file(archive_url, archive_path, progress_cb=_print_download_progress)
 
     # Ensure we end with a newline after the download progress line
     if use_tty_progress:
@@ -396,6 +455,8 @@ def _download_and_extract_archive(base_dir: Path) -> None:
             # Non-fatal; leftover archive is merely wasted space
             pass
 
+    return archive_url
+
 
 def download_templates_if_needed(force: bool = False) -> Path:
     """
@@ -429,7 +490,7 @@ def download_templates_if_needed(force: bool = False) -> Path:
         # Printing is purely cosmetic; never fail download because of it
         pass
 
-    _download_and_extract_archive(base_dir)
+    archive_url_used = _download_and_extract_archive(base_dir)
 
     # Record metadata
     _save_meta(
@@ -437,7 +498,7 @@ def download_templates_if_needed(force: bool = False) -> Path:
         {
             "version": TEMPLATE_BANK_VERSION,
             "files": list(TEMPLATES_FILES),
-            "archive_url": _compute_archive_url(),
+            "archive_url": archive_url_used,
         },
     )
 

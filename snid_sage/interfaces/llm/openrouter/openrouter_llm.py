@@ -27,6 +27,24 @@ OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 DEFAULT_MODEL = "deepseek/deepseek-chat-v3-0324:free"
 
 
+def _get_openrouter_config_dir() -> str:
+    """
+    Return the directory where OpenRouter config is stored.
+
+    By default this is ``<state_root>/LLM`` where ``state_root`` is
+    resolved via :func:`snid_sage.shared.utils.paths.state_root.get_state_root_dir`,
+    typically a ``SNID_SAGE`` subdirectory of the current working directory.
+    Advanced users can still override the root via ``SNID_SAGE_STATE_DIR``.
+    """
+    try:
+        from snid_sage.shared.utils.paths.state_root import get_state_root_dir
+
+        return str(get_state_root_dir() / "LLM")
+    except Exception:
+        # Fallback: keep config next to the current working directory
+        return os.path.join(os.getcwd(), "SNID_SAGE", "LLM")
+
+
 def get_openrouter_api_key():
     """Get OpenRouter API key from secure storage or legacy config file"""
     # Try secure storage first
@@ -40,8 +58,8 @@ def get_openrouter_api_key():
     except Exception as e:
         _LOGGER.warning(f"Failed to retrieve from secure storage: {e}")
     
-    # Fallback to legacy config file
-    config_path = os.path.join(os.path.expanduser("~"), ".snidanalyzer", "openrouter_config.json")
+    # Fallback to legacy / config file
+    config_path = os.path.join(_get_openrouter_config_dir(), "openrouter_config.json")
     if os.path.exists(config_path):
         try:
             with open(config_path, 'r') as f:
@@ -87,8 +105,8 @@ def save_openrouter_api_key(api_key):
     except Exception as e:
         _LOGGER.warning(f"Failed to save to secure storage: {e}")
     
-    # Fallback to legacy config file (but don't store API key in plain text)
-    config_dir = os.path.join(os.path.expanduser("~"), ".snidanalyzer")
+    # Fallback to legacy/config file (but don't store API key in plain text)
+    config_dir = _get_openrouter_config_dir()
     os.makedirs(config_dir, exist_ok=True)
     
     config_path = os.path.join(config_dir, "openrouter_config.json")
@@ -118,7 +136,7 @@ def save_openrouter_api_key(api_key):
 
 def save_openrouter_config(api_key, model_id, model_name=None, is_tested=False):
     """Save OpenRouter config to file with enhanced model information"""
-    config_dir = os.path.join(os.path.expanduser("~"), ".snidanalyzer")
+    config_dir = _get_openrouter_config_dir()
     os.makedirs(config_dir, exist_ok=True)
     
     config_path = os.path.join(config_dir, "openrouter_config.json")
@@ -169,7 +187,7 @@ def set_model_test_status(model_id, model_name=None, is_tested=True):
 
 def get_openrouter_config():
     """Get saved OpenRouter configuration"""
-    config_path = os.path.join(os.path.expanduser("~"), ".snidanalyzer", "openrouter_config.json")
+    config_path = os.path.join(_get_openrouter_config_dir(), "openrouter_config.json")
     if os.path.exists(config_path):
         try:
             with open(config_path, 'r') as f:

@@ -19,6 +19,7 @@ from dataclasses import dataclass, asdict
 import copy
 
 from snid_sage.shared.exceptions.core_exceptions import ConfigurationError
+from snid_sage.shared.utils.paths.state_root import get_state_root_dir
 
 
 @dataclass
@@ -60,11 +61,13 @@ class ConfigurationManager:
         self._current_config = None
         
     def _get_config_directory(self) -> Path:
-        """Get platform-appropriate configuration directory"""
-        # Use a single home-scoped directory so all tools share config and avoid AppData
-        # Windows: C:\Users\<user>\.snid_sage
-        # Linux/macOS: ~/.snid_sage
-        return Path.home() / '.snid_sage'
+        """Get platform-appropriate configuration directory.
+
+        By default this is ``~/.snid_sage`` to preserve existing behaviour.
+        Advanced users can override the *root* via ``SNID_SAGE_STATE_DIR``,
+        in which case the config directory becomes ``<state_root>``.
+        """
+        return get_state_root_dir()
     
     def _create_validation_rules(self) -> Dict[str, Dict[str, ConfigValidationRule]]:
         """Create validation rules for all configuration categories"""

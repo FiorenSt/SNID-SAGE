@@ -104,9 +104,13 @@ jobs:
         VERSION="${TAG_NAME#v}"
         echo "Extracting changelog for version ${VERSION}"
 
+        # Extract the section of CHANGELOG.md corresponding to this version.
+        # We intentionally avoid putting the header into a regex (to sidestep
+        # escaping '[' and other metacharacters) and instead use index(...) to
+        # test for a prefix match.
         awk -v ver="## [${VERSION}]" '
-          $0 ~ "^"ver" " {flag=1}
-          flag && /^## \[/ && $0 !~ "^"ver" " {flag=0}
+          index($0, ver) == 1 { flag=1 }
+          flag && /^## \[/ && index($0, ver) != 1 { flag=0 }
           flag
         ' CHANGELOG.md > changelog_section.md
 

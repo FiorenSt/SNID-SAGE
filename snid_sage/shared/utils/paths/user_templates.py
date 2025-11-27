@@ -16,6 +16,7 @@ import os
 from datetime import datetime
 
 from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
+from snid_sage.shared.utils.paths.state_root import get_state_root_dir
 
 
 def _is_writable_dir(path: Path) -> bool:
@@ -34,9 +35,10 @@ def get_user_templates_dir(strict: bool = False) -> Optional[Path]:
     - strict=False: same behavior for now (no implicit fallbacks). Legacy discovery should
       be explicitly requested by callers via discover_legacy_user_templates().
     """
-    # Minimal persistence independent of global config: ~/.snid_sage/user_templates.json
+    # Minimal persistence independent of global config: a small JSON selector
+    # under the shared state root (typically <cwd>/SNID_SAGE).
     try:
-        settings_path = Path.home() / '.snid_sage' / 'user_templates.json'
+        settings_path = get_state_root_dir() / 'user_templates.json'
         if settings_path.exists():
             import json
             with open(settings_path, 'r', encoding='utf-8') as f:
@@ -58,9 +60,10 @@ def get_default_user_templates_dir() -> Optional[Path]:
 
     By default this is a ``user_templates`` sibling directory next to the
     managed built-in templates directory resolved by the centralized templates
-    manager, e.g. on Windows:
+    manager, e.g. on Windows for a fresh install run from ``C:\\some\\proj``::
 
-        %LOCALAPPDATA%/snid-sage/user_templates
+        C:\\some\\proj\\SNID_SAGE\\templates
+        C:\\some\\proj\\SNID_SAGE\\user_templates
 
     The directory is not created here; callers may choose to create it.
     """
@@ -97,7 +100,9 @@ def set_user_templates_dir(path: Path) -> None:
         parent.mkdir(parents=True, exist_ok=True)
         path.mkdir(parents=True, exist_ok=True)
     try:
-        settings_dir = Path.home() / '.snid_sage'
+        # Prefer the shared state root when configured; otherwise fall back
+        # to the historic ~/.snid_sage location for backwards compatibility.
+        settings_dir = get_state_root_dir()
         settings_dir.mkdir(parents=True, exist_ok=True)
         settings_path = settings_dir / 'user_templates.json'
         data = {'path': str(path), 'last_modified': datetime.now().isoformat()}
@@ -165,13 +170,7 @@ def discover_legacy_user_templates() -> List[Path]:
     except Exception:
         pass
 
-    # 4) Home fallback ~/.snid_sage/User_templates
-    try:
-        home_fb = Path.home() / '.snid_sage' / 'User_templates'
-        if home_fb.exists() and _is_writable_dir(home_fb):
-            candidates.append(home_fb)
-    except Exception:
-        pass
+    # 4) (removed): legacy home fallback ~/.snid_sage/User_templates
 
     # Filter for libraries that look populated
     filtered: List[Path] = []
