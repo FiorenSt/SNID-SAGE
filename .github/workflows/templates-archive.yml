@@ -24,9 +24,10 @@ jobs:
       - name: Create templates archive
         run: |
           echo "Building templates archive for version: ${SNID_SAGE_VERSION}"
-          # Zip only the contents of snid_sage/templates so they extract
-          # directly into the managed templates directory.
-          cd snid_sage/templates
+          # Zip only the contents of the top-level templates directory so they
+          # extract directly into the managed templates directory on disk
+          # (typically <state_root>/templates under the SNID-SAGE folder).
+          cd templates
           zip -r "${GITHUB_WORKSPACE}/templates-v${SNID_SAGE_VERSION}.zip" .
 
       - name: Upload templates archive to release

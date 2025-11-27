@@ -6,7 +6,6 @@ All notable changes to SNID SAGE will be documented in this file.
 
 - Templates and state layout:
   - Templates, config, and user templates are now stored under a project-local `SNID-SAGE` folder rooted at the directory where SNID SAGE is first run (e.g. `C:\path\to\project\SNID_SAGE\templates`), unless overridden with `SNID_SAGE_TEMPLATE_DIR` or `SNID_SAGE_STATE_DIR`.
-  - Development installs whose version is ahead of the latest published templates archive now automatically fall back to the last known release bank (currently `templates-v0.11.2.zip`) instead of failing, and metadata records which archive URL was used.
 
 ## [0.11.1] - 2025-11-26
 

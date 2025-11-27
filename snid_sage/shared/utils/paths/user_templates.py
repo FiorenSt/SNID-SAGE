@@ -83,8 +83,8 @@ def get_default_user_templates_dir() -> Optional[Path]:
     managed built-in templates directory resolved by the centralized templates
     manager, e.g. on Windows for a fresh install run from ``C:\\some\\proj``::
 
-        C:\\some\\proj\\SNID_SAGE\\templates
-        C:\\some\\proj\\SNID_SAGE\\user_templates
+        C:\\some\\proj\\SNID-SAGE\\templates
+        C:\\some\\proj\\SNID-SAGE\\user_templates
 
     The directory is not created here; callers may choose to create it.
     """

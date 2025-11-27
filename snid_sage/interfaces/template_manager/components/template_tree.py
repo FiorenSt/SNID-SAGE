@@ -201,15 +201,31 @@ class TemplateTreeWidget(QtWidgets.QTreeWidget):
             
     def _find_template_index(self) -> Optional[str]:
         """Find the template index file"""
+        # 1) Prefer the centralized templates manager (managed SNID-SAGE/templates bank)
+        try:
+            from pathlib import Path as _Path
+            from snid_sage.shared.templates_manager import get_templates_dir as _get_tpl_dir
+
+            managed_dir = _Path(_get_tpl_dir())
+            idx_path = managed_dir / "template_index.json"
+            if idx_path.exists():
+                _LOGGER.info(f"Found managed template index at: {idx_path}")
+                return str(idx_path)
+        except Exception:
+            # Best-effort only; fall through to legacy/local discovery.
+            pass
+
+        # 2) Legacy/local fallbacks relative to the current working directory
         possible_paths = [
             "templates/template_index.json",
-            "template_index.json"
+            "template_index.json",
         ]
-        
+
         for path in possible_paths:
             if os.path.exists(path):
                 _LOGGER.info(f"Found template index at: {path}")
                 return path
+
         _LOGGER.warning("Template index not found in any of the expected locations")
         return None
         

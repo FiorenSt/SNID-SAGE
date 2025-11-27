@@ -42,9 +42,11 @@ def _get_builtin_dir() -> Path:
     Resolve the built-in templates directory.
 
     Preferred behaviour is to delegate to the centralized templates manager,
-    which will lazily download the GitHub Release archive into a per-user
-    cache as needed. For development/editable installs we fall back to the
-    repo-relative ``snid_sage/templates`` tree.
+    which will lazily download the GitHub Release archive into the managed
+    state-root bank (typically ``<cwd>/SNID-SAGE/templates``). For
+    development/editable installs we fall back to the repo-relative top-level
+    ``templates`` folder in the Git checkout, and only as a last resort to
+    any legacy ``snid_sage/templates`` package data.
     """
     try:
         from snid_sage.shared.templates_manager import get_templates_dir
@@ -896,7 +898,7 @@ class TemplateService:
         # Prefer the managed/built-in templates directory first
         try:
             base = _get_builtin_dir()
-            for alt in ('template_index_onir.json', 'template_index.onir.json'):
+            for alt in ("template_index_onir.json", "template_index.onir.json"):
                 idx = base / alt
                 if idx.exists():
                     return idx
@@ -906,18 +908,25 @@ class TemplateService:
         # Fallback: installed package resources
         try:
             with resources.as_file(resources.files('snid_sage') / 'templates') as tpl_dir:
-                for alt in ('template_index_onir.json', 'template_index.onir.json'):
+                for alt in ("template_index_onir.json", "template_index.onir.json"):
                     idx = tpl_dir / alt
                     if idx.exists():
                         return idx
         except Exception:
             pass
 
-        # Final fallback to repo-relative unified path (editable installs)
+        # Final fallback to repo-relative unified path (editable installs):
+        # prefer the top-level ``templates`` folder next to the repo root,
+        # then fall back to any legacy ``snid_sage/templates`` tree.
         try:
             root = Path(__file__).resolve().parents[3]
-            p1 = root / 'snid_sage' / 'templates' / 'template_index_onir.json'
-            return p1 if p1.exists() else None
+            # New layout: top-level templates bank
+            p_new = root / "templates" / "template_index_onir.json"
+            if p_new.exists():
+                return p_new
+            # Legacy layout inside package tree (kept for backwards compatibility)
+            p_legacy = root / "snid_sage" / "templates" / "template_index_onir.json"
+            return p_legacy if p_legacy.exists() else None
         except Exception:
             return None
 
