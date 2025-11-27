@@ -13,10 +13,10 @@ SNID SAGE per‑user/per‑project state, including:
 Design
 ------
 
-- By default, the root is a ``SNID_SAGE`` subdirectory of the current
+- By default, the root is a ``SNID-SAGE`` subdirectory of the current
   working directory, e.g. if the user runs from ``C:\\work\\proj``:
 
-      C:\\work\\proj\\SNID_SAGE
+      C:\\work\\proj\\SNID-SAGE
 
   This keeps all SNID SAGE state local to where the user is working,
   regardless of where ``pip`` installed the package.
@@ -52,7 +52,7 @@ def get_state_root_dir() -> Path:
 
     1. If ``SNID_SAGE_STATE_DIR`` is set, use that (absolute or relative
        to the current working directory).
-    2. Otherwise, use ``<cwd>/SNID_SAGE``.
+    2. Otherwise, use ``<cwd>/SNID-SAGE``.
     """
     override = os.environ.get(_ENV_STATE_DIR, "").strip()
     if override:
@@ -61,8 +61,8 @@ def get_state_root_dir() -> Path:
             base = (Path.cwd() / base).resolve()
         return base
 
-    # Default: project-local SNID_SAGE directory under the current working dir.
-    return (Path.cwd() / "SNID_SAGE").resolve()
+    # Default: project-local SNID-SAGE directory under the current working dir.
+    return (Path.cwd() / "SNID-SAGE").resolve()
 
 
 __all__ = ["get_state_root_dir"]

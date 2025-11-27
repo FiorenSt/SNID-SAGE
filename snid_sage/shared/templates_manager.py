@@ -44,13 +44,6 @@ _LOG = get_logger("snid_sage.shared.templates_manager")
 # This is *independent* from the JSON index's own "version" field.
 TEMPLATE_BANK_VERSION: str = "1"
 
-# Latest known SNID SAGE release version that has a templates archive
-# published on GitHub. This is used as a safety fallback when running a
-# development checkout whose version is newer than the latest released
-# templates bank (e.g. 0.12.0.dev while only templates-v0.11.2.zip
-# exists on GitHub).
-TEMPLATES_LAST_KNOWN_RELEASE: str = "0.11.2"
-
 # Files that make up the built-in template bank. Update this list when
 # templates are added/removed/renamed in the GitHub repo.
 TEMPLATES_FILES: List[str] = [
@@ -111,6 +104,37 @@ def _ensure_writable_dir(path: Path) -> Path:
         raise PermissionError(f"Template directory is not writable: {path}")
 
     return path
+
+
+def _find_packaged_templates_dir() -> Optional[Path]:
+    """
+    Return a read-only templates directory bundled with the package, if any.
+
+    This prefers templates shipped directly inside the ``snid_sage`` package
+    (e.g. a Git clone with ``snid_sage/templates`` present) and avoids any
+    download/state management when available.
+
+    Returns ``None`` when no such directory exists (typical for wheel/pip
+    installs where templates are no longer packaged).
+    """
+    try:
+        import importlib.resources as pkg_resources
+    except Exception:  # pragma: no cover - very old Python
+        return None
+
+    try:
+        if hasattr(pkg_resources, "files"):
+            try:
+                tdir = pkg_resources.files("snid_sage") / "templates"  # type: ignore[attr-defined]
+                tpl_dir = Path(str(tdir))
+                if (tpl_dir / "template_index.json").exists():
+                    return tpl_dir
+            except Exception:
+                pass
+    except Exception:
+        return None
+
+    return None
 
 
 def get_templates_base_dir() -> Path:
@@ -203,21 +227,6 @@ def _compute_archive_url() -> str:
     )
 
 
-def _compute_fallback_archive_url() -> str:
-    """
-    Compute the URL of the fallback templates ZIP archive.
-
-    This always points to :data:`TEMPLATES_LAST_KNOWN_RELEASE`, which
-    should correspond to the latest GitHub Release that ships a
-    templates-v<version>.zip asset.
-    """
-    version = TEMPLATES_LAST_KNOWN_RELEASE
-    return (
-        f"https://github.com/FiorenSt/SNID-SAGE/releases/download/"
-        f"v{version}/templates-v{version}.zip"
-    )
-
-
 def _all_files_present(base_dir: Path) -> bool:
     for name in TEMPLATES_FILES:
         if not (base_dir / name).exists():
@@ -260,26 +269,7 @@ def _download_file(
 
     try:
         with requests.get(url, stream=True, timeout=timeout) as resp:
-            try:
-                resp.raise_for_status()
-            except Exception as http_exc:  # pragma: no cover - defensive
-                # Special-case 404 so callers can distinguish "no such
-                # archive for this version" from generic network failures.
-                try:
-                    from requests import HTTPError  # type: ignore
-                except Exception:  # pragma: no cover - ultra-defensive
-                    HTTPError = Exception  # type: ignore
-                if isinstance(http_exc, HTTPError) and getattr(http_exc, "response", None) is not None:
-                    try:
-                        status = http_exc.response.status_code  # type: ignore[assignment]
-                    except Exception:
-                        status = None
-                    if status == 404:
-                        # Let the caller decide how to fall back.
-                        raise FileNotFoundError(f"Template archive not found at {url}") from http_exc
-                # Re-raise other HTTP errors as-is
-                raise
-
+            resp.raise_for_status()
             total_size: Optional[int]
             try:
                 total_size = int(resp.headers.get("Content-Length", "0")) or None
@@ -323,8 +313,7 @@ def _download_and_extract_archive(base_dir: Path) -> str:
     existing files with the contents of the archive but does not remove any
     unrelated files that may already reside in ``base_dir``.
     """
-    primary_url = _compute_archive_url()
-    archive_url = primary_url
+    archive_url = _compute_archive_url()
     archive_name = archive_url.rsplit("/", 1)[-1] or "templates.zip"
     archive_path = base_dir / archive_name
 
@@ -380,23 +369,7 @@ def _download_and_extract_archive(base_dir: Path) -> str:
             # versions); repeated failures are rare and purely cosmetic.
             return
 
-    try:
-        _download_file(archive_url, archive_path, progress_cb=_print_download_progress)
-    except FileNotFoundError:
-        # Likely a development checkout whose version does not yet have a
-        # published templates archive. Fall back to the latest known
-        # released templates bank so that dev installs remain usable.
-        fallback_url = _compute_fallback_archive_url()
-        fallback_name = fallback_url.rsplit("/", 1)[-1] or "templates.zip"
-        archive_path = base_dir / fallback_name
-        _LOG.warning(
-            "Primary templates archive not found (%s); falling back to "
-            "latest known release at %s",
-            primary_url,
-            fallback_url,
-        )
-        archive_url = fallback_url
-        _download_file(archive_url, archive_path, progress_cb=_print_download_progress)
+    _download_file(archive_url, archive_path, progress_cb=_print_download_progress)
 
     # Ensure we end with a newline after the download progress line
     if use_tty_progress:
@@ -518,6 +491,18 @@ def get_templates_dir(force_download: bool = False) -> Path:
     force_download:
         If True, always re-download the bank even when already present.
     """
+    # 0) Prefer templates bundled directly with the package (e.g. Git clone)
+    # when available, unless the caller explicitly forces a re-download.
+    if not force_download:
+        try:
+            packaged = _find_packaged_templates_dir()
+        except Exception:
+            packaged = None
+        if packaged is not None:
+            _LOG.debug(f"Using packaged templates directory: {packaged}")
+            return packaged
+
+    # 1) Fallback to the managed, lazily-downloaded templates bank.
     return download_templates_if_needed(force=force_download)
 
 
