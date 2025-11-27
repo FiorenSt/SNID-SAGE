@@ -31,12 +31,20 @@ def get_user_templates_dir(strict: bool = False) -> Optional[Path]:
     """
     Return the configured user templates directory, or None if unset/invalid.
 
-    - strict=True: do not attempt any legacy fallbacks; only return configured path if valid
-    - strict=False: same behavior for now (no implicit fallbacks). Legacy discovery should
-      be explicitly requested by callers via discover_legacy_user_templates().
+    Behaviour:
+    - First, honor an explicitly configured directory stored in ``user_templates.json``.
+      If that file exists and points to a writable directory, it is returned.
+    - If no explicit directory is configured yet, fall back to a *known, managed*
+      default next to the centralized templates bank, create it if needed, and
+      persist it as the configured location. This makes the user templates folder
+      predictable without requiring an explicit “Set folder” step in the GUI.
+
+    The ``strict`` flag is preserved for backwards compatibility but no longer
+    changes the resolution behaviour – callers that previously passed
+    ``strict=True`` to avoid legacy fallbacks now simply get the managed default.
     """
-    # Minimal persistence independent of global config: a small JSON selector
-    # under the shared state root (typically <cwd>/SNID_SAGE).
+    # 1) Minimal persistence independent of global config: a small JSON selector
+    #    under the shared state root (typically <cwd>/SNID_SAGE).
     try:
         settings_path = get_state_root_dir() / 'user_templates.json'
         if settings_path.exists():
@@ -49,8 +57,21 @@ def get_user_templates_dir(strict: bool = False) -> Optional[Path]:
                 if _is_writable_dir(p):
                     return p
     except Exception:
+        # If reading/parsing fails, fall through to the managed default logic
         pass
-    # No legacy fallback here; caller decides policy
+
+    # 2) No explicit folder yet – adopt a stable, managed default next to the
+    #    centralized templates bank and persist it so future calls are fast.
+    try:
+        default_dir = get_default_user_templates_dir()
+        if default_dir is not None:
+            # set_user_templates_dir will validate, create if needed, and persist
+            set_user_templates_dir(default_dir)
+            return default_dir
+    except Exception:
+        # If anything goes wrong, report “unset” and let callers decide how to react.
+        return None
+
     return None
 
 

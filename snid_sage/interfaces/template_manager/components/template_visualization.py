@@ -382,8 +382,11 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
         if self.template_data and self.template_data.wave_data is not None:
             view_mode = self.view_mode_combo.currentText()
             
+            # Collect flux arrays actually plotted so we can set a stable view range
+            plotted_flux_arrays = []
+            
             if view_mode == "All Epochs":
-                self._plot_all_epochs_pg()
+                plotted_flux_arrays = self._plot_all_epochs_pg() or []
                 # Show or hide subsampling info
                 try:
                     total_epochs = len(self.template_data.epochs)
@@ -396,12 +399,21 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                 except Exception:
                     self.cap_info_label.setVisible(False)
             elif view_mode == "Individual Epoch":
-                self._plot_individual_epoch_pg()
+                flux_arr = self._plot_individual_epoch_pg()
+                if flux_arr is not None:
+                    plotted_flux_arrays = [flux_arr]
                 # Hide subsampling info for individual view
                 try:
                     self.cap_info_label.setVisible(False)
                 except Exception:
                     pass
+            
+            # After plotting, reset the view so the template always fits the canvas
+            try:
+                if plotted_flux_arrays:
+                    self._set_stable_view_range(self.template_data.wave_data, plotted_flux_arrays)
+            except Exception:
+                pass
             
             # Ensure x-range includes fixed left label anchor
             try:
@@ -476,6 +488,97 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
         except Exception:
             pass
         
+    def _set_stable_view_range(self, wave: np.ndarray, flux_arrays: list[np.ndarray]) -> None:
+        """
+        Set a stable view range that always fits the currently plotted template data.
+
+        This explicitly resets the ViewBox range each time a template (or epoch/view)
+        is plotted so previous zoom/pan states don't cause clipped or tiny plots.
+        """
+        if not hasattr(self, 'plot_item'):
+            return
+        if wave is None or len(wave) == 0:
+            return
+        if not flux_arrays:
+            return
+
+        try:
+            # Clean wavelength array
+            wave_arr = np.asarray(wave, dtype=float)
+            wave_arr = wave_arr[np.isfinite(wave_arr)]
+            if wave_arr.size == 0:
+                return
+
+            # Concatenate all finite flux values from the provided arrays
+            valid_flux_chunks = []
+            for f in flux_arrays:
+                if f is None:
+                    continue
+                f_arr = np.asarray(f, dtype=float)
+                f_arr = f_arr[np.isfinite(f_arr)]
+                if f_arr.size:
+                    valid_flux_chunks.append(f_arr)
+
+            if not valid_flux_chunks:
+                return
+
+            all_flux = np.concatenate(valid_flux_chunks)
+            if all_flux.size == 0:
+                return
+
+            vb = self.plot_item.getViewBox()
+
+            # Disable auto-ranging to avoid PyQtGraph "spinning axes" behaviour
+            try:
+                vb.disableAutoRange()
+            except Exception:
+                pass
+
+            # Compute X range with a small margin
+            x_min = float(np.min(wave_arr))
+            x_max = float(np.max(wave_arr))
+            if not np.isfinite(x_min) or not np.isfinite(x_max):
+                return
+
+            if x_max > x_min:
+                x_margin = 0.05 * (x_max - x_min)
+            else:
+                # Degenerate or single-point wavelength range – construct a small window
+                scale = abs(x_max) if x_max != 0 else 1.0
+                x_margin = 0.05 * scale
+
+            x_lo = x_min - x_margin
+            x_hi = x_max + x_margin
+
+            # Compute Y range with a larger margin
+            y_min = float(np.min(all_flux))
+            y_max = float(np.max(all_flux))
+            if not np.isfinite(y_min) or not np.isfinite(y_max):
+                return
+
+            if y_max > y_min:
+                y_margin = 0.10 * (y_max - y_min)
+            else:
+                # Flat line case – create a reasonable vertical window
+                scale = abs(y_max) if y_max != 0 else 1.0
+                y_margin = 0.10 * scale
+
+            y_lo = y_min - y_margin
+            y_hi = y_max + y_margin
+
+            # Guard against zero-height windows
+            if y_hi <= y_lo:
+                y_center = y_lo
+                span = 0.10 * (abs(y_center) if y_center != 0 else 1.0)
+                y_lo = y_center - span
+                y_hi = y_center + span
+
+            vb.setRange(xRange=(x_lo, x_hi), yRange=(y_lo, y_hi), padding=0.0)
+
+        except Exception:
+            # Never let view-range computation break plotting
+            pass
+
     def _get_active_profile_id(self) -> str:
         """Determine active profile id for labeling (optical|onir)."""
         try:
