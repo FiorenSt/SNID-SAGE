@@ -2,6 +2,11 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
+## [0.11.3] - 2025-11-27
+
+- Template Manager (`snid-sage-templates`):
+  - Fixed default templates resolution after fresh `pip install` so that storage files are loaded from the centralized, lazily-downloaded templates bank (via `templates_manager`) instead of relying on legacy packaged paths.
+
 ## [0.11.2] - 2025-11-27
 
 - Templates and state layout:

@@ -8,6 +8,7 @@ Widget for visualizing template spectra with multiple view modes.
 import os
 import logging
 from typing import Dict, List, Optional, Any
+from pathlib import Path
 import numpy as np
 from PySide6 import QtWidgets, QtCore, QtGui
 
@@ -311,36 +312,54 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
     def _find_storage_file(self, storage_file: str, template_info: Dict[str, Any]) -> Optional[str]:
         """Find the full path to a storage file (packaged or user), honoring profile.
 
-        Uses the unified managed folder for both profiles.
+        Resolution order:
+        1) Managed built-in templates bank resolved via the centralized
+           :mod:`templates_manager` (GitHub-downloaded archive).
+        2) Configured user templates directory (for user HDF5 banks).
+        3) Legacy/repo-relative fallbacks for development checkouts.
         """
         profile_id = ((template_info or {}).get('profile_id') or '').strip().lower()
         pkg_folder_order = ['templates']
 
-        # 1) Packaged templates directory via importlib.resources
+        # 1) Managed built-in templates bank (GitHub-downloaded archive)
         try:
-            from importlib import resources
-            for folder in pkg_folder_order:
-                with resources.as_file(resources.files('snid_sage') / folder / storage_file) as p:
-                    if p.exists():
-                        _LOGGER.info(f"Found storage file at: {p}")
-                        return str(p)
+            from snid_sage.shared.templates_manager import get_templates_dir as _get_managed_tpl_dir
+
+            managed_base = Path(_get_managed_tpl_dir())
+            candidate = managed_base / storage_file
+            if candidate.exists():
+                _LOGGER.info(f"Found storage file in managed templates bank: {candidate}")
+                return str(candidate)
         except Exception:
+            # Best-effort only; fall through to user/legacy paths.
             pass
 
         # 2) User templates directory resolved by TemplateService (configured path)
         try:
             from snid_sage.interfaces.template_manager.services.template_service import get_template_service
+
             svc = get_template_service()
             user_dir = svc.get_user_templates_dir()
             if user_dir:
                 candidate = Path(user_dir) / storage_file
                 if candidate.exists():
-                    _LOGGER.info(f"Found storage file at: {candidate}")
+                    _LOGGER.info(f"Found storage file in user templates dir: {candidate}")
                     return str(candidate)
         except Exception:
             pass
 
-        # 3) Legacy fallbacks (repo-relative)
+        # 3) Legacy fallbacks (packaged or repo-relative paths)
+        try:
+            from importlib import resources
+
+            for folder in pkg_folder_order:
+                with resources.as_file(resources.files('snid_sage') / folder / storage_file) as p:
+                    if p.exists():
+                        _LOGGER.info(f"Found storage file in packaged resources: {p}")
+                        return str(p)
+        except Exception:
+            pass
+
         for folder in pkg_folder_order:
             for path in [
                 os.path.join("snid_sage", folder, storage_file),
@@ -351,7 +370,9 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                     _LOGGER.info(f"Found storage file at: {path}")
                     return path
 
-        _LOGGER.warning(f"Storage file {storage_file} not found in any of the expected locations (profile={profile_id or 'optical'})")
+        _LOGGER.warning(
+            f"Storage file {storage_file} not found in any of the expected locations (profile={profile_id or 'optical'})"
+        )
         return None
         
     def update_plot(self):
