@@ -451,7 +451,15 @@ class TemplateService:
                 # If missing in index, try to find and delete from any user H5
                 storage_abs = None
                 if meta:
-                    storage_abs = Path(meta.get("storage_file", "")).resolve()
+                    # storage_file may be absolute or relative to the configured user dir
+                    storage_raw = str(meta.get("storage_file", "")).strip()
+                    if storage_raw:
+                        p = Path(storage_raw)
+                        if not p.is_absolute():
+                            user_dir = get_user_templates_dir(strict=True)
+                            if user_dir:
+                                p = Path(user_dir) / p
+                        storage_abs = p.resolve()
                 else:
                     user_dir = get_user_templates_dir(strict=True)
                     if not user_dir:
@@ -506,6 +514,194 @@ class TemplateService:
                             self.rebuild_user_index()
                         except Exception:
                             pass
+            return True
+        except Exception:
+            return False
+
+    def delete_epoch(self, name: str, epoch_index: int) -> bool:
+        """
+        Delete a single epoch from a user template.
+
+        When the last remaining epoch is deleted, the entire template is removed
+        (group + index entry). Returns True on success, False otherwise.
+        """
+        try:
+            if epoch_index < 0:
+                return False
+            with self._lock:
+                idx_path = _user_index_path()
+                index = self._read_json(idx_path) or {}
+                templates = index.get("templates") or {}
+                meta = templates.get(name)
+                if not meta:
+                    # Only user templates (present in the user index) can be edited
+                    return False
+
+                # Resolve storage path (absolute or relative to user templates dir)
+                storage_raw = str(meta.get("storage_file", "")).strip()
+                if not storage_raw:
+                    return False
+                p = Path(storage_raw)
+                if not p.is_absolute():
+                    user_dir = get_user_templates_dir(strict=True)
+                    if user_dir:
+                        p = Path(user_dir) / p
+                storage_abs = p.resolve()
+                if not storage_abs.exists():
+                    return False
+
+                removed_template = False
+                remaining_templates_in_file = 0
+
+                with h5py.File(storage_abs, "a") as f:
+                    if "templates" not in f or name not in f["templates"]:
+                        return False
+                    tgroup = f["templates"]
+                    g = tgroup[name]
+
+                    # Helper to safely bump down template_count
+                    def _decrement_template_count():
+                        try:
+                            m = f["metadata"]
+                            m.attrs["template_count"] = max(
+                                0, int(m.attrs.get("template_count", 1)) - 1
+                            )
+                        except Exception:
+                            pass
+
+                    # Single-epoch legacy layout (no epochs subgroup)
+                    if "epochs" not in g:
+                        if epoch_index != 0:
+                            return False
+                        # Deleting the only epoch is equivalent to deleting the template
+                        del tgroup[name]
+                        _decrement_template_count()
+                        removed_template = True
+                    else:
+                        eg = g["epochs"]
+                        # Sort keys by numeric suffix to get a stable epoch order
+                        def _epoch_sort_key(k: str) -> int:
+                            try:
+                                suffix = str(k).rsplit("_", 1)[-1]
+                                return int(suffix)
+                            except Exception:
+                                return 0
+
+                        keys = sorted(list(eg.keys()), key=_epoch_sort_key)
+                        if epoch_index >= len(keys):
+                            return False
+                        target_key = keys[epoch_index]
+                        # Delete the selected epoch
+                        del eg[target_key]
+
+                        remaining_keys = list(eg.keys())
+                        if not remaining_keys:
+                            # No epochs left: remove template group entirely
+                            del tgroup[name]
+                            _decrement_template_count()
+                            removed_template = True
+                        else:
+                            # Update template attrs and top-level datasets based on a
+                            # representative remaining epoch (latest finite age when possible)
+                            best_group = None
+                            best_age = None
+                            for k in remaining_keys:
+                                ek = eg[k]
+                                try:
+                                    a = float(ek.attrs.get("age", float("nan")))
+                                except Exception:
+                                    a = float("nan")
+                                if best_group is None:
+                                    best_group = ek
+                                    best_age = a
+                                else:
+                                    if np.isfinite(a):
+                                        if best_age is None or not np.isfinite(best_age) or a > best_age:
+                                            best_group = ek
+                                            best_age = a
+
+                            # Fallback to the first remaining group if age inspection failed
+                            if best_group is None and remaining_keys:
+                                best_group = eg[remaining_keys[0]]
+                                try:
+                                    best_age = float(best_group.attrs.get("age", float("nan")))
+                                except Exception:
+                                    best_age = float("nan")
+
+                            # Sync top-level datasets to the representative epoch
+                            if best_group is not None:
+                                try:
+                                    if "flux" in g:
+                                        del g["flux"]
+                                    if "fft_real" in g:
+                                        del g["fft_real"]
+                                    if "fft_imag" in g:
+                                        del g["fft_imag"]
+                                except Exception:
+                                    pass
+                                try:
+                                    g.create_dataset("flux", data=best_group["flux"][:])
+                                except Exception:
+                                    pass
+                                try:
+                                    if "fft_real" in best_group and "fft_imag" in best_group:
+                                        g.create_dataset(
+                                            "fft_real", data=np.asarray(best_group["fft_real"][:])
+                                        )
+                                        g.create_dataset(
+                                            "fft_imag", data=np.asarray(best_group["fft_imag"][:])
+                                        )
+                                except Exception:
+                                    pass
+                                # Update age/epochs attrs
+                                try:
+                                    if best_age is not None and np.isfinite(best_age):
+                                        g.attrs["age"] = float(best_age)
+                                except Exception:
+                                    pass
+                            # Always update epochs count to reflect current state
+                            try:
+                                g.attrs["epochs"] = int(len(remaining_keys))
+                            except Exception:
+                                pass
+
+                    # Check how many templates remain in this storage file
+                    try:
+                        remaining_templates_in_file = len(f["templates"].keys())
+                    except Exception:
+                        remaining_templates_in_file = 0
+
+                # Update user index to reflect template/epoch changes
+                if removed_template:
+                    templates.pop(name, None)
+                else:
+                    tmpl = templates.get(name)
+                    if tmpl is not None:
+                        # Try to synchronize epochs count from HDF5
+                        try:
+                            with h5py.File(storage_abs, "r") as fchk:
+                                if "templates" in fchk and name in fchk["templates"]:
+                                    gchk = fchk["templates"][name]
+                                    tmpl["epochs"] = int(gchk.attrs.get("epochs", tmpl.get("epochs", 1)))
+                        except Exception:
+                            pass
+
+                index["by_type"] = self._compute_by_type(templates)
+                index["template_count"] = len(templates)
+                if idx_path is not None:
+                    self._write_json_atomic(idx_path, index)
+
+                # If the HDF5 file is now empty, delete it and rebuild the user index
+                if remaining_templates_in_file == 0 and storage_abs.exists():
+                    try:
+                        storage_abs.unlink()
+                    except Exception:
+                        pass
+                    try:
+                        self.rebuild_user_index()
+                    except Exception:
+                        pass
+
             return True
         except Exception:
             return False

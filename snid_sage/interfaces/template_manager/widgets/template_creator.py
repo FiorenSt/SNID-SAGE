@@ -482,6 +482,69 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
             wave = np.asarray(wave, dtype=float)
             flux = np.asarray(flux, dtype=float)
 
+            # Decide which redshift to use for de-redshifting and storage
+            try:
+                effective_redshift = float(template_info.get('redshift', 0.0) or 0.0)
+            except Exception:
+                effective_redshift = 0.0
+
+            # When explicitly adding to an existing user template, prefer the
+            # redshift stored for that template (index/HDF5) over any manual
+            # form value so epochs stay consistent.
+            if self._adding_to_existing:
+                meta = None
+                try:
+                    svc_meta = get_template_service()
+                    try:
+                        active_pid_meta = svc_meta.get_active_profile()
+                    except Exception:
+                        active_pid_meta = None
+                    user_idx = svc_meta.get_user_index(profile_id=active_pid_meta) or {}
+                    meta = (user_idx.get('templates') or {}).get(template_info['name'])
+                except Exception:
+                    meta = None
+
+                # 1) Prefer redshift from user index when present
+                try:
+                    if isinstance(meta, dict):
+                        rz = float(meta.get('redshift', effective_redshift) or effective_redshift)
+                        effective_redshift = rz
+                except Exception:
+                    pass
+
+                # 2) Fallback: read redshift from the underlying HDF5 group
+                if (not np.isfinite(effective_redshift)) or effective_redshift == 0.0:
+                    try:
+                        if isinstance(meta, dict):
+                            storage_file = str(meta.get('storage_file', '')).strip()
+                            if storage_file:
+                                p = Path(storage_file)
+                                if not p.is_absolute():
+                                    from snid_sage.shared.utils.paths.user_templates import get_user_templates_dir
+                                    user_dir = get_user_templates_dir(strict=True)
+                                    if user_dir:
+                                        p = Path(user_dir) / p
+                                h5_path = p.resolve()
+                                if h5_path.exists():
+                                    import h5py  # type: ignore[import]
+                                    with h5py.File(h5_path, "r") as f:
+                                        if "templates" in f and template_info['name'] in f["templates"]:
+                                            g = f["templates"][template_info['name']]
+                                            try:
+                                                rz = float(g.attrs.get("redshift", 0.0) or 0.0)
+                                            except Exception:
+                                                rz = 0.0
+                                            effective_redshift = rz
+                    except Exception:
+                        pass
+
+                # Keep UI + metadata in sync with the redshift we actually use
+                try:
+                    template_info['redshift'] = float(effective_redshift)
+                    self.redshift_spinbox.setValue(float(effective_redshift))
+                except Exception:
+                    pass
+
             # De-redshift to rest-frame if needed (skip if already rest frame)
             already_rest = False
             try:
@@ -490,12 +553,8 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
             except Exception:
                 already_rest = False
             if not already_rest:
-                try:
-                    z_input = float(template_info.get('redshift', 0.0) or 0.0)
-                except Exception:
-                    z_input = 0.0
-                if z_input != 0.0 and wave.size > 0:
-                    wave = wave / (1.0 + z_input)
+                if np.isfinite(effective_redshift) and effective_redshift != 0.0 and wave.size > 0:
+                    wave = wave / (1.0 + effective_redshift)
 
             # Persist via HDF5-only service
             svc = get_template_service()

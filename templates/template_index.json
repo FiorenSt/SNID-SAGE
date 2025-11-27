@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1751831068.0201683,
-  "template_count": 660,
+  "template_count": 662,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -4629,6 +4629,20 @@
       "redshift": 0.003856,
       "epochs": 19,
       "storage_file": "templates_Ib.hdf5"
+    },
+    "2008S": {
+      "type": "GAP",
+      "subtype": "ILRT",
+      "redshift": 0.00015,
+      "epochs": 6,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "2008jd": {
+      "type": "GAP",
+      "subtype": "ILRT",
+      "redshift": 0.00048,
+      "epochs": 8,
+      "storage_file": "templates_GAP.hdf5"
     }
   },
   "by_type": {
@@ -5120,7 +5134,7 @@
       ]
     },
     "GAP": {
-      "count": 6,
+      "count": 8,
       "storage_file": "templates_GAP.hdf5",
       "template_names": [
         "PS15dbp",
@@ -5128,7 +5142,9 @@
         "at2014ej",
         "lbv1999bw",
         "lbv2001ac",
-        "lbv2003hy"
+        "lbv2003hy",
+        "2008S",
+        "2008jd"
       ]
     },
     "KN": {

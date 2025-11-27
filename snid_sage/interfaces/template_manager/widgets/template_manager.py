@@ -154,21 +154,38 @@ class TemplateManagerWidget(QtWidgets.QWidget):
         if not self.edit_name.text().strip():
             QtWidgets.QMessageBox.warning(self, "Selection Error", "No template selected for deletion.")
             return
-        
+
         reply = QtWidgets.QMessageBox.question(
-            self, 
-            "Delete Template", 
-            f"Are you sure you want to delete template '{self.edit_name.text()}'?\n\nThis action cannot be undone.",
-            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+            self,
+            "Delete Template",
+            f"Are you sure you want to delete template '{self.edit_name.text()}'?\n\n"
+            "This will remove the template and all of its epochs from your user templates.\n"
+            "This action cannot be undone.",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
         )
         if reply == QtWidgets.QMessageBox.Yes:
             svc = get_template_service()
-            if svc.delete(self.edit_name.text().strip()):
-                QtWidgets.QMessageBox.information(self, "Deleted", f"Template '{self.edit_name.text()}' deleted successfully!")
+            try:
+                ok = svc.delete(self.edit_name.text().strip())
+            except Exception as e:
+                _LOGGER.error(f"Error while deleting template '{self.edit_name.text().strip()}': {e}")
+                ok = False
+            if ok:
+                QtWidgets.QMessageBox.information(
+                    self,
+                    "Deleted",
+                    f"Template '{self.edit_name.text()}' deleted successfully!",
+                )
                 self._clear_form()
                 self._emit_refresh()
             else:
-                QtWidgets.QMessageBox.critical(self, "Error", "Failed to delete (only user templates can be deleted).")
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    "Error",
+                    "Failed to delete template.\n\n"
+                    "Only user templates can be deleted, and the underlying storage "
+                    "file must be accessible.",
+                )
         self.update_empty_state()
             
     # Advanced operations and duplication removed

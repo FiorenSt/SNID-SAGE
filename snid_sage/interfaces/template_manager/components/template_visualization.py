@@ -17,6 +17,9 @@ from snid_sage.interfaces.gui.components.widgets.flexible_number_input import cr
 
 from .template_data import TemplateData
 
+# Import template service for epoch-level operations
+from ..services.template_service import get_template_service
+
 # Import layout manager
 from ..utils.layout_manager import get_template_layout_manager
 
@@ -91,11 +94,16 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
         
         self.epoch_selector = create_flexible_int_input(min_val=1, max_val=999, default=1)
         self.epoch_selector.valueChanged.connect(self.update_plot)
+
+        # Epoch deletion button (only enabled for user templates)
+        self.delete_epoch_btn = self.layout_manager.create_action_button("Delete Epoch")
+        self.delete_epoch_btn.clicked.connect(self._on_delete_epoch_clicked)
         
         control_layout.addWidget(QtWidgets.QLabel("View Mode:"))
         control_layout.addWidget(self.view_mode_combo)
         control_layout.addWidget(QtWidgets.QLabel("Epoch:"))
         control_layout.addWidget(self.epoch_selector)
+        control_layout.addWidget(self.delete_epoch_btn)
         control_layout.addStretch()
         
         layout.addWidget(control_panel)
@@ -266,6 +274,9 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
         
         # Load template data
         self._load_template_data()
+
+        # Update delete-epoch button state based on user/built-in and epoch count
+        self._update_delete_epoch_button_state()
         
         # Update plot
         self.update_plot()
@@ -301,6 +312,11 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                 self.epoch_selector.setRange(1, epochs_count)
             except Exception:
                 pass
+            # Keep delete-epoch button state in sync
+            try:
+                self._update_delete_epoch_button_state()
+            except Exception:
+                pass
                     
         except Exception as e:
             _LOGGER.error(f"Error loading template data: {e}")
@@ -308,6 +324,98 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
             if self.current_template:
                 self.template_data = TemplateData(self.current_template['name'], self.current_template['info'])
                 self.template_data._create_mock_data()
+
+        # Ensure epoch delete button state is refreshed on any load path
+        try:
+            self._update_delete_epoch_button_state()
+        except Exception:
+            pass
+
+    def _update_delete_epoch_button_state(self):
+        """Enable Delete Epoch only for user templates with at least one epoch."""
+        enabled = False
+        try:
+            if not self.current_template:
+                enabled = False
+            else:
+                name = self.current_template.get('name')
+                # Only user templates (those present in the user index) can be edited
+                svc = get_template_service()
+                user_idx = svc.get_user_index() or {}
+                user_templates = (user_idx.get('templates') or {})
+                is_user = name in user_templates
+                has_epochs = bool(self.template_data and getattr(self.template_data, "epochs", []))
+                enabled = bool(is_user and has_epochs)
+        except Exception:
+            enabled = False
+
+        try:
+            self.delete_epoch_btn.setEnabled(enabled)
+        except Exception:
+            pass
+
+    def _on_delete_epoch_clicked(self):
+        """Handle Delete Epoch button click."""
+        if not self.current_template or not self.template_data or not self.template_data.epochs:
+            return
+
+        name = self.current_template.get('name', '')
+        if not name:
+            return
+
+        # Confirm with the user
+        current_epoch_display = int(self.epoch_selector.value())
+        reply = QtWidgets.QMessageBox.question(
+            self,
+            "Delete Epoch",
+            (
+                f"Are you sure you want to delete epoch #{current_epoch_display} "
+                f"from template '{name}'?\n\n"
+                "The template itself will be removed only if this was the last epoch."
+            ),
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+        )
+        if reply != QtWidgets.QMessageBox.Yes:
+            return
+
+        # Map 1-based selector to 0-based index for the service
+        epoch_index = max(0, current_epoch_display - 1)
+
+        svc = get_template_service()
+        ok = False
+        try:
+            ok = svc.delete_epoch(name, epoch_index)
+        except Exception as e:
+            _LOGGER.error(f"Error deleting epoch via service: {e}")
+            ok = False
+
+        if not ok:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Delete Epoch",
+                "Failed to delete epoch.\n\n"
+                "Note: only user templates can be modified, and the epoch index "
+                "must be valid.",
+            )
+            return
+
+        # Successfully deleted: reload data and refresh plot/state
+        try:
+            self._load_template_data()
+        except Exception:
+            pass
+
+        try:
+            self.update_plot()
+        except Exception:
+            pass
+
+        QtWidgets.QMessageBox.information(
+            self,
+            "Delete Epoch",
+            "Epoch deleted successfully.\n\n"
+            "If this was the last epoch, the template has been removed.",
+        )
             
     def _find_storage_file(self, storage_file: str, template_info: Dict[str, Any]) -> Optional[str]:
         """Find the full path to a storage file (packaged or user), honoring profile.
