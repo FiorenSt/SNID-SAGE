@@ -26,6 +26,7 @@ from snid_sage.shared.utils.math_utils import (
     weighted_epoch_error,
     get_best_metric_value
 )
+from snid_sage.shared.utils.cli_parsing import parse_wavelength_mask_args
 
 # Import and apply centralized font configuration for consistent plotting
 try:
@@ -896,6 +897,9 @@ def main(args: argparse.Namespace) -> int:
                             effective_emclip_z = zf
                     except Exception:
                         effective_emclip_z = -1.0
+            # Parse any CLI-provided wavelength masks into numeric ranges
+            wavelength_masks = parse_wavelength_mask_args(getattr(args, 'wavelength_masks', None))
+
             processed_spectrum, preprocessing_trace = preprocess_spectrum(
                 args.spectrum_path,
                 spike_masking=getattr(args, 'spike_masking', True),
@@ -912,7 +916,7 @@ def main(args: argparse.Namespace) -> int:
                 skyclip=args.skyclip,
                 emclip_z=effective_emclip_z,
                 emwidth=args.emwidth,
-                wavelength_masks=args.wavelength_masks,
+                wavelength_masks=wavelength_masks,
                 apodize_percent=args.apodize_percent,
                 verbose=args.verbose,
                 clip_to_grid=True,

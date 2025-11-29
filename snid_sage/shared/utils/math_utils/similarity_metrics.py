@@ -15,6 +15,25 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# Default alpha for rational soft-clip used in CCC-based RLAP-CCC metric
+DEFAULT_CCC_SOFTCLIP_ALPHA: float = 3.0
+
+
+def _rational_softclip_transform(x: np.ndarray, alpha: float = DEFAULT_CCC_SOFTCLIP_ALPHA) -> np.ndarray:
+    """
+    Apply a rational soft-clip directly to a (possibly zero‑centred) spectrum.
+
+    y = x / (1 + alpha * |x|)
+
+    - Linear near 0
+    - Soft saturation to ±(1/alpha) for large |x|
+    """
+    arr = np.asarray(x, dtype=float)
+    if alpha is None or alpha <= 0:
+        return arr
+    return arr / (1.0 + float(alpha) * np.abs(arr))
+
+
 def _common_checks(spec1: np.ndarray, spec2: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Ensure equal length, finite values, exclude near-zeros in BOTH arrays, and L2-normalise."""
     s1 = np.asarray(spec1, dtype=float)
@@ -268,8 +287,9 @@ def compute_rlap_ccc_metric(
             enhanced_matches.append(match.copy())
             continue
         
-        # Compute CCC (Concordance Correlation Coefficient)
-        # Prefer the exact RLAP overlap window if provided on the match
+        # Compute CCC (Concordance Correlation Coefficient) on rational
+        # soft‑clipped spectra. Prefer the exact RLAP overlap window if
+        # provided on the match.
         try:
             a = np.asarray(input_flux, dtype=float)
             b = np.asarray(tpl_flux, dtype=float)
@@ -310,11 +330,15 @@ def compute_rlap_ccc_metric(
                         end_idx = int(idx[-1]) + 1
                         a_window = a[start_idx:end_idx]
                         b_window = b[start_idx:end_idx]
-                        ccc_sim = concordance_correlation_coefficient(a_window, b_window)
                 else:
                     a_window = a[start_idx:end_idx]
                     b_window = b[start_idx:end_idx]
-                    ccc_sim = concordance_correlation_coefficient(a_window, b_window)
+
+                # Apply rational soft-clip before CCC
+                if 'ccc_sim' not in locals() or (start_idx is not None and end_idx is not None):
+                    a_t = _rational_softclip_transform(a_window, alpha=DEFAULT_CCC_SOFTCLIP_ALPHA)
+                    b_t = _rational_softclip_transform(b_window, alpha=DEFAULT_CCC_SOFTCLIP_ALPHA)
+                    ccc_sim = concordance_correlation_coefficient(a_t, b_t)
         except Exception:
             ccc_sim = 0.0
         

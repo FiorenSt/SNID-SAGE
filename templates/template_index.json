@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1751831068.0201683,
-  "template_count": 663,
+  "template_count": 666,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -4560,13 +4560,6 @@
       "epochs": 2,
       "storage_file": "templates_Icn.hdf5"
     },
-    "sn1998SEarly": {
-      "type": "II",
-      "subtype": "II-flash",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_II.hdf5"
-    },
     "sn2013fsEarly": {
       "type": "II",
       "subtype": "II-flash",
@@ -4650,6 +4643,34 @@
       "redshift": 0.002035,
       "epochs": 9,
       "storage_file": "templates_GAP.hdf5"
+    },
+    "sn1998SEarly": {
+      "type": "II",
+      "subtype": "II-flash",
+      "redshift": 0.00299,
+      "epochs": 3,
+      "storage_file": "templates_II.hdf5"
+    },
+    "sn2023ixfEarly": {
+      "type": "II",
+      "subtype": "II-flash",
+      "redshift": 0.000804,
+      "epochs": 5,
+      "storage_file": "templates_II.hdf5"
+    },
+    "sn2020pniEarly": {
+      "type": "II",
+      "subtype": "II-flash",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_II.hdf5"
+    },
+    "sn2024ggiEarly": {
+      "type": "II",
+      "subtype": "II-flash",
+      "redshift": 0.0024355,
+      "epochs": 9,
+      "storage_file": "templates_II.hdf5"
     }
   },
   "by_type": {
@@ -4665,7 +4686,7 @@
       ]
     },
     "II": {
-      "count": 107,
+      "count": 110,
       "storage_file": "templates_II.hdf5",
       "template_names": [
         "ASASSN-14ha",
@@ -4773,8 +4794,11 @@
         "sn2018ldu",
         "sn2019asz",
         "sn2019bao",
+        "sn2013fsEarly",
+        "sn2023ixfEarly",
         "sn1998SEarly",
-        "sn2013fsEarly"
+        "sn2020pniEarly",
+        "sn2024ggiEarly"
       ]
     },
     "Ia": {

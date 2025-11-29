@@ -309,10 +309,10 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
             # Create matplotlib figure with white background
             self.fig = Figure(figsize=(10, 8), facecolor='white')
             self.fig.patch.set_facecolor('white')
-            # Match cluster selection dialog margins for consistent look
+            # Use tighter margins so the 3D plot fills more of the available canvas,
+            # and further minimize empty space above the plot
             try:
-                # Slightly smaller plot area to prevent z-label clipping
-                self.fig.subplots_adjust(left=0.08, right=0.96, top=0.96, bottom=0.10)
+                self.fig.subplots_adjust(left=0.06, right=0.98, top=0.999, bottom=0.07)
             except Exception:
                 pass
             
@@ -771,19 +771,21 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
                 legend_elements.append(scatter)
             
             # Set labels and title
-            self.ax.set_xlabel('Redshift (z)', fontsize=16, labelpad=15)
-            self.ax.set_ylabel('SN Type', fontsize=16, labelpad=15)
+            # Larger axis labels with padding restored to 15
+            self.ax.set_xlabel('Redshift (z)', fontsize=15, labelpad=15)
+            # Keep shorter label text ("Type") but with larger font
+            self.ax.set_ylabel('Type', fontsize=15, labelpad=15)
             # Z is the best metric (RLAP-CCC preferred)
-            self.ax.set_zlabel('RLAP-CCC', fontsize=16, labelpad=15)
+            self.ax.set_zlabel('RLAP-CCC', fontsize=15, labelpad=15)
             # No title for clean look
             try:
                 self.ax.set_title('')
             except Exception:
                 pass
 
-            # Set Y ticks to types
+            # Set Y ticks to types (smaller font to reduce overlap)
             self.ax.set_yticks(range(len(unique_types)))
-            self.ax.set_yticklabels(unique_types, fontsize=12)
+            self.ax.set_yticklabels(unique_types, fontsize=7)
 
             # Enhanced 3D styling like cluster selection dialog (white panes, light gray edges)
             try:
@@ -805,7 +807,8 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
             self.ax.xaxis.label.set_color('#000000')
             self.ax.yaxis.label.set_color('#000000')
             self.ax.zaxis.label.set_color('#000000')
-            self.ax.tick_params(colors='#666666', labelsize=12)
+            # Slightly smaller tick labels on all axes (z values, RLAP-CCC values, and type indices)
+            self.ax.tick_params(colors='#666666', labelsize=10)
             self.ax.grid(True, alpha=0.4, color='gray', linestyle='-', linewidth=0.5)
             
             # Add legend
@@ -813,6 +816,11 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
 
             # Lock rotation to horizontal (match main cluster selection behavior)
             self.ax.view_init(elev=25, azim=45)
+            # Make the Type (Y) axis visually taller and also slightly enlarge the Redshift (X) axis
+            try:
+                self.ax.set_box_aspect([2.9, 2.7, 2.0])
+            except Exception:
+                pass
 
             def on_rotate(event):
                 if event.inaxes == self.ax:

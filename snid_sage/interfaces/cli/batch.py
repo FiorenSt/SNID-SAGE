@@ -36,6 +36,7 @@ from snid_sage.shared.utils.math_utils import (
 from snid_sage.shared.utils.results_formatter import clean_template_name
 from snid_sage.shared.utils.logging import set_verbosity as set_global_verbosity
 from snid_sage.shared.utils.logging import VerbosityLevel
+from snid_sage.shared.utils.cli_parsing import parse_wavelength_mask_args
 
 # Import and apply centralized font configuration for consistent plotting
 try:
@@ -374,6 +375,9 @@ def process_single_spectrum_optimized(
                             effective_emclip_z = zf
                     except Exception:
                         effective_emclip_z = -1.0
+            # Parse any CLI-provided wavelength masks into numeric ranges
+            wavelength_masks = parse_wavelength_mask_args(getattr(args, 'wavelength_masks', None))
+
             processed_spectrum, _ = preprocess_spectrum(
                 spectrum_path=spectrum_path,
                 savgol_window=getattr(args, 'savgol_window', 0),
@@ -382,7 +386,7 @@ def process_single_spectrum_optimized(
                 skyclip=getattr(args, 'skyclip', False),
                 emclip_z=effective_emclip_z,
                 emwidth=getattr(args, 'emwidth', 40.0),
-                wavelength_masks=getattr(args, 'wavelength_masks', None),
+                wavelength_masks=wavelength_masks,
                 apodize_percent=getattr(args, 'apodize_percent', 10.0),
                 verbose=False,  # Suppress preprocessing output in batch mode
                 clip_to_grid=True,
@@ -2260,6 +2264,9 @@ def main(args: argparse.Namespace) -> int:
                 print(f"[INFO] Starting parallel processing with {max_workers} worker(s)...")
 
             # Build a lightweight dict of args to send to workers
+            # Parse wavelength masks once here so workers receive numeric ranges
+            parsed_wavelength_masks = parse_wavelength_mask_args(getattr(args, 'wavelength_masks', None))
+
             args_dict = {
                 'minimal': bool(args.minimal),
                 'complete': bool(args.complete),
@@ -2285,7 +2292,7 @@ def main(args: argparse.Namespace) -> int:
                 'emclip': bool(getattr(args, 'emclip', False)),
                 'emclip_z': float(getattr(args, 'emclip_z', -1.0)),
                 'emwidth': float(getattr(args, 'emwidth', 40.0)),
-                'wavelength_masks': getattr(args, 'wavelength_masks', None),
+                'wavelength_masks': parsed_wavelength_masks,
                 'apodize_percent': float(getattr(args, 'apodize_percent', 10.0)),
             }
 

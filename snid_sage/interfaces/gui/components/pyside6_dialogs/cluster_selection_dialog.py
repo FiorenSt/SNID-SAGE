@@ -372,8 +372,8 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self.fig = Figure(figsize=(8, 6), facecolor='white')  # Smaller initial size, will scale with window
         self.fig.patch.set_facecolor('white')
         
-        # MAXIMIZE the plot area - use almost the entire window space
-        self.fig.subplots_adjust(left=0.03, right=0.97, top=0.97, bottom=0.08)
+        # MAXIMIZE the plot area - use almost the entire window space, with minimal top margin
+        self.fig.subplots_adjust(left=0.03, right=0.97, top=0.995, bottom=0.08)
         
         # Create 3D axes
         self.ax = self.fig.add_subplot(111, projection='3d')
@@ -542,15 +542,23 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
             self.scatter_to_index[scatter] = i
         
         # Enhanced 3D setup
-        self.ax.set_xlabel('Redshift (z)', color='#000000', fontsize=16, labelpad=15)
-        self.ax.set_ylabel('SN Type', color='#000000', fontsize=16, labelpad=15)
-        self.ax.set_zlabel(metric_name_global, color='#000000', fontsize=16, labelpad=15)
+        # Larger axis labels with padding restored to 15
+        self.ax.set_xlabel('Redshift (z)', color='#000000', fontsize=15, labelpad=15)
+        # Use a shorter Y label ("Type") to match the GMM clustering dialog
+        self.ax.set_ylabel('Type', color='#000000', fontsize=15, labelpad=15)
+        # Z label uses the global metric name (e.g., "RLAP-CCC")
+        self.ax.set_zlabel(metric_name_global, color='#000000', fontsize=15, labelpad=15)
         self.ax.set_yticks(range(len(unique_types)))
-        self.ax.set_yticklabels(unique_types, fontsize=12)
+        # Smaller Y tick labels to reduce overlap
+        self.ax.set_yticklabels(unique_types, fontsize=7)
         
         # Set view and enable ONLY horizontal rotation, preserving current azimuth
         self.ax.view_init(elev=25, azim=current_azim)
-        self.ax.set_box_aspect([2.5, 1.0, 1.5])
+        # Make the Type (Y) axis visually taller and also slightly enlarge the Redshift (X) axis
+        try:
+            self.ax.set_box_aspect([2.9, 2.7, 2.0])
+        except Exception:
+            pass
         
         # Enhanced 3D styling with completely white background
         try:
@@ -574,7 +582,8 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self.ax.xaxis.label.set_color('#000000')
         self.ax.yaxis.label.set_color('#000000')
         self.ax.zaxis.label.set_color('#000000')
-        self.ax.tick_params(colors='#666666', labelsize=12)
+        # Slightly smaller tick labels on all axes (z values, metric values, and type indices)
+        self.ax.tick_params(colors='#666666', labelsize=10)
         self.ax.grid(True, alpha=0.4, color='gray', linestyle='-', linewidth=0.5)
         
         # Connect rotation constraint to ONLY allow horizontal (azimuth) rotation
