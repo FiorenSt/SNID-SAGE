@@ -8,6 +8,8 @@ All notable changes to SNID SAGE will be documented in this file.
   - Added three new GAP optical templates to the default library:
     - `2008S` and `2008jd` as **GAP ILRT**.
     - `2021biy` as **GAP LRN**.
+  - Added three new Type II flash optical templates to the default library:
+    - `sn2023ixfEarly`, `sn2020pniEarly`, and `sn2024ggiEarly` as **II-flash**.
 - **Template folders**
   - Simplified and unified how the default `user_templates` folder is created for both `.dev` checkouts and `pip install` installs, using a managed `user_templates` sibling next to the active templates bank.
 
