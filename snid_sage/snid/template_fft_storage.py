@@ -569,14 +569,10 @@ class TemplateFFTStorage:
                 template_type = template_data.get('type', 'Unknown')
                 subtype = template_data.get('subtype', 'Unknown')
                 
-                # For age, use the first valid age (not -999.0) if available
+                # For age, prefer the first value from the ages array when present
                 age = float(template_data.get('age', 0))
                 if 'ages' in template_data and len(template_data['ages']) > 0:
-                    # Find first valid age that's not -999.0
-                    for epoch_age in template_data['ages']:
-                        if abs(epoch_age - (-999.0)) >= 0.1:  # Not -999.0
-                            age = float(epoch_age)
-                            break
+                    age = float(template_data['ages'][0])
                 
                 redshift = float(template_data.get('redshift', 0))
                 
@@ -604,11 +600,6 @@ class TemplateFFTStorage:
                             epoch_age = ages_array[epoch]
                         else:
                             epoch_age = age
-                        
-                        # FILTER OUT EPOCHS WITH -999.0 AGE (these are useless for analysis)
-                        if abs(epoch_age - (-999.0)) < 0.1:  # Use small tolerance for float comparison
-                            _LOG.debug(f"Skipping epoch {epoch} of template {name} with invalid age {epoch_age}")
-                            continue
                         
                         # Extract flux for this epoch
                         if epoch < flux_matrix.shape[0]:
@@ -640,18 +631,6 @@ class TemplateFFTStorage:
                     
                     # Update epochs count to reflect valid epochs only
                     epochs = valid_epochs
-                    if epochs == 0:
-                        _LOG.warning(f"Template {name} has no valid epochs (all have -999.0 age), skipping template.")
-                        continue  # SKIP THIS TEMPLATE COMPLETELY
-                else:
-                    # Single-epoch template: check if age is -999.0
-                    if 'ages' in template_data and len(template_data['ages']) > 0:
-                        if abs(template_data['ages'][0] - (-999.0)) < 0.1:
-                            _LOG.warning(f"Template {name} has single epoch with -999.0 age, skipping template.")
-                            continue  # SKIP THIS TEMPLATE COMPLETELY
-                    elif abs(age - (-999.0)) < 0.1:
-                        _LOG.warning(f"Template {name} has single epoch with -999.0 age, skipping template.")
-                        continue  # SKIP THIS TEMPLATE COMPLETELY
                 
                 # Pre-compute FFT on rebinned data
                 fft = np.fft.fft(flux)

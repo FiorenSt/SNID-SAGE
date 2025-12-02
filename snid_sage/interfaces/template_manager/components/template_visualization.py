@@ -297,14 +297,16 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                     self.template_data = TemplateData(self.current_template['name'], template_info)
                     self.template_data.load_data(storage_path)
                 else:
-                    _LOGGER.warning(f"Storage file not found: {storage_file}")
-                    # Create template data with mock data
+                    msg = f"Storage file not found for template {self.current_template['name']}: {storage_file}"
+                    _LOGGER.warning(msg)
                     self.template_data = TemplateData(self.current_template['name'], template_info)
-                    self.template_data._create_mock_data()
+                    self.template_data.load_error = msg
             else:
-                # Create template data with mock data
+                # No storage file available – record a clear error instead of fabricating spectra
+                msg = f"No storage file specified for template {self.current_template['name']}"
+                _LOGGER.warning(msg)
                 self.template_data = TemplateData(self.current_template['name'], template_info)
-                self.template_data._create_mock_data()
+                self.template_data.load_error = msg
             
             # After loading data, update epoch selector based on actual epochs count
             try:
@@ -319,11 +321,11 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                 pass
                     
         except Exception as e:
-            _LOGGER.error(f"Error loading template data: {e}")
-            # Create fallback data
+            msg = f"Error loading template data for {self.current_template.get('name') if self.current_template else ''}: {e}"
+            _LOGGER.error(msg)
             if self.current_template:
                 self.template_data = TemplateData(self.current_template['name'], self.current_template['info'])
-                self.template_data._create_mock_data()
+                self.template_data.load_error = msg
 
         # Ensure epoch delete button state is refreshed on any load path
         try:
@@ -558,8 +560,29 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                 pass
             
         else:
-            # Create a sample plot if no real data available
-            self._create_sample_plot_pg()
+            # No real data available – show a clear placeholder message instead of a fake spectrum
+            reason = ""
+            try:
+                if self.template_data and getattr(self.template_data, "load_error", None):
+                    reason = str(self.template_data.load_error)
+            except Exception:
+                reason = ""
+
+            try:
+                # Clear plot and show a centered error message
+                self.plot_item.clear()
+                msg = "Template data could not be loaded."
+                if reason:
+                    msg += f"\n\n{reason}"
+                text_item = pg.TextItem(msg, color='red', anchor=(0.5, 0.5))
+                self.plot_item.addItem(text_item)
+                # Set a generic view range so the text is visible
+                self.plot_item.setLabel('left', 'Flux')
+                self.plot_item.setLabel('bottom', 'Rest Wavelength (Å)')
+                self.plot_item.setXRange(3000, 10000)
+                self.plot_item.setYRange(-0.5, 1.5)
+            except Exception as e:
+                _LOGGER.warning(f"Could not show no-data message: {e}")
             
         # Set title with comprehensive template information
         from snid_sage.shared.utils import clean_template_name
@@ -872,26 +895,12 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
     
         
     def _create_sample_plot_pg(self):
-        """Create a sample plot when no real data is available using PyQtGraph"""
-        wave = np.linspace(3000, 9000, 1000)
-        flux = np.exp(-0.5 * ((wave - 5000) / 1000)**2) + 0.1 * np.random.normal(0, 1, 1000)
-        
-        # Plot sample data
-        self.plot_item.plot(
-            wave,
-            flux,
-            pen=pg.mkPen(color='blue', width=1.5),
-            connect='all',
-            autoDownsample=False,
-            clipToView=False,
-            downsample=1,
-        )
-        
-        # Add text overlay
-        text_item = pg.TextItem('Sample spectrum (real data not available)', 
-                               color='red', anchor=(0.5, 0.1))
-        self.plot_item.addItem(text_item)
-        text_item.setPos(6000, np.max(flux) * 0.9)
+        """Deprecated: previously drew a fake sample spectrum when no real data was available.
+
+        Left in place for backward compatibility but no longer used; the GUI
+        now shows a clear text message instead of plotting any mock spectra.
+        """
+        _LOGGER.debug("Sample plot requested but disabled (no fake spectra policy).")
             
     def _create_placeholder_plot(self):
         """Create a placeholder plot until template loading is implemented"""

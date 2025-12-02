@@ -614,7 +614,6 @@ class SNIDLineManagerGUI(QtWidgets.QMainWindow):
                 spectrum_path=spectrum_file,
                 skip_steps=[
                     'log_rebinning',
-                    'flux_scaling',
                     'apodization',
                     'continuum_fitting'
                 ],

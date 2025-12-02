@@ -446,7 +446,8 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
             'GAP': ['GAP', 'LRN', 'LBV', 'ILRT'],
             'Galaxy': ['Galaxy', 'Gal', 'Gal-E', 'Gal-S0', 'Gal-Sa', 'Gal-Sb', 'Gal-Sc', 'Gal-SB'],
             'Star': ['Star', 'M-star', 'C-star'],
-            'AGN': ['AGN', 'AGN-type1', 'QSO']
+            'AGN': ['AGN', 'AGN-type1', 'QSO'],
+            'CV': ['CV', 'AM_CVn', 'DN', 'Polar']
         }
         
         row, col = 0, 0

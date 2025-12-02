@@ -2,7 +2,7 @@ from PySide6 import QtWidgets
 
 
 def create_options(dialog, layout: QtWidgets.QVBoxLayout) -> None:
-    desc = QtWidgets.QLabel("Apply log-wavelength rebinning and optional flux scaling.")
+    desc = QtWidgets.QLabel("Apply log-wavelength rebinning on the SNID grid.")
     desc.setWordWrap(True)
     desc.setStyleSheet("color: #64748b; font-size: 11pt; margin-bottom: 10px;")
     layout.addWidget(desc)
@@ -17,11 +17,6 @@ def create_options(dialog, layout: QtWidgets.QVBoxLayout) -> None:
     dialog.log_rebin_cb.setChecked(True)
     dialog.log_rebin_cb.setEnabled(False)
     rebin_layout.addWidget(dialog.log_rebin_cb)
-
-    dialog.flux_scaling_cb = QtWidgets.QCheckBox("Scale flux to mean value")
-    dialog.flux_scaling_cb.setChecked(dialog.processing_params['flux_scaling'])
-    dialog.flux_scaling_cb.toggled.connect(lambda *_: _on_flux_scaling_changed(dialog))
-    rebin_layout.addWidget(dialog.flux_scaling_cb)
 
     # Add some extra vertical space at the bottom
     rebin_layout.addStretch(1)
@@ -53,12 +48,6 @@ def create_options(dialog, layout: QtWidgets.QVBoxLayout) -> None:
 
 
 def apply_step(dialog) -> None:
-    scale_flux = True
-    try:
-        if hasattr(dialog, 'flux_scaling_cb') and dialog.flux_scaling_cb is not None:
-            scale_flux = bool(dialog.flux_scaling_cb.isChecked())
-    except Exception:
-        pass
     # Collect mask regions to force interpolation-based rebin (no steps)
     mask_regions = []
     try:
@@ -84,11 +73,10 @@ def apply_step(dialog) -> None:
     if apply_sky:
         for l in (5577.0, 6300.2, 6364.0):
             mask_regions.append((l - sky_width, l + sky_width))
-    dialog.preview_calculator.apply_step("log_rebin_with_scaling", scale_to_mean=scale_flux, mask_regions=mask_regions, step_index=2)
+    dialog.preview_calculator.apply_step("log_rebin", mask_regions=mask_regions, step_index=2)
 
 
 def calculate_preview(dialog):
-    scale_to_mean = bool(dialog.processing_params.get('flux_scaling', True))
     # Pass mask regions forward so rebin preview can use interpolation-based method
     mask_regions = []
     try:
@@ -114,11 +102,6 @@ def calculate_preview(dialog):
     if apply_sky:
         for l in (5577.0, 6300.2, 6364.0):
             mask_regions.append((l - sky_width, l + sky_width))
-    return dialog.preview_calculator.preview_step("log_rebin_with_scaling", scale_to_mean=scale_to_mean, mask_regions=mask_regions)
-
-
-def _on_flux_scaling_changed(dialog):
-    dialog.processing_params['flux_scaling'] = dialog.flux_scaling_cb.isChecked()
-    dialog._update_preview()
+    return dialog.preview_calculator.preview_step("log_rebin", mask_regions=mask_regions)
 
 

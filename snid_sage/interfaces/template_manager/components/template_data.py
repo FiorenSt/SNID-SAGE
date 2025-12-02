@@ -34,6 +34,9 @@ class TemplateData:
         self.flux_data = None
         self.wave_data = None
         self.epochs = []
+        # Optional error message when loading fails; used by the GUI to show
+        # a clear message instead of plotting fake/mock spectra.
+        self.load_error: Optional[str] = None
         
     def load_data(self, storage_path: str):
         """Load template flux data from storage"""
@@ -43,6 +46,12 @@ class TemplateData:
             
             _LOGGER.info(f"Loading template data for {self.name} from {storage_path}")
             
+            # Reset previous state
+            self.wave_data = None
+            self.flux_data = None
+            self.epochs = []
+            self.load_error = None
+
             # Load data from HDF5 storage file
             with h5py.File(storage_path, 'r') as f:
                 _LOGGER.debug(f"HDF5 file keys: {list(f.keys())}")
@@ -122,36 +131,17 @@ class TemplateData:
                         _LOGGER.warning(f"No flux data found for template {self.name}")
                 
                 if not template_found:
-                    _LOGGER.warning(f"Template {self.name} not found in HDF5 file")
-                    raise ValueError(f"Template {self.name} not found in {storage_path}")
+                    msg = f"Template {self.name} not found in {storage_path}"
+                    _LOGGER.warning(msg)
+                    # Record error so the GUI can show it; do not fabricate spectra
+                    self.load_error = msg
                         
         except Exception as e:
-            _LOGGER.error(f"Error loading template data for {self.name}: {e}")
-            # Create mock data for testing
-            _LOGGER.info("Creating mock data as fallback")
-            self._create_mock_data()
-    
-    def _create_mock_data(self):
-        """Create mock data for testing when real data is not available"""
-        # Create a simple mock spectrum
-        self.wave_data = np.linspace(3000, 9000, 1000)
-        self.flux_data = np.exp(-0.5 * ((self.wave_data - 5000) / 1000)**2) + 0.1 * np.random.normal(0, 1, 1000)
-        
-        # Create mock epochs
-        ages = [-10, 0, 10, 20, 30]
-        self.epochs = []
-        
-        for age in ages:
-            # Simulate spectral evolution
-            flux_variation = 1.0 + 0.1 * np.sin(age / 10.0)
-            mock_flux = self.flux_data * flux_variation + 0.05 * np.random.normal(0, 1, len(self.flux_data))
-            
-            epoch_info = {
-                'age': age,
-                'flux': mock_flux,
-                'phase': 'Mock Phase'
-            }
-            self.epochs.append(epoch_info)
+            msg = f"Error loading template data for {self.name}: {e}"
+            _LOGGER.error(msg)
+            # Record error instead of creating mock spectra so the GUI can
+            # present a clear message to the user.
+            self.load_error = msg
     
     def get_epoch_by_index(self, index: int) -> Optional[Dict[str, Any]]:
         """Get epoch data by index"""

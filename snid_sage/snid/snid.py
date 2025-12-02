@@ -185,9 +185,9 @@ def preprocess_spectrum(
         Wavelength ranges to mask out
     apodize_percent : float, optional
         Percentage of spectrum ends to apodize
-            skip_steps : list of str, optional
+    skip_steps : list of str, optional
         List of preprocessing steps to skip:
-        ['clipping', 'savgol_filtering', 'log_rebinning', 'flux_scaling', 
+        ['clipping', 'savgol_filtering', 'log_rebinning',
          'continuum_fitting', 'apodization']
     verbose : bool, optional
         Whether to print detailed information
@@ -198,7 +198,7 @@ def preprocess_spectrum(
         Dictionary containing processed spectrum with keys:
         - 'input_spectrum': {'wave': array, 'flux': array}  # Original input
         - 'log_wave': array  # Log-rebinned wavelength grid
-        - 'log_flux': array  # Log-rebinned flux (scaled to mean=1)
+        - 'log_flux': array  # Log-rebinned flux on the log grid
         - 'flat_flux': array  # Flattened (continuum-removed) flux
         - 'tapered_flux': array  # Final apodized flux ready for FFT
         - 'continuum': array  # Fitted continuum
@@ -478,26 +478,7 @@ def preprocess_spectrum(
     trace["step3_wave"], trace["step3_flux"] = log_wave.copy(), log_flux.copy()
 
     # ============================================================================
-    # STEP 4: RESCALE FLUX TO MEAN=1
-    # ============================================================================
-    if "flux_scaling" not in skip_steps:
-        mask = log_flux > 0
-        if np.any(mask):
-            mean_flux = np.mean(log_flux[mask])
-            if mean_flux > 0:
-                log_flux /= mean_flux
-                _LOG.info(f"Step 4: Rescaled flux to mean=1 (original mean: {mean_flux:.3f})")
-            else:
-                _LOG.info("Step 4: Warning - mean flux is zero or negative, skipping scaling")
-        else:
-            _LOG.info("Step 4: Warning - no positive flux values found, skipping scaling")
-    else:
-        _LOG.info("Step 4: Skipped flux scaling")
-    
-    trace["step4_wave"], trace["step4_flux"] = log_wave.copy(), log_flux.copy()
-
-    # ============================================================================
-    # STEP 5: CONTINUUM FITTING -> FLATTENED SPECTRUM
+    # STEP 4: CONTINUUM FITTING -> FLATTENED SPECTRUM
     # ============================================================================
     if "continuum_fitting" not in skip_steps:
         # Use a higher knot count for ONIR to keep bins-per-knot similar to optical
@@ -515,7 +496,7 @@ def preprocess_spectrum(
             method="spline",
             knotnum=int(knotnum_for_profile)
         )
-        _LOG.info("Step 5: Fitted and removed continuum")
+        _LOG.info("Step 4: Fitted and removed continuum")
         if verbose:
             cont_mean = np.mean(cont[cont > 0]) if np.any(cont > 0) else 0
             _LOG.info(f"    Mean continuum level: {cont_mean:.3f}")
@@ -523,9 +504,9 @@ def preprocess_spectrum(
         # Assume input is already flattened
         flat_flux = log_flux.copy()
         cont = np.ones_like(log_flux)  # Dummy continuum
-        _LOG.info("Step 5: Skipped continuum fitting (assuming input is pre-flattened)")
+        _LOG.info("Step 4: Skipped continuum fitting (assuming input is pre-flattened)")
     
-    trace["step5_flux"], trace["step5_cont"] = flat_flux.copy(), cont.copy()
+    trace["step4_flux"], trace["step4_cont"] = flat_flux.copy(), cont.copy()
 
     # Find valid (non-zero) region of the spectrum
     # For continuum-subtracted spectra, negative values are valid
@@ -539,7 +520,7 @@ def preprocess_spectrum(
         right_edge = len(log_flux) - 1
 
     # ============================================================================
-    # STEP 6: APODIZE THE ENDS
+    # STEP 5: APODIZE THE ENDS
     # ============================================================================
     if "apodization" not in skip_steps:
         # For continuum-subtracted spectra, negative values are valid

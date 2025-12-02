@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1751831068.0201683,
-  "template_count": 666,
+  "template_count": 669,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -25,20 +25,6 @@
       "storage_file": "templates_AGN.hdf5"
     },
     "qso2": {
-      "type": "AGN",
-      "subtype": "QSO",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_AGN.hdf5"
-    },
-    "qso_bal": {
-      "type": "AGN",
-      "subtype": "QSO",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_AGN.hdf5"
-    },
-    "qso_bal2": {
       "type": "AGN",
       "subtype": "QSO",
       "redshift": 0.0,
@@ -3307,27 +3293,6 @@
       "epochs": 11,
       "storage_file": "templates_LFBOT.hdf5"
     },
-    "carbonstar1": {
-      "type": "Star",
-      "subtype": "C-star",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Star.hdf5"
-    },
-    "carbonstar2": {
-      "type": "Star",
-      "subtype": "C-star",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Star.hdf5"
-    },
-    "carbonstar3": {
-      "type": "Star",
-      "subtype": "C-star",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Star.hdf5"
-    },
     "mstar": {
       "type": "Star",
       "subtype": "M-star",
@@ -4648,14 +4613,14 @@
       "type": "II",
       "subtype": "II-flash",
       "redshift": 0.00299,
-      "epochs": 3,
+      "epochs": 2,
       "storage_file": "templates_II.hdf5"
     },
     "sn2023ixfEarly": {
       "type": "II",
       "subtype": "II-flash",
       "redshift": 0.000804,
-      "epochs": 5,
+      "epochs": 4,
       "storage_file": "templates_II.hdf5"
     },
     "sn2020pniEarly": {
@@ -4671,18 +4636,73 @@
       "redshift": 0.0024355,
       "epochs": 9,
       "storage_file": "templates_II.hdf5"
+    },
+    "AM_CVn": {
+      "type": "CV",
+      "subtype": "AM_CVn",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "U_Gem": {
+      "type": "CV",
+      "subtype": "DN",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "WZ_Sge": {
+      "type": "CV",
+      "subtype": "DN",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "Z_Cam": {
+      "type": "CV",
+      "subtype": "DN",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "Polar": {
+      "type": "CV",
+      "subtype": "Polar",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "HD193928": {
+      "type": "Star",
+      "subtype": "WR-WN",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "HD186943": {
+      "type": "Star",
+      "subtype": "WR-WN",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "ASASSN-14ko": {
+      "type": "AGN",
+      "subtype": "Seyfert 1.5",
+      "redshift": 0.042489,
+      "epochs": 5,
+      "storage_file": "templates_AGN.hdf5"
     }
   },
   "by_type": {
     "AGN": {
-      "count": 5,
+      "count": 4,
       "storage_file": "templates_AGN.hdf5",
       "template_names": [
+        "ASASSN-14ko",
         "agn",
         "qso",
-        "qso2",
-        "qso_bal",
-        "qso_bal2"
+        "qso2"
       ]
     },
     "II": {
@@ -5196,12 +5216,11 @@
       ]
     },
     "Star": {
-      "count": 4,
+      "count": 3,
       "storage_file": "templates_Star.hdf5",
       "template_names": [
-        "carbonstar1",
-        "carbonstar2",
-        "carbonstar3",
+        "HD186943",
+        "HD193928",
         "mstar"
       ]
     },
@@ -5422,6 +5441,17 @@
       "storage_file": "templates_Icn.hdf5",
       "template_names": [
         "sn2021csp"
+      ]
+    },
+    "CV": {
+      "count": 5,
+      "storage_file": "templates_CV.hdf5",
+      "template_names": [
+        "AM_CVn",
+        "Polar",
+        "U_Gem",
+        "WZ_Sge",
+        "Z_Cam"
       ]
     }
   }

@@ -16,8 +16,7 @@ Supported Step Types:
 - masking: Wavelength region masking
 - savgol_filter: Savitzky-Golay smoothing
 - clipping: Various spectrum clipping operations
-- log_rebin: Log-wavelength rebinning
-- log_rebin_with_scaling: Log rebinning with flux scaling
+- log_rebin: Log-wavelength rebinning on the SNID log grid
 - continuum_fit: Continuum fitting and removal
 - apodization: Spectrum edge tapering
 """
@@ -188,7 +187,7 @@ class PySide6PreviewCalculator(QtCore.QObject):
                 
                 _LOGGER.debug(f"Updated edges after {step_type}: left={self.current_left_edge}, right={self.current_right_edge}")
                 _LOGGER.debug(f"Wavelength range: {orig_wave_min:.1f} - {orig_wave_max:.1f}")
-        elif step_type in ["log_rebin", "log_rebin_with_scaling"]:
+        elif step_type == "log_rebin":
             # After log rebinning, calculate edges based on valid flux regions (including negative values)
             valid_mask = (self.current_flux != 0) & np.isfinite(self.current_flux)
             if np.any(valid_mask):
@@ -232,10 +231,6 @@ class PySide6PreviewCalculator(QtCore.QObject):
                 return self._preview_clipping(**preview_kwargs)
             elif step_type == "log_rebin":
                 return self._preview_log_rebin(**preview_kwargs)
-            elif step_type == "log_rebin_with_scaling":
-                return self._preview_log_rebin_with_scaling(**preview_kwargs)
-            elif step_type == "flux_scaling":
-                return self._preview_flux_scaling(**preview_kwargs)
             elif step_type == "continuum_fit":
                 return self._preview_continuum_fit(**preview_kwargs)
             elif step_type == "interactive_continuum":
@@ -443,6 +438,8 @@ class PySide6PreviewCalculator(QtCore.QObject):
                 rebinned_wave = w0 * np.exp((np.arange(nlog) + 0.5) * dwlog)
                 # If mask regions provided (SNID unavailable), drop masked samples before interpolation in log space
                 if mask_regions:
+                    # Clip masks to the actually observed wavelength range so that only
+                    # interior gaps are treated as masked regions on the log grid.
                     keep = np.ones_like(temp_wave, dtype=bool)
                     for a, b in mask_regions:
                         aa = float(min(a, b))
@@ -452,15 +449,32 @@ class PySide6PreviewCalculator(QtCore.QObject):
                     f_src = temp_flux[keep]
                     if w_src.size < 2:
                         rebinned_flux = np.zeros_like(rebinned_wave, dtype=float)
-                    else:
-                        rebinned_flux = np.interp(np.log(rebinned_wave), np.log(w_src), f_src,
-                                                  left=float(f_src[0]), right=float(f_src[-1]))
-                    # Compute and store mask bins against the target grid for downstream behavior
-                    try:
-                        from snid_sage.snid.preprocessing import compute_mask_on_loggrid
-                        self.current_mask_logbins = compute_mask_on_loggrid(rebinned_wave, mask_regions or [])
-                    except Exception:
                         self.current_mask_logbins = None
+                    else:
+                        # Build a clipped mask list consistent with the core helper:
+                        obs_min = float(w_src[0])
+                        obs_max = float(w_src[-1])
+                        clipped_masks = []
+                        for a, b in mask_regions:
+                            aa = float(min(a, b))
+                            bb = float(max(a, b))
+                            clipped_a = max(aa, obs_min)
+                            clipped_b = min(bb, obs_max)
+                            if clipped_b > clipped_a:
+                                clipped_masks.append((clipped_a, clipped_b))
+                        rebinned_flux = np.interp(
+                            np.log(rebinned_wave),
+                            np.log(w_src),
+                            f_src,
+                            left=float(f_src[0]),
+                            right=float(f_src[-1]),
+                        )
+                        # Compute and store mask bins against the target grid for downstream behavior
+                        try:
+                            from snid_sage.snid.preprocessing import compute_mask_on_loggrid
+                            self.current_mask_logbins = compute_mask_on_loggrid(rebinned_wave, clipped_masks)
+                        except Exception:
+                            self.current_mask_logbins = None
                 else:
                     rebinned_flux = np.interp(rebinned_wave, temp_wave, temp_flux, left=0.0, right=0.0)
                     self.current_mask_logbins = None
@@ -468,45 +482,6 @@ class PySide6PreviewCalculator(QtCore.QObject):
             
         except Exception as e:
             _LOGGER.error(f"Log rebinning preview failed: {e}")
-            return self.current_wave.copy(), self.current_flux.copy()
-    
-    def _preview_log_rebin_with_scaling(self, scale_to_mean: bool = True, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
-        """Preview log rebinning with flux scaling"""
-        try:
-            # Reuse generic log-rebin, forwarding kwargs so mask_regions reach the rebin
-            rebinned_wave, rebinned_flux = self._preview_log_rebin(**kwargs)
-            
-            # Apply flux scaling if requested
-            if scale_to_mean:
-                mask = rebinned_flux > 0
-                if np.any(mask):
-                    mean_flux = np.mean(rebinned_flux[mask])
-                    if mean_flux > 0:
-                        rebinned_flux /= mean_flux
-            
-            return rebinned_wave, rebinned_flux
-            
-        except Exception as e:
-            _LOGGER.error(f"Log rebinning with scaling preview failed: {e}")
-            return self.current_wave.copy(), self.current_flux.copy()
-    
-    def _preview_flux_scaling(self, scale_to_mean: bool = True, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
-        """Preview flux scaling"""
-        try:
-            temp_wave = self.current_wave.copy()
-            temp_flux = self.current_flux.copy()
-            
-            if scale_to_mean:
-                mask = temp_flux > 0
-                if np.any(mask):
-                    mean_flux = np.mean(temp_flux[mask])
-                    if mean_flux > 0:
-                        temp_flux /= mean_flux
-            
-            return temp_wave, temp_flux
-            
-        except Exception as e:
-            _LOGGER.error(f"Flux scaling preview failed: {e}")
             return self.current_wave.copy(), self.current_flux.copy()
     
     def _preview_continuum_fit(self, method: str = 'spline', **kwargs) -> Tuple[np.ndarray, np.ndarray]:

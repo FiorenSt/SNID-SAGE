@@ -949,71 +949,48 @@ class TemplateService:
                 except Exception:
                     existing_z = float("nan")
                 if np.isfinite(existing_z) and abs(existing_z - float(redshift)) < 1e-6:
-                    # Multi-epoch combine (only if no duplicate epoch age)
-                    # Check duplicate ages (tolerance)
-                    age_tol = 1e-3
-                    duplicate_age = False
-                    existing_ages: list[float] = []
-                    try:
-                        if "epochs" in g:
-                            for ek in g["epochs"].keys():
-                                try:
-                                    existing_ages.append(float(g["epochs"][ek].attrs.get("age", float("nan"))))
-                                except Exception:
-                                    continue
-                        else:
-                            existing_ages.append(float(g.attrs.get("age", float("nan"))))
-                    except Exception:
-                        existing_ages = []
-                    try:
-                        for ea in existing_ages:
-                            if np.isfinite(ea) and abs(ea - float(age)) < age_tol:
-                                duplicate_age = True
-                                break
-                    except Exception:
-                        duplicate_age = False
-                    if not duplicate_age:
-                        # Ensure epochs group exists, move current data if needed
-                        if "epochs" not in g:
-                            eg = g.create_group("epochs")
-                            eg0 = eg.create_group("epoch_0")
-                            eg0.create_dataset("flux", data=g["flux"][:])
-                            eg0.create_dataset("fft_real", data=g["fft_real"][:])
-                            eg0.create_dataset("fft_imag", data=g["fft_imag"][:])
-                            eg0.attrs["age"] = float(g.attrs.get("age", 0.0))
-                            eg0.attrs["rebinned"] = True
-                        # Append new epoch
-                        eg = g["epochs"]
-                        new_epoch_idx = len(list(eg.keys()))
-                        egn = eg.create_group(f"epoch_{new_epoch_idx}")
-                        egn.create_dataset("flux", data=flux)
-                        egn.create_dataset("fft_real", data=np.asarray(fft.real))
-                        egn.create_dataset("fft_imag", data=np.asarray(fft.imag))
-                        egn.attrs["age"] = float(age)
-                        egn.attrs["rebinned"] = True
-                        if sim_flag is not None:
-                            try:
-                                egn.attrs["sim_flag"] = int(sim_flag)
-                            except Exception:
-                                pass
-                        # Update epochs count and latest age
-                        g.attrs["epochs"] = new_epoch_idx + 1
-                        g.attrs["age"] = float(age)
-                        if sim_flag is not None:
-                            try:
-                                g.attrs["sim_flag"] = int(sim_flag)
-                            except Exception:
-                                pass
-                        # Keep top-level flux/fft as last epoch for compatibility
+                    # Multi-epoch combine (allow duplicate ages)
+                    # Ensure epochs group exists, move current data if needed
+                    if "epochs" not in g:
+                        eg = g.create_group("epochs")
+                        eg0 = eg.create_group("epoch_0")
+                        eg0.create_dataset("flux", data=g["flux"][:])
+                        eg0.create_dataset("fft_real", data=g["fft_real"][:])
+                        eg0.create_dataset("fft_imag", data=g["fft_imag"][:])
+                        eg0.attrs["age"] = float(g.attrs.get("age", 0.0))
+                        eg0.attrs["rebinned"] = True
+                    # Append new epoch
+                    eg = g["epochs"]
+                    new_epoch_idx = len(list(eg.keys()))
+                    egn = eg.create_group(f"epoch_{new_epoch_idx}")
+                    egn.create_dataset("flux", data=flux)
+                    egn.create_dataset("fft_real", data=np.asarray(fft.real))
+                    egn.create_dataset("fft_imag", data=np.asarray(fft.imag))
+                    egn.attrs["age"] = float(age)
+                    egn.attrs["rebinned"] = True
+                    if sim_flag is not None:
                         try:
-                            del g["flux"]
-                            del g["fft_real"]
-                            del g["fft_imag"]
+                            egn.attrs["sim_flag"] = int(sim_flag)
                         except Exception:
                             pass
-                        g.create_dataset("flux", data=flux)
-                        g.create_dataset("fft_real", data=np.asarray(fft.real))
-                        g.create_dataset("fft_imag", data=np.asarray(fft.imag))
+                    # Update epochs count and latest age
+                    g.attrs["epochs"] = new_epoch_idx + 1
+                    g.attrs["age"] = float(age)
+                    if sim_flag is not None:
+                        try:
+                            g.attrs["sim_flag"] = int(sim_flag)
+                        except Exception:
+                            pass
+                    # Keep top-level flux/fft as last epoch for compatibility
+                    try:
+                        del g["flux"]
+                        del g["fft_real"]
+                        del g["fft_imag"]
+                    except Exception:
+                        pass
+                    g.create_dataset("flux", data=flux)
+                    g.create_dataset("fft_real", data=np.asarray(fft.real))
+                    g.create_dataset("fft_imag", data=np.asarray(fft.imag))
                     return name, True, int(g.attrs.get("epochs", 1)), "combined"
                     # else: fall through to create a suffixed new template name
                 else:

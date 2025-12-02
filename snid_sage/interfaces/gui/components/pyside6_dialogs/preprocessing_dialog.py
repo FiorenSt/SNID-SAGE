@@ -277,9 +277,8 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             'filter_order': 3,
             # removed wavelength/FWHM option
             
-            # Step 2: Rebinning & Scaling (always applied)
+            # Step 2: Log-wavelength rebinning (always applied)
             'log_rebin': True,  # Always true - required for SNID
-            'flux_scaling': True,  # Scale to mean
             
             # Step 3: Continuum
             'continuum_method': 'spline',  # only spline
@@ -863,8 +862,6 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
     # (Removed wavelength-based filter handler)
     
     # Step-2 UI handled in steps.step2_rebinning
-    
-    # Step-2 flux scaling change handled in steps.step2_rebinning
 
     # Step-0 aband toggled handled in steps.step0_masking
 
@@ -1087,41 +1084,27 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
                             knotnum = step['kwargs'].get('knotnum', 13)
 
                             
-                            # Get the state before continuum fitting
-                            # This requires reconstructing the flux before continuum removal
-                            log_rebin_step_idx = None
-                            for i, s in enumerate(applied_steps):
-                                if s['type'] == 'log_rebin_with_scaling':
-                                    log_rebin_step_idx = i
-                                    break
+                            # Reconstruct the flux before continuum fitting by replaying
+                            # all steps up to (but not including) the continuum step.
+                            from snid_sage.snid.preprocessing import fit_continuum
                             
-                            if log_rebin_step_idx is not None:
-                                # Get flux state right after log rebinning (before continuum fitting)
-                                # We need to reconstruct this from the current flat flux
-                                from snid_sage.snid.preprocessing import fit_continuum
-                                
-                                # The final_flux is the continuum-removed version
-                                # We need to get the flux before continuum removal
-                                # Let's recompute the continuum using the same logic as original
-                                
-                                # Find the flux before continuum step by re-running preprocessing up to that point
-                                temp_calc = type(self.preview_calculator)(self.original_wave, self.original_flux)
-                                
-                                # Replay steps up to (but not including) continuum fitting
-                                for i, step in enumerate(applied_steps):
-                                    if step['type'] == 'continuum_fit':
-                                        break
-                                    step_kwargs = step['kwargs'].copy()
-                                    step_kwargs.pop('step_index', None)  # Remove step_index if present
-                                    temp_calc.apply_step(step['type'], **step_kwargs)
-                                
-                                # Now get the flux before continuum removal
-                                _, flux_before_continuum = temp_calc.get_current_state()
-                                
-                                # Fit continuum to this flux
-                                flat_flux, continuum = fit_continuum(flux_before_continuum, method=method, knotnum=knotnum)
-
-                                break
+                            temp_calc = type(self.preview_calculator)(self.original_wave, self.original_flux)
+                            
+                            # Replay steps up to (but not including) continuum fitting
+                            for i, step in enumerate(applied_steps):
+                                if step['type'] == 'continuum_fit':
+                                    break
+                                step_kwargs = step['kwargs'].copy()
+                                step_kwargs.pop('step_index', None)  # Remove step_index if present
+                                temp_calc.apply_step(step['type'], **step_kwargs)
+                            
+                            # Now get the flux before continuum removal
+                            _, flux_before_continuum = temp_calc.get_current_state()
+                            
+                            # Fit continuum to this flux
+                            flat_flux, continuum = fit_continuum(flux_before_continuum, method=method, knotnum=knotnum)
+                            
+                            break
                         # Gaussian method removed; only spline and interactive are supported
                                 
                     except Exception as e:
@@ -1424,16 +1407,8 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
     # Step-1 application handled in steps.step1_filtering
     
     def _apply_step_2(self):
-        """Apply log-wavelength rebinning and flux scaling exactly like original"""
+        """Apply log-wavelength rebinning exactly like original (no extra scaling)"""
         # Log rebinning is always applied (required for SNID)
-        # Cache widget values to avoid accessing deleted C++ objects
-        scale_flux = True  # default fallback
-        
-        if hasattr(self, 'flux_scaling_cb') and self.flux_scaling_cb is not None:
-            try:
-                scale_flux = self.flux_scaling_cb.isChecked()
-            except RuntimeError as e:
-                _LOGGER.warning(f"Widget access error for flux_scaling_cb: {e}, using default value {scale_flux}")
         # Forward mask regions and toggles so rebin is mask-aware (compute mask_logbins)
         mask_regions = []
         try:
@@ -1460,7 +1435,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             for l in (5577.0, 6300.2, 6364.0):
                 mask_regions.append((l - sky_width, l + sky_width))
         
-        self.preview_calculator.apply_step("log_rebin_with_scaling", scale_to_mean=scale_flux, mask_regions=mask_regions, step_index=2)
+        self.preview_calculator.apply_step("log_rebin", mask_regions=mask_regions, step_index=2)
     
     def _apply_step_3(self):
         """Apply continuum fitting exactly like original"""
@@ -1587,6 +1562,16 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
                         current_wave, current_flux, continuum_points, 
                         preview_wave, preview_flux, interactive_mode
                     )
+                    # For interactive continuum editing, keep both plots auto-rescaled
+                    try:
+                        QtCore.QTimer.singleShot(10, self._auto_rescale_bottom_plot_y)
+                        QtCore.QTimer.singleShot(10, self._auto_rescale_top_plot_y)
+                    except Exception:
+                        try:
+                            self._auto_rescale_bottom_plot_y()
+                            self._auto_rescale_top_plot_y()
+                        except Exception:
+                            pass
                     return
             
             # Standard preview update: current state vs preview of current step
@@ -1616,14 +1601,16 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             self.plot_manager.update_standard_preview(
                 current_wave, current_flux, preview_wave, preview_flux, mask_regions
             )
-            # If we're in masking step or step 3/6 (log rebin & scaling),
-            # rescale the bottom plot to the preview's range
-            if self.current_step in (0, 2):
+            # In key steps (masking, rebinning, continuum, apodization) ensure
+            # both plots auto-rescale vertically so the spectrum stays centered.
+            if self.current_step in (0, 2, 3, 4):
                 try:
                     QtCore.QTimer.singleShot(10, self._auto_rescale_bottom_plot_y)
+                    QtCore.QTimer.singleShot(10, self._auto_rescale_top_plot_y)
                 except Exception:
                     try:
                         self._auto_rescale_bottom_plot_y()
+                        self._auto_rescale_top_plot_y()
                     except Exception:
                         pass
             
@@ -1631,25 +1618,49 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             _LOGGER.error(f"Error updating preview: {e}")
 
     def _auto_rescale_bottom_plot_y(self):
-        """Auto-rescale the Y-axis of the bottom preview plot (masking step focus)."""
+        """Auto-rescale the Y-axis of the bottom preview plot."""
         try:
             if not hasattr(self, 'bottom_plot_widget') or not self.bottom_plot_widget:
                 return
             plot_item = self.bottom_plot_widget.getPlotItem()
             if not plot_item:
                 return
+            vb = plot_item.getViewBox()
+            if not vb:
+                return
+            # Toggle and force auto-range to ensure the latest data is centered
             try:
+                plot_item.enableAutoRange(axis='y', enable=False)
                 plot_item.enableAutoRange(axis='y', enable=True)
+                vb.autoRange(axis='y')
             except Exception:
-                pass
+                try:
+                    plot_item.enableAutoRange('y', True)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def _auto_rescale_top_plot_y(self):
+        """Auto-rescale the Y-axis of the top (current state) plot."""
+        try:
+            if not hasattr(self, 'top_plot_widget') or not self.top_plot_widget:
+                return
+            plot_item = self.top_plot_widget.getPlotItem()
+            if not plot_item:
+                return
+            vb = plot_item.getViewBox()
+            if not vb:
+                return
             try:
-                vb = plot_item.getViewBox()
-                if vb:
-                    vb.autoRange()
-                else:
-                    plot_item.autoRange()
+                plot_item.enableAutoRange(axis='y', enable=False)
+                plot_item.enableAutoRange(axis='y', enable=True)
+                vb.autoRange(axis='y')
             except Exception:
-                pass
+                try:
+                    plot_item.enableAutoRange('y', True)
+                except Exception:
+                    pass
         except Exception:
             pass
     

@@ -352,12 +352,29 @@ def log_rebin_maskaware(
         w = w[uniq]
         f = f[uniq]
 
-    # Build weight samples from masks: 1 outside, 0 inside
-    weight = np.ones_like(w, float)
+    # Clip any wavelength masks to the actually observed data range so that
+    # only interior gaps (within [w.min(), w.max()]) are treated as masked
+    # regions to be interpolated across on the log grid. Parts of a mask that
+    # lie strictly outside the observed range are effectively "off-spectrum"
+    # and should not cause edge bins to be refilled.
+    clipped_masks: List[Tuple[float, float]] = []
     if masks:
+        obs_min = float(w[0])
+        obs_max = float(w[-1])
         for a, b in masks:
             aa = float(min(a, b))
             bb = float(max(a, b))
+            clipped_a = max(aa, obs_min)
+            clipped_b = min(bb, obs_max)
+            if clipped_b > clipped_a:
+                clipped_masks.append((clipped_a, clipped_b))
+
+    # Build weight samples from masks: 1 outside, 0 inside
+    weight = np.ones_like(w, float)
+    if clipped_masks:
+        for a, b in clipped_masks:
+            aa = float(a)
+            bb = float(b)
             weight[(w >= aa) & (w <= bb)] = 0.0
 
     # Precompute cumulative integrals at sample positions
@@ -374,8 +391,10 @@ def log_rebin_maskaware(
         reb = num / den
     coverage = den / binw
 
-    # Identify masked bins on the log grid and low-coverage bins
-    mask_logbins = compute_mask_on_loggrid(log_wave, masks or [])
+    # Identify masked bins on the log grid and low-coverage bins.  We use the
+    # masks clipped to the observed wavelength range so that only true interior
+    # gaps are interpolated across; bins outside the data range remain zeros.
+    mask_logbins = compute_mask_on_loggrid(log_wave, clipped_masks)
     invalid = (~np.isfinite(reb)) | (coverage < float(min_coverage))
 
     # Fill only inside masked bins; preserve zeros at edges/outside masks

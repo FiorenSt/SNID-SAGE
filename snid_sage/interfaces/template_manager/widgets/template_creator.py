@@ -12,6 +12,9 @@ from typing import Dict, List, Optional, Tuple, Any
 import numpy as np
 from PySide6 import QtWidgets, QtCore, QtGui
 
+# Use the unified SNID spectrum reader for all formats (ASCII, CSV, FITS, etc.)
+from snid_sage.snid.io import read_spectrum
+
 # Import flexible number input widget
 from snid_sage.interfaces.gui.components.widgets.flexible_number_input import create_flexible_double_input
 
@@ -298,7 +301,9 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
             self, 
             "Select Spectrum File",
             "",
-            "All Supported (*.txt *.dat *.ascii *.asci *.fits *.flm);;Text Files (*.txt *.dat *.ascii *.asci *.flm);;FITS Files (*.fits);;FLM Files (*.flm);;All Files (*.*)"
+            "All Supported (*.txt *.dat *.ascii *.asci *.csv *.fits *.flm);;"
+            "Text/CSV Files (*.txt *.dat *.ascii *.asci *.csv *.flm);;"
+            "FITS Files (*.fits);;FLM Files (*.flm);;All Files (*.*)"
         )
         
         if file_path:
@@ -635,21 +640,17 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
         self._update_actions_enabled()
         
     def _load_spectrum(self, file_path: str) -> Tuple[np.ndarray, np.ndarray]:
-        """Load spectrum from file"""
-        try:
-            # Try different file formats (LNW removed)
-            if file_path.endswith('.fits'):
-                return self._load_fits_spectrum(file_path)
-            elif file_path.endswith('.flm'):
-                return self._load_ascii_spectrum(file_path)  # FLM files are text-based
-            else:
-                return self._load_ascii_spectrum(file_path)
-        except Exception as e:
-            _LOGGER.error(f"Error loading spectrum: {e}")
-            # Return dummy data on error
-            wave = np.linspace(3000, 9000, 1000)
-            flux = np.random.normal(1, 0.1, 1000)
-            return wave, flux
+        """Load spectrum from file using the unified SNID reader.
+
+        This delegates to ``snid_sage.snid.io.read_spectrum`` which supports:
+        - ASCII/text files (.txt, .dat, .ascii, .asci, .csv, .flm)
+        - FITS files (.fits, .fit)
+
+        Any error raised here is propagated to the caller so the GUI can
+        show a clear message instead of silently plotting a fake spectrum.
+        """
+        wave, flux = read_spectrum(file_path)
+        return np.asarray(wave, dtype=float), np.asarray(flux, dtype=float)
             
     def _load_fits_spectrum(self, file_path: str) -> Tuple[np.ndarray, np.ndarray]:
         """Load spectrum from FITS file"""
