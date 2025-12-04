@@ -349,6 +349,7 @@ TESTING_TEMPLATES/
 TESTING_TEMPLATES_NEW/
 WISEREP_RESULTS/
 SNID-SAGE/
+OCAPI/
 
 # ===== MARKDOWN FILES =====
 # Track markdown files (remove previous global ignore). No entries here on purpose.

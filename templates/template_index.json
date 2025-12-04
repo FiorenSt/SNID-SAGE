@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1751831068.0201683,
-  "template_count": 669,
+  "template_count": 682,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -333,11 +333,11 @@
       "storage_file": "templates_II.hdf5"
     },
     "sn2012ca": {
-      "type": "II",
-      "subtype": "IIn",
+      "type": "Ia",
+      "subtype": "Ia-csm",
       "redshift": 0.0,
       "epochs": 11,
-      "storage_file": "templates_II.hdf5"
+      "storage_file": "templates_Ia.hdf5"
     },
     "sn2012dy": {
       "type": "II",
@@ -3293,13 +3293,6 @@
       "epochs": 11,
       "storage_file": "templates_LFBOT.hdf5"
     },
-    "mstar": {
-      "type": "Star",
-      "subtype": "M-star",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_Star.hdf5"
-    },
     "CSS140421": {
       "type": "Ibn",
       "subtype": "Ibn",
@@ -4692,6 +4685,104 @@
       "redshift": 0.042489,
       "epochs": 5,
       "storage_file": "templates_AGN.hdf5"
+    },
+    "cas2021": {
+      "type": "CV",
+      "subtype": "Nova",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "her2021": {
+      "type": "CV",
+      "subtype": "Nova",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "NL1": {
+      "type": "CV",
+      "subtype": "NL",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "IP1": {
+      "type": "CV",
+      "subtype": "IP",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "TCorBorealis": {
+      "type": "Star",
+      "subtype": "Symbiotic",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "PS1-10jh": {
+      "type": "TDE",
+      "subtype": "TDE-He",
+      "redshift": 0.1696,
+      "epochs": 2,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "ASASSN-14ae": {
+      "type": "TDE",
+      "subtype": "TDE-H",
+      "redshift": 0.043603,
+      "epochs": 13,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "2019qiz": {
+      "type": "TDE",
+      "subtype": "TDE-H-He",
+      "redshift": 0.01513,
+      "epochs": 8,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "2018dyb": {
+      "type": "TDE",
+      "subtype": "TDE-H-He",
+      "redshift": 0.017932,
+      "epochs": 6,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "iPTF16fnl": {
+      "type": "TDE",
+      "subtype": "TDE-H-He",
+      "redshift": 0.016328,
+      "epochs": 3,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "ASASSN-14li": {
+      "type": "TDE",
+      "subtype": "TDE-H-He",
+      "redshift": 0.020578,
+      "epochs": 5,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "SN2012dn": {
+      "type": "Ia",
+      "subtype": "Ia-03fg",
+      "redshift": 0.010187,
+      "epochs": 9,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "SN2009dc": {
+      "type": "Ia",
+      "subtype": "Ia-03fg",
+      "redshift": 0.021468,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "PTF10ops": {
+      "type": "Ia",
+      "subtype": "Ia-02es",
+      "redshift": 0.061,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
     }
   },
   "by_type": {
@@ -4706,7 +4797,7 @@
       ]
     },
     "II": {
-      "count": 110,
+      "count": 109,
       "storage_file": "templates_II.hdf5",
       "template_names": [
         "ASASSN-14ha",
@@ -4753,7 +4844,6 @@
         "sn2011dh",
         "sn2011ei",
         "sn2011fu",
-        "sn2012ca",
         "sn2012dy",
         "sn2012ec",
         "sn2012hs",
@@ -4822,7 +4912,7 @@
       ]
     },
     "Ia": {
-      "count": 341,
+      "count": 345,
       "storage_file": "templates_Ia.hdf5",
       "template_names": [
         "ASASSN-15ga",
@@ -4832,6 +4922,9 @@
         "LSQ15adm",
         "OGLE2012sn04",
         "PSNJ15053007",
+        "PTF10ops",
+        "SN2009dc",
+        "SN2012dn",
         "SNLS03D3bb",
         "iPTF14atg",
         "sn1981B",
@@ -5145,6 +5238,7 @@
         "sn2008ds",
         "sn2008ec",
         "sn2008hs",
+        "sn2012ca",
         "sn2013bh",
         "sn2013gr",
         "sn2013u",
@@ -5169,18 +5263,24 @@
       ]
     },
     "TDE": {
-      "count": 10,
+      "count": 16,
       "storage_file": "templates_TDE.hdf5",
       "template_names": [
+        "2018dyb",
+        "2019qiz",
+        "ASASSN-14ae",
+        "ASASSN-14li",
         "ASASSN-15oi",
         "LSQ12dyw",
         "OGLE16aaa",
+        "PS1-10jh",
         "at2018dyb",
         "at2018fyk",
         "at2018hyz",
         "at2018lna",
         "at2019ahk",
         "at2019azh",
+        "iPTF16fnl",
         "sn2015L"
       ]
     },
@@ -5221,7 +5321,7 @@
       "template_names": [
         "HD186943",
         "HD193928",
-        "mstar"
+        "TCorBorealis"
       ]
     },
     "Ibn": {
@@ -5444,14 +5544,18 @@
       ]
     },
     "CV": {
-      "count": 5,
+      "count": 9,
       "storage_file": "templates_CV.hdf5",
       "template_names": [
         "AM_CVn",
+        "IP1",
+        "NL1",
         "Polar",
         "U_Gem",
         "WZ_Sge",
-        "Z_Cam"
+        "Z_Cam",
+        "cas2021",
+        "her2021"
       ]
     }
   }

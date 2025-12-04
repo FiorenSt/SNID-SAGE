@@ -2427,11 +2427,11 @@
       "storage_file": "templates_II_onir.hdf5"
     },
     "sn2012ca": {
-      "type": "II",
-      "subtype": "IIn",
+      "type": "Ia",
+      "subtype": "Ia-csm",
       "redshift": 0.0,
       "epochs": 11,
-      "storage_file": "templates_II_onir.hdf5"
+      "storage_file": "templates_Ia_onir.hdf5"
     },
     "sn2012dy": {
       "type": "II",
@@ -3400,7 +3400,7 @@
       ]
     },
     "Ia": {
-      "count": 160,
+      "count": 161,
       "storage_file": "templates_Ia_onir.hdf5",
       "template_names": [
         "ASASSN-15ga",
@@ -3562,7 +3562,8 @@
         "sn2019akg",
         "sn2019bka",
         "sn2019so",
-        "sn2022vqz"
+        "sn2022vqz",
+        "sn2012ca"
       ]
     },
     "Ib": {
@@ -3717,7 +3718,7 @@
       ]
     },
     "II": {
-      "count": 106,
+      "count": 105,
       "storage_file": "templates_II_onir.hdf5",
       "template_names": [
         "ASASSN-14ha",
@@ -3764,7 +3765,6 @@
         "sn2011dh",
         "sn2011ei",
         "sn2011fu",
-        "sn2012ca",
         "sn2012dy",
         "sn2012ec",
         "sn2012hs",

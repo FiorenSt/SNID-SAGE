@@ -36,6 +36,12 @@ try:
 except ImportError:
     SNID_AVAILABLE = False
 
+# Flux handling helper (match main SNID GUI behaviour)
+try:
+    from snid_sage.snid.preprocessing import enforce_positive_flux
+except Exception:  # pragma: no cover - defensive import
+    enforce_positive_flux = None  # type: ignore
+
 # Import logging
 try:
     from snid_sage.shared.utils.logging import get_logger
@@ -325,10 +331,30 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
         if not spectrum_file or not os.path.exists(spectrum_file):
             QtWidgets.QMessageBox.warning(self, "No Spectrum", "Please select a valid spectrum file first.")
             return
-            
+
         try:
             # Load spectrum data
             wave, flux = self._load_spectrum(spectrum_file)
+            # Match main SNID GUI: ensure flux is strictly positive for downstream
+            # smoothing / log-rebinning / continuum fitting BEFORE launching the
+            # advanced preprocessing workflow.
+            if enforce_positive_flux is not None:
+                try:
+                    shifted_flux, flux_offset = enforce_positive_flux(flux)
+                    if flux_offset != 0.0:
+                        _LOGGER.info(
+                            "TemplateCreator: shifted spectrum flux up by %.6g "
+                            "before advanced preprocessing (positive-flux enforcement)",
+                            float(flux_offset),
+                        )
+                    flux = shifted_flux
+                except Exception as e:  # pragma: no cover - defensive
+                    _LOGGER.warning(
+                        "TemplateCreator: positive-flux enforcement failed (%s); "
+                        "proceeding with raw flux in advanced preprocessing",
+                        e,
+                    )
+
             # Convert to rest frame using user-provided redshift
             try:
                 z_input = float(self.redshift_spinbox.value())
