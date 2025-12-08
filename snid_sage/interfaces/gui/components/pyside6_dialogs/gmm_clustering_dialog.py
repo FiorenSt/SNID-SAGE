@@ -572,12 +572,41 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
                 lines.append(f"Reason: {reason}")
         
         if winning_cluster:
-            lines.append(f"Winning Type: {winning_cluster.get('type', 'Unknown')}  |  Size: {winning_cluster.get('size', 0)}  |  z={winning_cluster.get('mean_redshift', 0):.6f}")
-        
-        # Keep it short; no full cluster listing
-        
-        # No legend explanation
-        
+            # Prefer enhanced/weighted cluster redshift for display, with safe fallbacks
+            try:
+                import math
+                
+                def _finite(val):
+                    return isinstance(val, (int, float)) and not math.isnan(float(val))
+                
+                z_val = winning_cluster.get('enhanced_redshift', None)
+                if not _finite(z_val):
+                    z_val = winning_cluster.get('weighted_mean_redshift', None)
+                if not _finite(z_val):
+                    z_val = winning_cluster.get('mean_redshift', 0.0)
+                if not _finite(z_val):
+                    z_val = 0.0
+                z_val = float(z_val)
+            except Exception:
+                # Conservative fallback
+                try:
+                    z_val = float(
+                        winning_cluster.get(
+                            'enhanced_redshift',
+                            winning_cluster.get(
+                                'weighted_mean_redshift',
+                                winning_cluster.get('mean_redshift', 0.0),
+                            ),
+                        )
+                    )
+                except Exception:
+                    z_val = 0.0
+            
+            lines.append(
+                f"Winning Type: {winning_cluster.get('type', 'Unknown')}  |  "
+                f"Size: {winning_cluster.get('size', 0)}  |  z={z_val:.6f}"
+            )
+
         self.info_text.setPlainText("\n".join(lines))
     
     def _populate_cluster_table(self):

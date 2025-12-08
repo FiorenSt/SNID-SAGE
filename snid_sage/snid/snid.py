@@ -767,12 +767,13 @@ def _process_template_peaks(
                     width = 0.0
                     z_width = 0.0
                 
-                # Calculate R value and final rlap (using the same logic as original SNID)
+                # Calculate R value and final rlap (Tonry-Davis R with correct antisymmetric RMS normalisation)
                 arms_raw, _ = aspart(cross_power_peak, k1, k2, k3, k4, peak_lag)
                 arms_norm = arms_raw / (NW_grid * drms_peak * trms_peak)
 
                 if arms_norm > 0:
-                    r_value = hgt_p / (2 * arms_norm)
+                    # Tonry antisymmetric RMS metric: use sqrt(2) in the denominator rather than 2
+                    r_value = hgt_p / (np.sqrt(2.0) * arms_norm)
                 else:
                     r_value = 0.0
                 # Apply optional profile-aware scaling to R
@@ -799,7 +800,7 @@ def _process_template_peaks(
                 
                 # For flux view, reconstruct from flattened: (flat + 1) * continuum
                 plot_template_flux = (plot_template_flat + 1.0) * cont[left_edge:right_edge+1]
-
+                
                 # Create match object (matching original SNID structure)
                 match = {
                     'template': tpl,
@@ -834,7 +835,7 @@ def _process_template_peaks(
                         'correlation': Rz_peak,
                         'center': ctr_p,
                         'drms': drms_peak,
-                        'trms': trms_peak
+                        'trms': drms_peak
                     }
                 }
                 
@@ -1330,12 +1331,13 @@ def _process_forced_redshift_match(
             # Include Jacobian with forced redshift
             z_width = fwhm_pixels * DWLOG_grid * (1.0 + z_est)
         
-        # Calculate R value and final rlap
+        # Calculate R value and final rlap (Tonry-Davis R with correct antisymmetric RMS normalisation)
         arms_raw, _ = aspart(cross_power_peak, k1, k2, k3, k4, 0)
         arms_norm = arms_raw / (NW_grid * drms_peak * trms_peak)
 
         if arms_norm > 0:
-            r_value = hgt_p / (2 * arms_norm)
+            # Tonry antisymmetric RMS metric: use sqrt(2) in the denominator rather than 2
+            r_value = hgt_p / (np.sqrt(2.0) * arms_norm)
         else:
             r_value = 0.0
         # Apply optional profile-aware scaling
@@ -1353,9 +1355,29 @@ def _process_forced_redshift_match(
                 formal_z_error = z_width / (1.0 + r_value)
             else:
                 formal_z_error = z_width if z_width > 0 else 0.0
-            
+
+            # ------------------------------------------------------------------
+            # Convert global overlap indices to the plotting / CCC index range
+            # [left_edge:right_edge]. We store them as inclusive indices
+            # relative to this trimmed range so that RLAP-CCC / locality / chi²
+            # metrics can re‑use the *exact* RLAP overlap window.
+            # ------------------------------------------------------------------
+            overlap_indices = None  # type: Optional[Dict[str, int]]
+            try:
+                total_len = int(right_edge - left_edge + 1)
+                if total_len > 0:
+                    rel_start = max(0, int(start_trim) - int(left_edge))
+                    rel_end = min(total_len - 1, int(end_trim) - int(left_edge))
+                    if rel_end >= rel_start:
+                        overlap_indices = {
+                            "start": int(rel_start),
+                            "end": int(rel_end)  # inclusive; CCC logic converts to exclusive
+                        }
+            except Exception:
+                overlap_indices = None
+
             # Create match dictionary
-            match_info = {
+            match_info: Dict[str, Any] = {
                 "template": tpl,
                 "name": tpl["name"],
                 "type": tpl.get("type", "Unknown"),
@@ -1395,6 +1417,10 @@ def _process_forced_redshift_match(
                 },
                 "forced_redshift": True  # Flag to indicate this was forced
             }
+
+            # Attach overlap_indices when available
+            if overlap_indices is not None:
+                match_info["overlap_indices"] = overlap_indices
             
             return match_info
         

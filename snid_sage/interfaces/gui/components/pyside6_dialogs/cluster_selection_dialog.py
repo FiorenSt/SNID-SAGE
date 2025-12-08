@@ -112,6 +112,9 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         
         # Colors for different supernova types
         self.type_colors = self._get_type_colors()
+        # Cached type mapping for plots/highlights
+        self._unique_types: Optional[List[str]] = None
+        self._type_to_index: Optional[Dict[str, int]] = None
         
         # Validate matplotlib availability
         if not MATPLOTLIB_AVAILABLE:
@@ -165,6 +168,59 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
             self.all_candidates.sort(key=_get_candidate_score, reverse=True)
         except Exception as sort_err:
             _LOGGER.debug(f"Could not sort clusters by score: {sort_err}")
+    
+    # ------------------------------------------------------------------
+    # Cluster helper utilities
+    # ------------------------------------------------------------------
+    def _get_cluster_display_redshift(self, candidate: Dict[str, Any]) -> float:
+        """
+        Get a robust display redshift for a cluster.
+        
+        Preference order (matching other GUI summaries conceptually):
+        1. enhanced_redshift (joint cluster estimate, if available and finite)
+        2. weighted_mean_redshift
+        3. mean_redshift
+        4. mean of match redshifts
+        5. 0.0 as a last resort
+        """
+        try:
+            import math
+            
+            def _finite_or_none(val):
+                if isinstance(val, (int, float)) and not math.isnan(float(val)):
+                    return float(val)
+                return None
+            
+            # 1. enhanced_redshift
+            z_val = _finite_or_none(candidate.get('enhanced_redshift', None))
+            if z_val is not None:
+                return z_val
+            
+            # 2. weighted_mean_redshift
+            z_val = _finite_or_none(candidate.get('weighted_mean_redshift', None))
+            if z_val is not None:
+                return z_val
+            
+            # 3. mean_redshift
+            z_val = _finite_or_none(candidate.get('mean_redshift', None))
+            if z_val is not None:
+                return z_val
+            
+            # 4. Mean of match redshifts if matches are present
+            matches = candidate.get('matches', []) or []
+            if matches:
+                redshifts = []
+                for m in matches:
+                    rz = _finite_or_none(m.get('redshift', None))
+                    if rz is not None:
+                        redshifts.append(rz)
+                if redshifts:
+                    return float(np.mean(redshifts))
+        except Exception as e:
+            _LOGGER.debug(f"Error computing display redshift for cluster: {e}")
+        
+        # 5. Safe fallback
+        return 0.0
     
     def _find_automatic_best_index(self):
         """Find index of automatic best cluster after sorting"""
@@ -448,6 +504,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         for idx, candidate in enumerate(self.all_candidates):
             cluster_type = candidate.get('type', 'Unknown')
             size = len(candidate.get('matches', []))
+            z_val = self._get_cluster_display_redshift(candidate)
             
             # Get quality score
             quality = (
@@ -461,7 +518,10 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
             is_best = (self.automatic_best is not None and candidate == self.automatic_best)
             best_mark = " 🏆" if is_best else ""
             
-            item_text = f"#{idx+1}: {cluster_type} ({size} templates, Q={quality:.1f}){best_mark}"
+            item_text = (
+                f"#{idx+1}: {cluster_type} "
+                f"({size} templates, z={z_val:.6f}, Q={quality:.1f}){best_mark}"
+            )
             self.cluster_dropdown.addItem(item_text)
         
         # Set current selection
@@ -483,9 +543,9 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self.scatter_plots.clear()
         self.scatter_to_index.clear()
         
-        # Prepare type mapping with consistent ordering
-        unique_types = sorted(list(set(c.get('type', 'Unknown') for c in self.all_candidates)))
-        type_to_index = {sn_type: i for i, sn_type in enumerate(unique_types)}
+        # Prepare and cache type mapping with consistent ordering
+        self._unique_types = sorted(list(set(c.get('type', 'Unknown') for c in self.all_candidates)))
+        self._type_to_index = {sn_type: i for i, sn_type in enumerate(self._unique_types)}
         
         # Determine metric name (RLAP-CCC or RLAP)
         metric_name_global = 'RLAP'
@@ -497,21 +557,16 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         
         # Plot all clusters with enhanced styling
         for i, candidate in enumerate(self.all_candidates):
-            matches = candidate.get('matches', [])
-            if not matches:
-                candidate_redshifts = [candidate.get('mean_redshift', 0)]
-                if MATH_UTILS_AVAILABLE:
-                    candidate_metrics = [candidate.get('mean_metric', candidate.get('mean_rlap', 0))]
-                else:
-                    candidate_metrics = [candidate.get('mean_rlap', 0)]
-            else:
-                candidate_redshifts = [m['redshift'] for m in matches]
-                if MATH_UTILS_AVAILABLE:
-                    candidate_metrics = [get_best_metric_value(m) for m in matches]
-                else:
-                    candidate_metrics = [m.get('rlap_ccc', m.get('rlap', 0)) for m in matches]
+            candidate_redshifts, candidate_metrics = self._get_cluster_redshifts_and_metrics(candidate)
+            if not candidate_redshifts:
+                continue
             
-            candidate_type_indices = [type_to_index[candidate['type']]] * len(candidate_redshifts)
+            # Map type to Y index using cached mapping (fallback to 0 if missing)
+            if self._type_to_index is None:
+                type_index = 0
+            else:
+                type_index = self._type_to_index.get(candidate.get('type', 'Unknown'), 0)
+            candidate_type_indices = [type_index] * len(candidate_redshifts)
             
             # Visual style: consistent size, no transparency
             size = 30  # Slightly smaller points for better readability
@@ -548,9 +603,10 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self.ax.set_ylabel('Type', color='#000000', fontsize=15, labelpad=15)
         # Z label uses the global metric name (e.g., "RLAP-CCC")
         self.ax.set_zlabel(metric_name_global, color='#000000', fontsize=15, labelpad=15)
-        self.ax.set_yticks(range(len(unique_types)))
-        # Smaller Y tick labels to reduce overlap
-        self.ax.set_yticklabels(unique_types, fontsize=7)
+        if self._unique_types is not None:
+            self.ax.set_yticks(range(len(self._unique_types)))
+            # Smaller Y tick labels to reduce overlap
+            self.ax.set_yticklabels(self._unique_types, fontsize=7)
         
         # Set view and enable ONLY horizontal rotation, preserving current azimuth
         self.ax.view_init(elev=25, azim=current_azim)
@@ -600,30 +656,67 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
             self._add_persistent_highlight(self.selected_index)
         
         self.plot_widget.draw()
+
+    def _get_cluster_redshifts_and_metrics(self, candidate: Dict[str, Any]) -> Tuple[List[float], List[float]]:
+        """
+        Return lists of redshifts and metric values for the given cluster candidate.
+        
+        Uses get_best_metric_value when math utils are available; otherwise falls back
+        to rlap/rlap_ccc fields. Provides sensible defaults when matches or metrics
+        are missing so that plotting and highlighting can still work.
+        """
+        matches = candidate.get('matches', []) or []
+        try:
+            if not matches:
+                # Fallback to aggregate stats on the candidate
+                redshift = candidate.get('mean_redshift', 0.0)
+                if MATH_UTILS_AVAILABLE:
+                    metric_val = candidate.get('mean_metric', candidate.get('mean_rlap', 0.0))
+                else:
+                    metric_val = candidate.get('mean_rlap', 0.0)
+                return [float(redshift)], [float(metric_val)]
+            
+            # Extract per-match redshifts and metrics
+            redshifts: List[float] = []
+            metrics: List[float] = []
+            for m in matches:
+                try:
+                    z = float(m.get('redshift', 0.0))
+                except Exception:
+                    z = 0.0
+                redshifts.append(z)
+                
+                if MATH_UTILS_AVAILABLE:
+                    try:
+                        metric_val = float(get_best_metric_value(m))
+                    except Exception:
+                        metric_val = float(m.get('rlap_ccc', m.get('rlap', 0.0)))
+                else:
+                    metric_val = float(m.get('rlap_ccc', m.get('rlap', 0.0)))
+                metrics.append(metric_val)
+            
+            return redshifts, metrics
+        except Exception as e:
+            _LOGGER.debug(f"Error computing cluster redshifts/metrics: {e}")
+            return [], []
     
     def _add_persistent_highlight(self, cluster_index):
         """Add persistent highlight for selected cluster"""
         try:
-            if MATH_UTILS_AVAILABLE:
-                get_best_metric_value_local = get_best_metric_value
-            else:
-                get_best_metric_value_local = lambda m: m.get('rlap_ccc', m.get('rlap', 0))
-
             if 0 <= cluster_index < len(self.scatter_plots):
                 scatter, idx, candidate = self.scatter_plots[cluster_index]
                 
-                # Add BLACK edge highlights to this cluster
-                matches = candidate.get('matches', [])
-                if not matches:
-                    candidate_redshifts = [candidate.get('mean_redshift', 0)]
-                    candidate_metrics = [candidate.get('mean_metric', candidate.get('mean_rlap', 0))]
-                else:
-                    candidate_redshifts = [m['redshift'] for m in matches]
-                    candidate_metrics = [get_best_metric_value_local(m) for m in matches]
+                # Use the same helper logic as in _plot_clusters to get points
+                candidate_redshifts, candidate_metrics = self._get_cluster_redshifts_and_metrics(candidate)
+                if not candidate_redshifts:
+                    return
                 
-                unique_types = sorted(list(set(c.get('type', 'Unknown') for c in self.all_candidates)))
-                type_to_index = {sn_type: i for i, sn_type in enumerate(unique_types)}
-                candidate_type_indices = [type_to_index[candidate['type']]] * len(candidate_redshifts)
+                # Reuse cached type-to-index mapping from last plot (fallback safely if missing)
+                if self._type_to_index is None:
+                    type_index = 0
+                else:
+                    type_index = self._type_to_index.get(candidate.get('type', 'Unknown'), 0)
+                candidate_type_indices = [type_index] * len(candidate_redshifts)
                 
                 # Add highlighted scatter with BLACK edges
                 # Add highlighted scatter with picking disabled (so picks map to the base scatter only)

@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1751831068.0201683,
-  "template_count": 682,
+  "template_count": 604,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -892,13 +892,6 @@
       "epochs": 13,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn1993ac": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn1994ae": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -983,25 +976,11 @@
       "epochs": 7,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn1996ab": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn1996ai": {
       "type": "Ia",
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1996bk": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn1996bl": {
@@ -1016,20 +995,6 @@
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1996bv": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1996C": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn1996X": {
@@ -1256,13 +1221,6 @@
       "epochs": 11,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn1999cp": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn1999cw": {
       "type": "Ia",
       "subtype": "Ia-91T",
@@ -1296,13 +1254,6 @@
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 12,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999ef": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn1999ej": {
@@ -1354,20 +1305,6 @@
       "epochs": 5,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2000bh": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2000bk": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2000ce": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -1389,27 +1326,6 @@
       "epochs": 10,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2000cp": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2000cu": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2000cw": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2000cx": {
       "type": "Ia",
       "subtype": "Ia-pec",
@@ -1429,13 +1345,6 @@
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2000dm": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2000dn": {
@@ -1494,20 +1403,6 @@
       "epochs": 5,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2001br": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001cj": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2001ck": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -1527,20 +1422,6 @@
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001dw": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001E": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2001eh": {
@@ -1569,13 +1450,6 @@
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 26,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001ex": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2001fe": {
@@ -1620,13 +1494,6 @@
       "epochs": 38,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2002aw": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2002bf": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -1634,25 +1501,11 @@
       "epochs": 13,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2002bg": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2002bo": {
       "type": "Ia",
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 51,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002bz": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2002cd": {
@@ -1688,13 +1541,6 @@
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002cu": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2002cx": {
@@ -1739,20 +1585,6 @@
       "epochs": 7,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2002ef": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002el": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2002er": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -1788,25 +1620,11 @@
       "epochs": 24,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2002G": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2002ha": {
       "type": "Ia",
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002hd": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2002he": {
@@ -1858,13 +1676,6 @@
       "epochs": 11,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2003ai": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2003cg": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -1900,25 +1711,11 @@
       "epochs": 19,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2003gn": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2003gq": {
       "type": "Ia",
       "subtype": "Ia-02cx",
       "redshift": 0.0,
       "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003he": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2003hu": {
@@ -1970,13 +1767,6 @@
       "epochs": 26,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2003U": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2003W": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -2019,27 +1809,6 @@
       "epochs": 5,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2004bk": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2004bl": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2004bw": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2004dt": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -2061,32 +1830,11 @@
       "epochs": 19,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2004ey": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2004fu": {
       "type": "Ia",
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2004fz": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2004gc": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2004gs": {
@@ -2110,13 +1858,6 @@
       "epochs": 7,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2005A": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2005am": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -2124,32 +1865,11 @@
       "epochs": 18,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2005bc": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005be": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2005bl": {
       "type": "Ia",
       "subtype": "Ia-91bg",
       "redshift": 0.0,
       "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005bo": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2005cc": {
@@ -2180,13 +1900,6 @@
       "epochs": 4,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2005dv": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2005el": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -2215,13 +1928,6 @@
       "epochs": 22,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2005hc": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2005hf": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -2243,13 +1949,6 @@
       "epochs": 32,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2005iq": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2005kc": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -2264,46 +1963,11 @@
       "epochs": 10,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2005ki": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005ls": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005lu": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2005M": {
       "type": "Ia",
       "subtype": "Ia-91T",
       "redshift": 0.0,
       "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005mc": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005ms": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2005mz": {
@@ -2327,13 +1991,6 @@
       "epochs": 11,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2006ak": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2006al": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -2348,27 +2005,6 @@
       "epochs": 4,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2006az": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006bq": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006br": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2006bt": {
       "type": "Ia",
       "subtype": "Ia-02es",
@@ -2376,32 +2012,11 @@
       "epochs": 4,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2006bu": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006bw": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2006bz": {
       "type": "Ia",
       "subtype": "Ia-91bg",
       "redshift": 0.0,
       "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006cc": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2006cf": {
@@ -2418,25 +2033,11 @@
       "epochs": 8,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2006cm": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2006cp": {
       "type": "Ia",
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006cq": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2006cs": {
@@ -2474,13 +2075,6 @@
       "epochs": 4,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2006ef": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2006ej": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -2493,41 +2087,6 @@
       "subtype": "Ia-91bg",
       "redshift": 0.0,
       "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006eq": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006et": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006eu": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006ev": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006gj": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2006gr": {
@@ -2572,13 +2131,6 @@
       "epochs": 1,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2006kf": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2006le": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -2593,13 +2145,6 @@
       "epochs": 20,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2006mo": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2006N": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -2607,39 +2152,11 @@
       "epochs": 12,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2006nz": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2006oa": {
       "type": "Ia",
       "subtype": "Ia-91T",
       "redshift": 0.0,
       "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006or": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006os": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006ot": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2006S": {
@@ -2656,32 +2173,11 @@
       "epochs": 6,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2006te": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2006X": {
       "type": "Ia",
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 26,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007A": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007ae": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2007af": {
@@ -2696,13 +2192,6 @@
       "subtype": "Ia-91bg",
       "redshift": 0.0,
       "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007ap": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2007au": {
@@ -2754,25 +2243,11 @@
       "epochs": 11,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2007bz": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2007ca": {
       "type": "Ia",
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007cg": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2007ci": {
@@ -2810,25 +2285,11 @@
       "epochs": 10,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2007fr": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2007fs": {
       "type": "Ia",
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007gk": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2007hj": {
@@ -2845,13 +2306,6 @@
       "epochs": 38,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2007jg": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2007kk": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -2864,13 +2318,6 @@
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 27,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007nq": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2007qe": {
@@ -2894,13 +2341,6 @@
       "epochs": 12,
       "storage_file": "templates_Ia.hdf5"
     },
-    "sn2007ux": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2008A": {
       "type": "Ia",
       "subtype": "Ia-02cx",
@@ -2913,13 +2353,6 @@
       "subtype": "Ia-02cx",
       "redshift": 0.0,
       "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2008af": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 2,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2008ar": {
@@ -2962,20 +2395,6 @@
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2008hs": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2008L": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 1,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2008Q": {
@@ -4783,6 +4202,41 @@
       "redshift": 0.061,
       "epochs": 4,
       "storage_file": "templates_Ia.hdf5"
+    },
+    "2010md": {
+      "type": "SLSN",
+      "subtype": "SLSN-I",
+      "redshift": 0.0982,
+      "epochs": 8,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "SN2019hge": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.0866,
+      "epochs": 2,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "SN2006gy": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.01919,
+      "epochs": 4,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "2003fg": {
+      "type": "Ia",
+      "subtype": "Ia-03fg",
+      "redshift": 0.244,
+      "epochs": 1,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "CSS121015": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.2868,
+      "epochs": 5,
+      "storage_file": "templates_SLSN.hdf5"
     }
   },
   "by_type": {
@@ -4912,9 +4366,10 @@
       ]
     },
     "Ia": {
-      "count": 345,
+      "count": 263,
       "storage_file": "templates_Ia.hdf5",
       "template_names": [
+        "2003fg",
         "ASASSN-15ga",
         "ASASSN-15hy",
         "LSQ12fhs",
@@ -4937,7 +4392,6 @@
         "sn1991T",
         "sn1991bg",
         "sn1992A",
-        "sn1993ac",
         "sn1994D",
         "sn1994M",
         "sn1994Q",
@@ -4950,15 +4404,11 @@
         "sn1995ak",
         "sn1995al",
         "sn1995bd",
-        "sn1996C",
         "sn1996X",
         "sn1996Z",
-        "sn1996ab",
         "sn1996ai",
-        "sn1996bk",
         "sn1996bl",
         "sn1996bo",
-        "sn1996bv",
         "sn1997E",
         "sn1997Y",
         "sn1997bp",
@@ -4990,13 +4440,11 @@
         "sn1999by",
         "sn1999cc",
         "sn1999cl",
-        "sn1999cp",
         "sn1999cw",
         "sn1999da",
         "sn1999dk",
         "sn1999dq",
         "sn1999ee",
-        "sn1999ef",
         "sn1999ej",
         "sn1999ek",
         "sn1999gd",
@@ -5004,21 +4452,14 @@
         "sn1999gp",
         "sn2000B",
         "sn2000E",
-        "sn2000bh",
-        "sn2000bk",
         "sn2000ce",
         "sn2000cf",
         "sn2000cn",
-        "sn2000cp",
-        "sn2000cu",
-        "sn2000cw",
         "sn2000cx",
         "sn2000dg",
         "sn2000dk",
-        "sn2000dm",
         "sn2000dn",
         "sn2000fa",
-        "sn2001E",
         "sn2001G",
         "sn2001N",
         "sn2001V",
@@ -5027,47 +4468,35 @@
         "sn2001az",
         "sn2001bf",
         "sn2001bg",
-        "sn2001br",
-        "sn2001cj",
         "sn2001ck",
         "sn2001cp",
         "sn2001da",
-        "sn2001dw",
         "sn2001eh",
         "sn2001el",
         "sn2001en",
         "sn2001ep",
-        "sn2001ex",
         "sn2001fe",
         "sn2001fh",
         "sn2001gc",
-        "sn2002G",
-        "sn2002aw",
         "sn2002bf",
-        "sn2002bg",
         "sn2002bo",
-        "sn2002bz",
         "sn2002cd",
         "sn2002cf",
         "sn2002ck",
         "sn2002cr",
         "sn2002cs",
-        "sn2002cu",
         "sn2002cx",
         "sn2002de",
         "sn2002dj",
         "sn2002dl",
         "sn2002do",
         "sn2002dp",
-        "sn2002ef",
-        "sn2002el",
         "sn2002er",
         "sn2002es",
         "sn2002eu",
         "sn2002fb",
         "sn2002fk",
         "sn2002ha",
-        "sn2002hd",
         "sn2002he",
         "sn2002hu",
         "sn2002hw",
@@ -5075,18 +4504,14 @@
         "sn2002jg",
         "sn2002jy",
         "sn2002kf",
-        "sn2003U",
         "sn2003W",
         "sn2003Y",
-        "sn2003ai",
         "sn2003cg",
         "sn2003ch",
         "sn2003cq",
         "sn2003du",
         "sn2003fa",
-        "sn2003gn",
         "sn2003gq",
-        "sn2003he",
         "sn2003hu",
         "sn2003hv",
         "sn2003ic",
@@ -5100,45 +4525,27 @@
         "sn2004at",
         "sn2004bd",
         "sn2004bg",
-        "sn2004bk",
-        "sn2004bl",
-        "sn2004bw",
         "sn2004dt",
         "sn2004ef",
         "sn2004eo",
-        "sn2004ey",
         "sn2004fu",
-        "sn2004fz",
-        "sn2004gc",
         "sn2004gs",
-        "sn2005A",
         "sn2005M",
         "sn2005am",
-        "sn2005bc",
-        "sn2005be",
         "sn2005bl",
-        "sn2005bo",
         "sn2005cc",
         "sn2005cf",
         "sn2005cg",
         "sn2005de",
-        "sn2005dv",
         "sn2005el",
         "sn2005eq",
         "sn2005eu",
         "sn2005gj",
-        "sn2005hc",
         "sn2005hf",
         "sn2005hj",
         "sn2005hk",
-        "sn2005iq",
         "sn2005kc",
         "sn2005ke",
-        "sn2005ki",
-        "sn2005ls",
-        "sn2005lu",
-        "sn2005mc",
-        "sn2005ms",
         "sn2005mz",
         "sn2005na",
         "sn2006D",
@@ -5147,57 +4554,32 @@
         "sn2006S",
         "sn2006X",
         "sn2006ac",
-        "sn2006ak",
         "sn2006al",
         "sn2006ax",
-        "sn2006az",
-        "sn2006bq",
-        "sn2006br",
         "sn2006bt",
-        "sn2006bu",
-        "sn2006bw",
         "sn2006bz",
-        "sn2006cc",
         "sn2006cf",
         "sn2006cj",
-        "sn2006cm",
         "sn2006cp",
-        "sn2006cq",
         "sn2006cs",
         "sn2006cz",
         "sn2006dm",
         "sn2006dw",
-        "sn2006ef",
         "sn2006ej",
         "sn2006em",
-        "sn2006eq",
-        "sn2006et",
-        "sn2006eu",
-        "sn2006ev",
-        "sn2006gj",
         "sn2006gr",
         "sn2006gt",
         "sn2006gz",
         "sn2006hb",
         "sn2006ke",
-        "sn2006kf",
         "sn2006le",
         "sn2006lf",
-        "sn2006mo",
-        "sn2006nz",
         "sn2006oa",
-        "sn2006or",
-        "sn2006os",
-        "sn2006ot",
         "sn2006sr",
-        "sn2006te",
-        "sn2007A",
         "sn2007F",
         "sn2007S",
-        "sn2007ae",
         "sn2007af",
         "sn2007al",
-        "sn2007ap",
         "sn2007au",
         "sn2007ax",
         "sn2007ba",
@@ -5205,39 +4587,29 @@
         "sn2007bd",
         "sn2007bj",
         "sn2007bm",
-        "sn2007bz",
         "sn2007ca",
-        "sn2007cg",
         "sn2007ci",
         "sn2007co",
         "sn2007cq",
         "sn2007fb",
-        "sn2007fr",
         "sn2007fs",
-        "sn2007gk",
         "sn2007hj",
         "sn2007if",
-        "sn2007jg",
         "sn2007kk",
         "sn2007le",
-        "sn2007nq",
         "sn2007qe",
         "sn2007sr",
-        "sn2007ux",
         "sn2008A",
         "sn2008C",
-        "sn2008L",
         "sn2008Q",
         "sn2008R",
         "sn2008Z",
         "sn2008ae",
-        "sn2008af",
         "sn2008ar",
         "sn2008bf",
         "sn2008bt",
         "sn2008ds",
         "sn2008ec",
-        "sn2008hs",
         "sn2012ca",
         "sn2013bh",
         "sn2013gr",
@@ -5339,9 +4711,11 @@
       ]
     },
     "SLSN": {
-      "count": 45,
+      "count": 49,
       "storage_file": "templates_SLSN.hdf5",
       "template_names": [
+        "2010md",
+        "CSS121015",
         "DES13S2cmm",
         "DES14X3taz",
         "LSQ12dlf",
@@ -5363,6 +4737,8 @@
         "PTF11rks",
         "PTF12dam",
         "SCP06F6",
+        "SN2006gy",
+        "SN2019hge",
         "SNLS06D4eu",
         "SNLS07D2bv",
         "SSS120810-23",

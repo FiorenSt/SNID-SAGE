@@ -42,7 +42,7 @@ _LOG = get_logger("snid_sage.shared.templates_manager")
 
 # Bump this when you intentionally change the template bank contents on GitHub.
 # This is *independent* from the JSON index's own "version" field.
-TEMPLATE_BANK_VERSION: str = "1"
+TEMPLATE_BANK_VERSION: str = "2"
 
 # Files that make up the built-in template bank. Update this list when
 # templates are added/removed/renamed in the GitHub repo.
@@ -51,6 +51,7 @@ TEMPLATES_FILES: List[str] = [
     "template_index_onir.json",
     "templates_AGN_onir.hdf5",
     "templates_AGN.hdf5",
+    "templates_CV.hdf5",
     "templates_Galaxy_onir.hdf5",
     "templates_Galaxy.hdf5",
     "templates_GAP_onir.hdf5",

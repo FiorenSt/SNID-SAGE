@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1761936657.5681412,
-  "template_count": 478,
+  "template_count": 467,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 2048,
@@ -354,13 +354,6 @@
       "epochs": 8,
       "storage_file": "templates_Ia_onir.hdf5"
     },
-    "sn1996C": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
     "sn1996X": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -557,20 +550,6 @@
       "epochs": 9,
       "storage_file": "templates_Ia_onir.hdf5"
     },
-    "sn2001br": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
-    "sn2001ck": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
     "sn2001da": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -669,13 +648,6 @@
       "epochs": 24,
       "storage_file": "templates_Ia_onir.hdf5"
     },
-    "sn2002ha": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
     "sn2002he": {
       "type": "Ia",
       "subtype": "Ia-norm",
@@ -709,13 +681,6 @@
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 11,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
-    "sn2003U": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
       "storage_file": "templates_Ia_onir.hdf5"
     },
     "sn2003W": {
@@ -802,13 +767,6 @@
       "epochs": 19,
       "storage_file": "templates_Ia_onir.hdf5"
     },
-    "sn2004ey": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
     "sn2005M": {
       "type": "Ia",
       "subtype": "Ia-91T",
@@ -835,13 +793,6 @@
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 67,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
-    "sn2005de": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
       "storage_file": "templates_Ia_onir.hdf5"
     },
     "sn2005eq": {
@@ -933,34 +884,6 @@
       "subtype": "Ia-91T",
       "redshift": 0.0,
       "epochs": 3,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
-    "sn2006dm": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
-    "sn2006dw": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
-    "sn2006ef": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
-    "sn2006ej": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
       "storage_file": "templates_Ia_onir.hdf5"
     },
     "sn2006em": {
@@ -3400,7 +3323,7 @@
       ]
     },
     "Ia": {
-      "count": 161,
+      "count": 150,
       "storage_file": "templates_Ia_onir.hdf5",
       "template_names": [
         "ASASSN-15ga",
@@ -3430,7 +3353,6 @@
         "sn1995ac",
         "sn1995al",
         "sn1995bd",
-        "sn1996C",
         "sn1996X",
         "sn1997bp",
         "sn1997bq",
@@ -3459,8 +3381,6 @@
         "sn2001ay",
         "sn2001az",
         "sn2001bf",
-        "sn2001br",
-        "sn2001ck",
         "sn2001da",
         "sn2001eh",
         "sn2001el",
@@ -3475,13 +3395,11 @@
         "sn2002eu",
         "sn2002fb",
         "sn2002fk",
-        "sn2002ha",
         "sn2002he",
         "sn2002hu",
         "sn2002ic",
         "sn2002jy",
         "sn2002kf",
-        "sn2003U",
         "sn2003W",
         "sn2003Y",
         "sn2003cg",
@@ -3494,12 +3412,10 @@
         "sn2004S",
         "sn2004dt",
         "sn2004eo",
-        "sn2004ey",
         "sn2005M",
         "sn2005bl",
         "sn2005cc",
         "sn2005cf",
-        "sn2005de",
         "sn2005eq",
         "sn2005gj",
         "sn2005hj",
@@ -3513,10 +3429,6 @@
         "sn2006bz",
         "sn2006cs",
         "sn2006cz",
-        "sn2006dm",
-        "sn2006dw",
-        "sn2006ef",
-        "sn2006ej",
         "sn2006em",
         "sn2006gt",
         "sn2006gz",

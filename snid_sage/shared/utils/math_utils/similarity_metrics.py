@@ -334,6 +334,22 @@ def compute_rlap_ccc_metric(
                     a_window = a[start_idx:end_idx]
                     b_window = b[start_idx:end_idx]
 
+                # ------------------------------------------------------------------
+                # Local apodization of the overlap window before CCC
+                # ------------------------------------------------------------------
+                try:
+                    from snid_sage.snid.preprocessing import apodize as _snid_apodize  # type: ignore
+                    if a_window.size > 1 and b_window.size > 1:
+                        apodize_percent = 10.0  # Match phase-2 correlation default
+                        n1 = 0
+                        n2 = a_window.size - 1
+                        if n2 >= n1:
+                            a_window = _snid_apodize(a_window, n1, n2, percent=apodize_percent)
+                            b_window = _snid_apodize(b_window, n1, n2, percent=apodize_percent)
+                except Exception:
+                    # If apodization is unavailable for any reason, fall back silently
+                    pass
+
                 # Apply rational soft-clip before CCC
                 if 'ccc_sim' not in locals() or (start_idx is not None and end_idx is not None):
                     a_t = _rational_softclip_transform(a_window, alpha=DEFAULT_CCC_SOFTCLIP_ALPHA)

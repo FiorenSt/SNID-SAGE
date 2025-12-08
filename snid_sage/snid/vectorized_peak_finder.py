@@ -378,12 +378,13 @@ class VectorizedPeakFinder:
                 width = 0.0
                 z_width = 0.0
             
-            # Calculate R value and final rlap
+            # Calculate R value and final rlap (Tonry-Davis R with correct antisymmetric RMS normalisation)
             arms_raw, _ = aspart(cross_power_peak, self.k1, self.k2, self.k3, self.k4, peak_lag)
             arms_norm = arms_raw / (self.NW_grid * drms_peak * trms_peak)
             
             if arms_norm > 0:
-                r_value = hgt_p / (2 * arms_norm)
+                # Tonry antisymmetric RMS metric: use sqrt(2) in the denominator rather than 2
+                r_value = hgt_p / (np.sqrt(2.0) * arms_norm)
             else:
                 r_value = 0.0
             # Apply optional profile-aware scaling to R
