@@ -170,7 +170,9 @@ def _extract_template_flux(match: Dict[str, Any]) -> np.ndarray:
 def compute_rlap_ccc_metric(
     matches: List[Dict[str, Any]], 
     processed_spectrum: Dict[str, Any],
-    verbose: bool = False
+    verbose: bool = False,
+    *,
+    use_local_rlap: bool = False,
 ) -> List[Dict[str, Any]]:
     """
     Compute RLAP-CCC metric (RLAP * capped_concordance_correlation_coefficient) for template matches.
@@ -361,16 +363,40 @@ def compute_rlap_ccc_metric(
         # Cap CCC to [0, 1] (negative similarities are bad, as requested by user)
         ccc_sim_capped = max(0.0, ccc_sim)
         
-        # Compute RLAP-CCC = RLAP * capped_ccc_similarity
-        rlap = match.get('rlap', 0.0)
-        rlap_ccc = rlap * ccc_sim_capped
+        # Compute RLAP-CCC metric. When requested and available, prefer the
+        # local RLAP variant (based on local antisymmetry) as the primary
+        # metric, while still retaining the global RLAP-CCC for diagnostics.
+        try:
+            rlap_global = float(match.get("rlap", 0.0) or 0.0)
+        except Exception:
+            rlap_global = 0.0
+        try:
+            rlap_local = float(match.get("rlap_local", 0.0) or 0.0)
+        except Exception:
+            rlap_local = 0.0
+
+        use_local_here = bool(
+            use_local_rlap and np.isfinite(rlap_local) and (rlap_local > 0.0)
+        )
+
+        rlap_ccc_global = rlap_global * ccc_sim_capped
+        if use_local_here:
+            rlap_ccc_local = rlap_local * ccc_sim_capped
+            primary_rlap_ccc = rlap_ccc_local
+        else:
+            rlap_ccc_local = float("nan")
+            primary_rlap_ccc = rlap_ccc_global
         
         # Create enhanced match
         enhanced_match = match.copy()
         enhanced_match.update({
-            'ccc_similarity': ccc_sim,
-            'ccc_similarity_capped': ccc_sim_capped,
-            'rlap_ccc': rlap_ccc
+            "ccc_similarity": ccc_sim,
+            "ccc_similarity_capped": ccc_sim_capped,
+            # Primary composite metric used by clustering / summaries
+            "rlap_ccc": primary_rlap_ccc,
+            # Diagnostics: keep track of which flavour was actually used
+            "rlap_ccc_global": rlap_ccc_global,
+            "rlap_ccc_local": rlap_ccc_local,
         })
         
         enhanced_matches.append(enhanced_match)
@@ -831,206 +857,3 @@ def _robust_sigma(residual: np.ndarray, *, mode: str = "mad", window: int = 51, 
         sigma_val = max(min_sigma, 1.4826 * mad)
     return np.full(n, sigma_val, dtype=float), sigma_val
 
-
-def compute_chi_square_metric(
-    matches: List[Dict[str, Any]],
-    processed_spectrum: Dict[str, Any],
-    *,
-    sigma_mode: str = "obs_diff_mad",
-    local_window: int = 51,
-    min_sigma: float = 1e-6,
-    huber_delta: Optional[float] = 0.0,
-    verbose: bool = False,
-) -> List[Dict[str, Any]]:
-    """
-    Compute a chi-square style metric per match on the true overlap only, with robust sigma handling.
-
-    Attaches fields per match:
-      - 'chi2': sum((a - alpha b)^2 / sigma^2) over overlap
-      - 'reduced_chi2': chi2 / max(1, N - p) with p=1 for fitted scale alpha
-      - 'scale_alpha': least-squares scale that best fits template to observed within overlap
-      - 'sigma_mode': the chosen sigma mode
-      - 'sigma_value': scalar sigma (or median if local windowed)
-      - 'rlap_chi': rlap / (1 + reduced_chi2)
-    """
-    if not matches:
-        return matches
-
-    # Choose base flattened spectrum like in compute_rlap_ccc_metric
-    if "tapered_flux" in processed_spectrum and processed_spectrum["tapered_flux"] is not None:
-        base_flux = processed_spectrum["tapered_flux"]
-    elif "display_flat" in processed_spectrum and processed_spectrum["display_flat"] is not None:
-        base_flux = processed_spectrum["display_flat"]
-    elif "flat_flux" in processed_spectrum and processed_spectrum["flat_flux"] is not None:
-        base_flux = processed_spectrum["flat_flux"]
-    else:
-        base_flux = processed_spectrum.get("tapered_flux")
-
-    if base_flux is None:
-        return matches
-
-    base_flux = np.asarray(base_flux, dtype=float)
-    le_val = processed_spectrum.get("left_edge", 0)
-    re_val = processed_spectrum.get("right_edge", None)
-    if le_val is None:
-        le_val = 0
-    if re_val is None:
-        re_val = len(base_flux) - 1
-    left_edge = int(le_val)
-    right_edge = int(re_val)
-    expected_len = right_edge - left_edge + 1
-    if len(base_flux) == expected_len:
-        input_flux = base_flux
-    else:
-        input_flux = base_flux[left_edge:right_edge + 1]
-
-    enhanced: list[Dict[str, Any]] = []
-    for i, match in enumerate(matches):
-        tpl_flux = _extract_template_flux_exact(match)
-        if tpl_flux is None or tpl_flux.size == 0:
-            enhanced.append(match.copy())
-            continue
-
-        try:
-            a = np.asarray(input_flux, dtype=float)
-            b = np.asarray(tpl_flux, dtype=float)
-            n = min(len(a), len(b))
-            if n == 0:
-                red_chi2 = float("inf")
-                alpha = 0.0
-                sigma_summary = 0.0
-            else:
-                # Overlap indices if provided
-                start_idx = None
-                end_idx = None
-                try:
-                    overlap_indices = match.get('overlap_indices') or {}
-                    if isinstance(overlap_indices, dict):
-                        start_idx = int(overlap_indices.get('start'))
-                        end_idx = int(overlap_indices.get('end')) + 1
-                        if start_idx < 0 or end_idx <= start_idx or end_idx > n:
-                            start_idx = None
-                            end_idx = None
-                except Exception:
-                    start_idx = None
-                    end_idx = None
-
-                if start_idx is None or end_idx is None:
-                    # Compute contiguous joint valid slice
-                    tol = 1e-12
-                    joint_mask = np.isfinite(a) & np.isfinite(b) & (np.abs(a) > tol) & (np.abs(b) > tol)
-                    if not np.any(joint_mask):
-                        red_chi2 = float("inf")
-                        alpha = 0.0
-                        sigma_summary = 0.0
-                        new_match = match.copy()
-                        new_match.update({
-                            'chi2': float("inf"),
-                            'reduced_chi2': red_chi2,
-                            'scale_alpha': alpha,
-                            'sigma_mode': sigma_mode,
-                            'sigma_value': sigma_summary,
-                            'rlap_chi': 0.0,
-                        })
-                        enhanced.append(new_match)
-                        continue
-                    idx = np.flatnonzero(joint_mask)
-                    start_idx = int(idx[0])
-                    end_idx = int(idx[-1]) + 1
-
-                a_win = a[start_idx:end_idx]
-                b_win = b[start_idx:end_idx]
-
-                # First pass: unweighted scale fit
-                alpha = _fit_scale_coefficient(a_win, b_win, None)
-                resid = a_win - alpha * b_win
-
-                # Sigma estimation (independent of template by default)
-                sigma_mode_l = (sigma_mode or "").lower()
-                if sigma_mode_l.startswith("obs_"):
-                    # Estimate sigma from observed signal only (avoid residual circularity)
-                    if sigma_mode_l == "obs_diff_mad":
-                        # Use MAD on first differences (noise ~ diff/√2)
-                        if len(a_win) >= 3:
-                            da = np.diff(a_win)
-                            med = float(np.median(da))
-                            mad = float(np.median(np.abs(da - med)))
-                            sigma_scalar = max(min_sigma, 1.4826 * mad / np.sqrt(2.0))
-                        else:
-                            sigma_scalar = 1.0
-                        sigma_vec = np.full(len(a_win), sigma_scalar, dtype=float)
-                        sigma_summary = float(sigma_scalar)
-                    elif sigma_mode_l == "obs_local_mad":
-                        # Rolling MAD on observed in a window
-                        w = int(max(3, local_window | 1))
-                        half = w // 2
-                        sig = np.empty(len(a_win), dtype=float)
-                        for ii in range(len(a_win)):
-                            lo = max(0, ii - half)
-                            hi = min(len(a_win), ii + half + 1)
-                            seg = a_win[lo:hi]
-                            m = float(np.median(seg))
-                            mad = float(np.median(np.abs(seg - m)))
-                            sig[ii] = max(min_sigma, 1.4826 * mad)
-                        sigma_vec = sig
-                        sigma_summary = float(np.median(sig))
-                    else:
-                        # Fallback to global MAD on observed
-                        m = float(np.median(a_win))
-                        mad = float(np.median(np.abs(a_win - m)))
-                        sigma_scalar = max(min_sigma, 1.4826 * mad)
-                        sigma_vec = np.full(len(a_win), sigma_scalar, dtype=float)
-                        sigma_summary = float(sigma_scalar)
-                else:
-                    # Residual-based sigma modes
-                    sigma_vec, sigma_summary = _robust_sigma(resid, mode=sigma_mode_l or "mad", window=local_window, min_sigma=min_sigma)
-
-                # Weighted chi-square with sigma_vec
-                w = 1.0 / (sigma_vec * sigma_vec)
-                # Optional: refine alpha with weights
-                alpha = _fit_scale_coefficient(a_win, b_win, w)
-                resid = a_win - alpha * b_win
-                if huber_delta and huber_delta > 0.0:
-                    # Huber loss approximation to reduce influence of large residuals
-                    scaled = resid / sigma_vec
-                    d = float(huber_delta)
-                    quad = np.minimum(np.abs(scaled), d)
-                    lin = np.maximum(np.abs(scaled) - d, 0.0)
-                    chi2 = float(np.sum(quad * quad + 2 * d * lin))
-                else:
-                    chi2 = float(np.sum((resid * np.sqrt(w)) ** 2))
-                dof = max(1, len(a_win) - 1)  # -1 for fitted alpha
-                red_chi2 = chi2 / float(dof)
-
-            rlap = float(match.get('rlap', 0.0))
-            rlap_chi = rlap / (1.0 + float(red_chi2)) if np.isfinite(red_chi2) else 0.0
-
-            new_match = match.copy()
-            new_match.update({
-                'chi2': float(chi2) if 'chi2' in locals() else float('inf'),
-                'reduced_chi2': float(red_chi2),
-                'scale_alpha': float(alpha),
-                'sigma_mode': str(sigma_mode),
-                'sigma_value': float(sigma_summary),
-                'rlap_chi': float(rlap_chi),
-            })
-            enhanced.append(new_match)
-
-            if verbose and i < 5:
-                logger.debug(
-                    f"Match {i}: RLAP={rlap:.2f}, alpha={alpha:.3f}, red_chi2={red_chi2:.3f}, RLAP-Chi={rlap_chi:.3f}"
-                )
-
-        except Exception:
-            new_match = match.copy()
-            new_match.update({
-                'chi2': float('inf'),
-                'reduced_chi2': float('inf'),
-                'scale_alpha': 0.0,
-                'sigma_mode': str(sigma_mode),
-                'sigma_value': 0.0,
-                'rlap_chi': 0.0,
-            })
-            enhanced.append(new_match)
-
-    return enhanced

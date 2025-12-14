@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1751831068.0201683,
-  "template_count": 604,
+  "template_count": 603,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -2024,13 +2024,6 @@
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006cj": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 8,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2006cp": {
@@ -4366,7 +4359,7 @@
       ]
     },
     "Ia": {
-      "count": 263,
+      "count": 262,
       "storage_file": "templates_Ia.hdf5",
       "template_names": [
         "2003fg",
@@ -4559,7 +4552,6 @@
         "sn2006bt",
         "sn2006bz",
         "sn2006cf",
-        "sn2006cj",
         "sn2006cp",
         "sn2006cs",
         "sn2006cz",

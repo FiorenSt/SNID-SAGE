@@ -7,11 +7,12 @@ over template-by-template processing.
 """
 
 import numpy as np
+import warnings
 
 # Global scaling for redshift uncertainties; fixed to 1.0 (no configurability).
 Z_K = 1.0
 from typing import List, Dict, Tuple, Any, Optional
-from scipy.signal import find_peaks
+from scipy.signal import find_peaks, peak_prominences
 import logging
 
 _LOG = logging.getLogger(__name__)
@@ -172,8 +173,34 @@ class VectorizedPeakFinder:
             peaks = peak_data['peaks']
             template_meta = template_data_dict[template_name]
             template_rms = peak_data['template_rms']
+
+            # Phase-1 selection policy: keep only the single best peak per template
+            # (hard top-1; see snid.py::_process_template_peaks).
+            MAX_PHASE1_PEAKS_PER_TEMPLATE = 1
+            selected_peaks: List[int] = []
+            # Phase-1 uses a hard top-1 peak policy per template.
+            try:
+                peaks_int = [int(p) for p in peaks]
+                peaks_int = [p for p in peaks_int if 0 <= p < int(self.NW_grid)]
+                if peaks_int:
+                    mid0 = int(self.NW_grid // 2)
+                    peaks_int.sort(
+                        key=lambda i: (
+                            -float(correlation[i]) if np.isfinite(correlation[i]) else float("inf"),
+                            abs(int(i) - mid0),
+                        )
+                    )
+                    selected_peaks = peaks_int[:MAX_PHASE1_PEAKS_PER_TEMPLATE]
+            except Exception:
+                selected_peaks = []
+
+            if not selected_peaks:
+                try:
+                    selected_peaks = [int(p) for p in peaks][:MAX_PHASE1_PEAKS_PER_TEMPLATE]
+                except Exception:
+                    selected_peaks = []
             
-            for peak_idx in peaks:
+            for peak_idx in selected_peaks:
                 # Derive refined lag at this correlation peak (bins relative to zero-lag center)
                 # Use a local quadratic fit around the peak on the normalized correlation, 
                 # mirroring the legacy approach for initial centering.
