@@ -149,12 +149,12 @@ class ConfigController:
                     'tooltip': 'Tolerance for wavelength matching in Angstroms'
                 },
                 # SNID-specific analysis parameters
-                'rlapmin': {
-                    'label': 'Correlation Threshold (rlapmin)',
+                'hlapmin': {
+                    'label': 'HLAP-min Threshold (hlapmin)',
                     'widget_type': 'slider',
                     'slider_config': {'from_': 0.0, 'to': 100.0, 'resolution': 0.5},
-                    'validation_rule': self.config_manager._validation_rules['analysis']['rlapmin'],
-                    'tooltip': 'Correlation coefficient threshold for template matching'
+                    'validation_rule': self.config_manager._validation_rules['analysis']['hlapmin'],
+                    'tooltip': 'Minimum HLAP (height × lap) required for template matching'
                 },
                 'lapmin': {
                     'label': 'Overlap Fraction (lapmin)',

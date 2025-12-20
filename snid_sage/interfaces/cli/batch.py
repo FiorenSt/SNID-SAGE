@@ -455,9 +455,9 @@ def process_single_spectrum_optimized(
             type_filter=getattr(args, 'type_filter', None),
             template_filter=getattr(args, 'template_filter', None),
             exclude_templates=getattr(args, 'exclude_templates', None),
-            rlapmin=getattr(args, 'rlapmin', 4.0),
+            hlapmin=getattr(args, 'hlapmin', 0.1),
             lapmin=getattr(args, 'lapmin', 0.3),
-            rlap_ccc_threshold=getattr(args, 'rlap_ccc_threshold', 1.8),
+            hlap_ccc_threshold=getattr(args, 'hlap_ccc_threshold', 0.4),
             forced_redshift=used_forced_redshift,
             verbose=False,
             show_plots=False,
@@ -604,7 +604,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
         
         if winning_cluster:
             cluster_matches = winning_cluster.get('matches', [])
-            # Sort cluster matches by best available metric (RLAP-CCC if available, otherwise RLAP) descending
+            # Sort cluster matches by best available metric (HLAP-CCC preferred) descending
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
     
@@ -612,12 +612,12 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
     if not cluster_matches:
         if hasattr(result, 'filtered_matches') and result.filtered_matches:
             cluster_matches = result.filtered_matches
-            # Sort by best available metric (RLAP-CCC if available, otherwise RLAP) descending
+            # Sort by best available metric (HLAP-CCC preferred) descending
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
         elif hasattr(result, 'best_matches') and result.best_matches:
             cluster_matches = result.best_matches
-            # Sort by best available metric (RLAP-CCC if available, otherwise RLAP) descending
+            # Sort by best available metric (HLAP-CCC preferred) descending
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
     
@@ -633,7 +633,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
         'consensus_subtype': result.best_subtype,
         'redshift': result.redshift,
         'redshift_error': result.redshift_error,
-        'rlap': result.rlap,
+        'hlap_ccc': getattr(result, 'hlap_ccc', 0.0),
 
 
         'runtime': result.runtime_sec,
@@ -642,8 +642,8 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
     }
     
     # If we have any matches (from cluster or fallback), override the "best_*" fields
-    # to reflect the true top match according to RLAP-CCC (final metric),
-    # and also expose RLAP-CCC on the summary for downstream reporting.
+    # to reflect the true top match according to the best metric (HLAP-CCC),
+    # and also expose the best metric on the summary for downstream reporting.
     if cluster_matches:
         top_match = cluster_matches[0]
         top_tpl = top_match.get('template', {}) if isinstance(top_match.get('template'), dict) else {}
@@ -652,9 +652,9 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
         summary['best_template_subtype'] = top_tpl.get('subtype', summary['best_template_subtype'])
         # Use the top match's redshift/error for "Best Match Redshift"
         summary['redshift'] = top_match.get('redshift', summary['redshift'])
-        summary['redshift_error'] = top_match.get('redshift_error', summary['redshift_error'])
-        # Always expose RLAP-CCC; if missing, fall back to RLAP but keep the key present
-        summary['rlap_ccc'] = top_match.get('rlap_ccc', top_match.get('rlap', summary.get('rlap', 0.0)))
+        summary['redshift_error'] = top_match.get('sigma_z', summary['redshift_error'])
+        # Always expose HLAP-CCC; if missing, fall back to HLAP
+        summary['hlap_ccc'] = top_match.get('hlap_1mccc', top_match.get('hlap_ccc', top_match.get('hlap', summary.get('hlap_ccc', 0.0))))
         # Propagate age for top match if available (used as fallback when no cluster age)
         if isinstance(top_tpl, dict):
             summary['age'] = top_tpl.get('age', summary.get('age', None))
@@ -746,8 +746,6 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
         
         # Calculate enhanced cluster statistics using hybrid methods
         if cluster_matches:
-            rlaps = np.array([m['rlap'] for m in cluster_matches])
-            
             # Collect redshift data with uncertainties for balanced estimation
             redshifts_with_errors = []
             redshift_errors = []
@@ -762,7 +760,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 
                 # Always collect redshift data (uncertainties are always available)
                 z = m.get('redshift')
-                z_err = m.get('redshift_error', 0.0)
+                z_err = m.get('sigma_z', float('nan'))
                 metric_val = get_best_metric_value(m)
                 
                 if z is not None and np.isfinite(z) and z_err > 0:
@@ -796,7 +794,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 summary['cluster_age_weighted'] = np.nan
                 summary['cluster_age_err_weighted'] = np.nan
             
-            summary['cluster_rlap_mean'] = np.mean(rlaps)
+            summary['cluster_mean_metric'] = float(np.mean(metric_values)) if metric_values is not None and len(metric_values) else 0.0
 
             # Compute winning subtype aggregates and penalized score within the winning type
             try:
@@ -818,13 +816,13 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                         # Group for confidence computation
                         if st not in by_subtype:
                             by_subtype[st] = {'metrics': [], 'z_errs': []}
-                        # Best available metric (RLAP-CCC preferred)
+                        # Best available metric (HLAP-CCC preferred)
                         try:
                             from snid_sage.shared.utils.math_utils import get_best_metric_value
                             metric_val_all = float(get_best_metric_value(m))
                         except Exception:
-                            metric_val_all = float(m.get('rlap', 0.0) or 0.0)
-                        zerr_all = m.get('redshift_error', None)
+                            metric_val_all = float(m.get('hlap', 0.0) or 0.0)
+                        zerr_all = m.get('sigma_z', None)
                         by_subtype[st]['metrics'].append(metric_val_all)
                         by_subtype[st]['z_errs'].append(float(zerr_all) if (zerr_all is not None) else float('nan'))
                         # Keep the list of matches only for the winning subtype aggregates
@@ -839,13 +837,13 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 for m in subtype_matches:
                     tpl = m.get('template', {}) if isinstance(m.get('template'), dict) else {}
                     z = m.get('redshift')
-                    zerr = m.get('redshift_error', None)
-                    # Best available metric (RLAP-CCC preferred)
+                    zerr = m.get('sigma_z', None)
+                    # Best available metric (HLAP-CCC preferred)
                     try:
                         from snid_sage.shared.utils.math_utils import get_best_metric_value
                         metric_val = float(get_best_metric_value(m))
                     except Exception:
-                        metric_val = float(m.get('rlap', 0.0) or 0.0)
+                        metric_val = float(m.get('hlap', 0.0) or 0.0)
                     if z is not None and np.isfinite(z):
                         z_vals.append(float(z))
                         z_errs.append(float(zerr) if (zerr is not None) else float('nan'))
@@ -986,8 +984,9 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
             if active:
                 pairs = []
                 for m in active:
+                    from snid_sage.shared.utils.math_utils import get_best_metric_value
                     metric = float(get_best_metric_value(m))
-                    sigma = m.get('redshift_error', m.get('z_err', m.get('sigma_z', None)))
+                    sigma = m.get('sigma_z', m.get('z_err', None))
                     sigma = float(sigma) if sigma is not None else float('nan')
                     pairs.append((metric, sigma))
                 pairs.sort(key=lambda x: x[0], reverse=True)
@@ -1005,18 +1004,18 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 penalty = min(mets.size / 5.0, 1.0) if mets.size else 0.0
                 penalized = mean_top * penalty
                 summary['cluster_penalized_score'] = penalized
-                if penalized > 10.0:
+                if penalized > 2.5:
                     summary['cluster_quality_category'] = 'High'
-                    summary['cluster_quality_description'] = f'Excellent match quality (Q: {penalized:.1f})'
-                elif penalized >= 4.0:
+                    summary['cluster_quality_description'] = f'Excellent match quality (HLAP-CCC: {penalized:.2f})'
+                elif penalized >= 1.0:
                     summary['cluster_quality_category'] = 'Medium'
-                    summary['cluster_quality_description'] = f'Good match quality (Q: {penalized:.1f})'
-                elif penalized >= 2.5:
+                    summary['cluster_quality_description'] = f'Good match quality (HLAP-CCC: {penalized:.2f})'
+                elif penalized >= 0.6:
                     summary['cluster_quality_category'] = 'Low'
-                    summary['cluster_quality_description'] = f'Poor match quality (Q: {penalized:.1f})'
+                    summary['cluster_quality_description'] = f'Poor match quality (HLAP-CCC: {penalized:.2f})'
                 else:
                     summary['cluster_quality_category'] = 'Very Low'
-                    summary['cluster_quality_description'] = f'Very poor match quality (Q: {penalized:.1f})'
+                    summary['cluster_quality_description'] = f'Very poor match quality (HLAP-CCC: {penalized:.2f})'
         except Exception:
             pass
         
@@ -1129,7 +1128,7 @@ def _save_spectrum_outputs(
                     elif hasattr(result, 'best_matches') and result.best_matches:
                         plot_matches = result.best_matches
                 
-                # CRITICAL: Sort all plot matches by best available metric (RLAP-CCC if available, otherwise RLAP) descending
+                # CRITICAL: Sort all plot matches by best available metric (HLAP-CCC preferred) descending
                 if plot_matches:
                     from snid_sage.shared.utils.math_utils import get_best_metric_value
                     plot_matches = sorted(plot_matches, key=get_best_metric_value, reverse=True)
@@ -1319,10 +1318,11 @@ Examples:
         help="Maximum redshift to consider (default: 1.0 for optical, 2.5 for ONIR)"
     )
     analysis_group.add_argument(
-        "--rlapmin",
+        "--hlapmin",
+        dest="hlapmin",
         type=float,
-        default=4.0,
-        help="Minimum rlap value required"
+        default=0.1,
+        help="Minimum HLAP value required (HLAP = height * lap)"
     )
     analysis_group.add_argument(
         "--lapmin",
@@ -1331,11 +1331,11 @@ Examples:
         help="Minimum overlap fraction required"
     )
     analysis_group.add_argument(
-        "--rlap-ccc-threshold",
-        dest="rlap_ccc_threshold",
+        "--hlap-ccc-threshold",
+        dest="hlap_ccc_threshold",
         type=float,
-        default=1.8,
-        help="Minimum RLAP-CCC value required for clustering"
+        default=0.4,
+        help="Minimum HLAP-CCC value required for clustering (HLAP-CCC: HLAP/(1−CCC))"
     )
     analysis_group.add_argument(
         "--forced-redshift", 
@@ -1588,7 +1588,7 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
             age_str = f"{float(age_val):.1f}" if isinstance(age_val, (int, float)) else ""
             age_se_str = f"{float(age_err_val):.1f}" if isinstance(age_err_val, (int, float)) else "nan"
 
-            # Display penalized top-5 RLAP-CCC for winning subtype when available; fallback to best metric
+            # Display penalized top-5 best metric for winning subtype when available
             metric_val = summary.get('winning_subtype_penalized_score', None)
             if not isinstance(metric_val, (int, float)) or not np.isfinite(metric_val):
                 from snid_sage.shared.utils.math_utils import get_best_metric_value
@@ -1701,7 +1701,7 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
                         show_se = isinstance(se_val, (int, float)) and np.isfinite(se_val) and (float(se_val) > 0.0)
                     se_txt = f" (Err={se_val:.6f})" if show_se else ""
                     report.append(f"      Weighted Redshift: {summary['cluster_redshift_weighted']:.6f}{se_txt}")
-                    report.append(f"      Cluster RLAP: {summary.get('cluster_rlap_mean', 0):.2f}")
+                    report.append(f"      Cluster mean metric: {summary.get('cluster_mean_metric', 0):.2f}")
                 
                 report.append(f"   Best Match Redshift: {summary.get('redshift', 0):.6f} ± {summary.get('redshift_error', 0):.6f}")
             else:
@@ -1743,7 +1743,7 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
         report.append("These statistics describe the quality of the batch processing, not the science.")
         report.append("")
         
-        # RLAP-CCC distribution (analysis quality)
+        # Best-metric distribution (analysis quality)
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         all_metrics = [get_best_metric_value(summary) for _, _, _, summary in successful_results]
         avg_metric = sum(all_metrics) / len(all_metrics) if all_metrics else 0
@@ -1751,9 +1751,9 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
         medium_quality = sum(1 for metric in all_metrics if 5.0 <= metric < 10.0)
         low_quality = sum(1 for metric in all_metrics if metric < 5.0)
         
-        # Determine metric name (RLAP-CCC if available, otherwise RLAP)
+        # Determine metric name (HLAP-CCC preferred)
         from snid_sage.shared.utils.math_utils import get_best_metric_name
-        metric_name = get_best_metric_name(successful_results[0][3]) if successful_results else "RLAP"
+        metric_name = get_best_metric_name(successful_results[0][3]) if successful_results else "HLAP-CCC"
         
         report.append(f"ANALYSIS QUALITY ({metric_name} Distribution):")
         report.append(f"   Average {metric_name}: {avg_metric:.2f}")
@@ -1970,7 +1970,7 @@ def _export_results_table(results: List[Tuple], output_dir: Path) -> Optional[Pa
                     from snid_sage.shared.utils.math_utils import get_best_metric_value
                     q_cluster = get_best_metric_value(summary)
                 except Exception:
-                    q_cluster = summary.get('rlap', None)
+                    q_cluster = summary.get('hlap_ccc', None)
             row['Q_cluster'] = q_cluster
 
             row['match_quality'] = summary.get('cluster_quality_category', None)
@@ -2274,9 +2274,9 @@ def main(args: argparse.Namespace) -> int:
                 'zmax': float(args.zmax),
                 'age_min': getattr(args, 'age_min', None),
                 'age_max': getattr(args, 'age_max', None),
-                'rlapmin': float(getattr(args, 'rlapmin', 4.0)),
+                'hlapmin': float(getattr(args, 'hlapmin', 0.1)),
                 'lapmin': float(getattr(args, 'lapmin', 0.3)),
-                'rlap_ccc_threshold': float(getattr(args, 'rlap_ccc_threshold', 1.8)),
+                'hlap_ccc_threshold': float(getattr(args, 'hlap_ccc_threshold', 0.4)),
                 'forced_redshift': getattr(args, 'forced_redshift', None),
                 'type_filter': getattr(args, 'type_filter', None),
                 'template_filter': getattr(args, 'template_filter', None),
@@ -2359,7 +2359,7 @@ def main(args: argparse.Namespace) -> int:
                                         from snid_sage.shared.utils.math_utils import get_best_metric_value
                                         metric_value = get_best_metric_value(summary)
                                     except Exception:
-                                        metric_value = summary.get('rlap', 0.0)
+                                        metric_value = summary.get('hlap_ccc', 0.0)
                                 type_display = f"{consensus_type} {consensus_subtype}".strip()
                                 try:
                                     age_str = f" age={float(age_value):.1f}" if isinstance(age_value, (int, float)) and np.isfinite(age_value) else ""

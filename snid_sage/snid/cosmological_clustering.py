@@ -27,7 +27,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 # Note: find_winning_cluster_exact_match has been replaced by find_winning_cluster_top5_method
-# The new method uses top-5 best metric values (prefer RLAP-CCC; fallback to RLAP) with penalties for small clusters
+# The new method uses top-5 best metric values (HLAP-CCC preferred; fallback to HLAP) with penalties for small clusters
 
 
 
@@ -100,7 +100,7 @@ def calculate_joint_subtype_estimates_from_cluster(
             age = template.get('age', 0.0)
             metric_val = get_best_metric_value(match)
             z = match.get('redshift')
-            z_err = match.get('redshift_error', 0.0)
+            z_err = match.get('sigma_z', float('nan'))
             if z is not None and np.isfinite(z) and z_err > 0:
                 redshifts_for_estimation.append(z)
                 redshift_errors_for_estimation.append(z_err)
@@ -173,7 +173,7 @@ def _compute_weighted_cluster_stats(
             age = template.get('age', 0.0)
             metric_val = get_best_metric_value(match)
             z = match.get('redshift')
-            z_err = match.get('redshift_error', 0.0)
+            z_err = match.get('sigma_z', float('nan'))
             if z is not None and np.isfinite(z) and z_err > 0:
                 redshifts_for_estimation.append(z)
                 redshift_errors_for_estimation.append(z_err)
@@ -223,10 +223,11 @@ def _compute_weighted_cluster_stats(
 def perform_direct_gmm_clustering(
     matches: List[Dict[str, Any]], 
     min_matches_per_type: int = 2,
-    quality_threshold: float = 0.02,  # Direct redshift threshold
+    # Deprecated/unused quality taxonomy: kept only for signature compatibility.
+    quality_threshold: float = 0.02,
     max_clusters_per_type: int = 10,
     verbose: bool = False,
-    rlap_ccc_threshold: float = 1.8,  # NEW: RLAP-CCC threshold for clustering
+    hlap_ccc_threshold: float = 0.4,  # Best-metric threshold for clustering (HLAP-CCC)
     use_weighted_gmm: Optional[bool] = None,  # Hidden option: when True, use weighted GMM + weighted BIC
     # Optional progress reporting (message, percent). If provided, emit per-type updates.
     progress_callback: Optional[Callable[[str, float], None]] = None,
@@ -239,8 +240,8 @@ def perform_direct_gmm_clustering(
     This approach works directly on redshift values without any transformations,
     matching the approach in transformation_comparison_test.py exactly.
     
-    NEW: Now automatically uses the best available similarity metric via 
-    get_best_metric_value(): prefers RLAP-CCC (final metric); falls back to RLAP when needed.
+    NEW: Now automatically uses the best available similarity metric via
+    get_best_metric_value(): prefers HLAP-CCC; falls back to HLAP when needed.
     
     Parameters
     ----------
@@ -254,8 +255,9 @@ def perform_direct_gmm_clustering(
         Maximum clusters for GMM
     verbose : bool, optional
         Enable detailed logging
-    rlap_ccc_threshold : float, optional
-        Minimum RLAP-CCC value required for matches to be considered for clustering
+    hlap_ccc_threshold : float, optional
+        Minimum HLAP-CCC value required for matches to be considered for clustering
+        (HLAP-CCC: HLAP/(1−CCC), with CCC estimated via 99.5% trimming).
         
     Hidden Options
     --------------
@@ -282,34 +284,33 @@ def perform_direct_gmm_clustering(
             use_weighted_gmm = False
     
     # Determine which metric to use - now using get_best_metric_value()
-    # This automatically prioritizes RLAP-CCC > RLAP
-    # Standardize metric naming; do not imply comparison phrasing.
-    # We always prefer the final RLAP-CCC metric when available.
-    metric_name = "RLAP-CCC"
+    # This automatically prioritizes HLAP-CCC > HLAP
+    metric_name = "HLAP-CCC"
     metric_key = "best_metric"  # Not actually used anymore, see get_best_metric_value() calls
     
     _LOGGER.info(f"🔄 Starting direct GMM {metric_name} clustering")
-    _LOGGER.info(f"📐 Quality threshold: {quality_threshold:.3f} in redshift space")
-    _LOGGER.info(f"🎯 RLAP-CCC threshold: {rlap_ccc_threshold:.1f} (matches below this are excluded from clustering)")
+    # quality_threshold is retained for compatibility, but we no longer classify clusters
+    # as tight/moderate/loose/very_loose.
+    _LOGGER.info(f"🎯 HLAP-CCC threshold: {hlap_ccc_threshold:.1f} (matches below this are excluded from clustering)")
     
-    # Filter matches by RLAP-CCC threshold before grouping
+    # Filter matches by best-metric threshold before grouping
     from snid_sage.shared.utils.math_utils import get_best_metric_value
     filtered_matches = []
     excluded_count = 0
     
     for match in matches:
         metric_value = get_best_metric_value(match)
-        if metric_value >= rlap_ccc_threshold:
+        if metric_value >= hlap_ccc_threshold:
             filtered_matches.append(match)
         else:
             excluded_count += 1
     
     if excluded_count > 0:
-        _LOGGER.info(f"🙅 Filtered out {excluded_count} matches below RLAP-CCC threshold {rlap_ccc_threshold:.1f}")
+        _LOGGER.info(f"🙅 Filtered out {excluded_count} matches below HLAP-CCC threshold {hlap_ccc_threshold:.1f}")
         _LOGGER.info(f"✅ Proceeding with {len(filtered_matches)} matches for clustering")
     
     if not filtered_matches:
-        _LOGGER.info(f"No matches above RLAP-CCC threshold {rlap_ccc_threshold:.1f}")
+        _LOGGER.info(f"No matches above HLAP-CCC threshold {hlap_ccc_threshold:.1f}")
         return {'success': False, 'reason': 'no_matches_above_threshold'}
     
     # Group filtered matches by type
@@ -387,7 +388,7 @@ def perform_direct_gmm_clustering(
                     continue
                 
                 # Calculate mean metric value for this cluster
-                cluster_metric_values = [match.get(metric_key, match.get('rlap', 0)) for match in cluster_info['matches']]
+                cluster_metric_values = [match.get(metric_key, match.get('hlap', 0.0)) for match in cluster_info['matches']]
                 mean_metric = np.mean(cluster_metric_values) if cluster_metric_values else 0.0
                 
                 cluster_candidate = {
@@ -395,11 +396,9 @@ def perform_direct_gmm_clustering(
                     'cluster_id': cluster_info['id'],
                     'matches': cluster_info['matches'],
                     'size': cluster_info['size'],
-                    'mean_rlap': cluster_info['mean_rlap'],  # Keep original RLAP for compatibility
-                    'mean_metric': mean_metric,  # NEW: Mean of selected metric (RLAP-CCC or RLAP)
+                    'mean_metric': mean_metric,  # Mean of selected best metric (HLAP-CCC / HLAP)
                     'metric_name': metric_name,  # NEW: Name of metric used
                     'redshift_span': cluster_info['redshift_span'],
-                    'redshift_quality': cluster_info['redshift_quality'],
                     'cluster_method': 'direct_gmm',
                     'quality_score': 0, # This will be updated by the new method
                     'composite_score': 0, # This will be updated by the new method
@@ -542,7 +541,7 @@ def perform_direct_gmm_clustering(
     # Update the best cluster with new quality metrics
     best_cluster['quality_assessment'] = quality_assessment['quality_assessment']
     best_cluster['confidence_assessment'] = quality_assessment['confidence_assessment']
-    best_cluster['selection_method'] = 'top5_rlap_ccc'
+    best_cluster['selection_method'] = 'top5_best_metric'
     
     total_time = time.time() - start_time
     
@@ -550,8 +549,7 @@ def perform_direct_gmm_clustering(
         _LOGGER.info("🏆 All cluster candidates (before new selection method):")
         for i, candidate in enumerate(all_cluster_candidates[:5]):
             _LOGGER.info(f"   {i+1}. {candidate['type']} cluster {candidate['cluster_id']}: "
-                        f"size={candidate['size']}, z-span={candidate['redshift_span']:.4f}, "
-                        f"quality={candidate['redshift_quality']}")
+                        f"size={candidate['size']}, z-span={candidate['redshift_span']:.4f}")
     
     _LOGGER.info(f"✅ Direct GMM clustering completed in {total_time:.3f}s")
     _LOGGER.info(f"Best cluster: {best_cluster['type']} cluster {best_cluster.get('cluster_id', 0)} "
@@ -562,7 +560,7 @@ def perform_direct_gmm_clustering(
         'success': True,
         'method': 'direct_gmm',
         'metric_used': metric_name,  # NEW: Which metric was used
-        'selection_method': 'top5_rlap_ccc',  # NEW: Selection method used
+        'selection_method': 'top5_best_metric',  # Selection method used
         'type_clustering_results': clustering_results,
         'best_cluster': best_cluster,
         'all_candidates': all_cluster_candidates,
@@ -592,10 +590,9 @@ def _perform_direct_gmm_clustering(
     
     try:
         redshifts = np.array([m['redshift'] for m in type_matches])
-        rlaps = np.array([m['rlap'] for m in type_matches])  # Keep for compatibility
         from snid_sage.shared.utils.math_utils import get_best_metric_value, calculate_combined_weights
         from snid_sage.shared.utils.match_utils import extract_redshift_sigma
-        metric_values = np.array([get_best_metric_value(m) for m in type_matches])  # Use best available metric (CCC > Cos > RLAP)
+        metric_values = np.array([get_best_metric_value(m) for m in type_matches])  # Use best available metric
         sigmas = np.array([extract_redshift_sigma(m) for m in type_matches], dtype=float)
         
         # Suppress sklearn convergence warnings for cleaner output
@@ -611,7 +608,7 @@ def _perform_direct_gmm_clustering(
             # Single match or too few for multi-cluster GMM - create single cluster
             _LOGGER.info(f"Creating single cluster for {sn_type} ({n_matches} matches)")
             return _create_single_cluster_result(
-                type_matches, sn_type, redshifts, rlaps, quality_threshold, "best_metric"
+                type_matches, sn_type, redshifts, quality_threshold, "best_metric"
             )
         
         # Build weights only when requested; default to unweighted GMM
@@ -750,19 +747,10 @@ def _perform_direct_gmm_clustering(
             # Build clusters from final segments
             for new_id, (orig_label, idx, is_gap) in enumerate(segment_records):
                 cluster_redshifts = redshifts[idx]
-                cluster_rlaps = rlaps[idx]
                 cluster_metric_values = metric_values[idx]
                 cluster_matches = [type_matches[i] for i in idx]
 
                 redshift_span = float(np.max(cluster_redshifts) - np.min(cluster_redshifts)) if len(cluster_redshifts) > 0 else 0.0
-                if redshift_span <= quality_threshold:
-                    redshift_quality = 'tight'
-                elif redshift_span <= quality_threshold * 2:
-                    redshift_quality = 'moderate'
-                elif redshift_span <= quality_threshold * 4:
-                    redshift_quality = 'loose'
-                else:
-                    redshift_quality = 'very_loose'
 
                 weighted_mean_redshift, _, weighted_redshift_err, _, _ = _compute_weighted_cluster_stats(cluster_matches)
 
@@ -770,17 +758,13 @@ def _perform_direct_gmm_clustering(
                     'id': new_id,
                     'matches': cluster_matches,
                     'size': len(cluster_matches),
-                    'mean_rlap': float(np.mean(cluster_rlaps)) if len(cluster_rlaps) > 0 else 0.0,
-                    'std_rlap': float(np.std(cluster_rlaps)) if len(cluster_rlaps) > 1 else 0.0,
                     'mean_metric': float(np.mean(cluster_metric_values)) if len(cluster_metric_values) > 0 else 0.0,
                     'std_metric': float(np.std(cluster_metric_values)) if len(cluster_metric_values) > 1 else 0.0,
                     'metric_key': metric_key,
                     'weighted_mean_redshift': float(weighted_mean_redshift) if np.isfinite(weighted_mean_redshift) else np.nan,
                     'weighted_redshift_err': float(weighted_redshift_err) if np.isfinite(weighted_redshift_err) else np.nan,
                     'redshift_span': redshift_span,
-                    'redshift_quality': redshift_quality,
                     'cluster_method': 'direct_gmm_contiguous',
-                    'rlap_range': (float(np.min(cluster_rlaps)), float(np.max(cluster_rlaps))) if len(cluster_rlaps) > 0 else (0.0, 0.0),
                     'metric_range': (float(np.min(cluster_metric_values)), float(np.max(cluster_metric_values))) if len(cluster_metric_values) > 0 else (0.0, 0.0),
                     'redshift_range': (float(np.min(cluster_redshifts)), float(np.max(cluster_redshifts))) if len(cluster_redshifts) > 0 else (0.0, 0.0),
                     'top_5_values': [],
@@ -795,7 +779,7 @@ def _perform_direct_gmm_clustering(
                 })
 
                 if verbose:
-                    _LOGGER.info(f"  Segment {new_id} (from label {orig_label}): {redshift_quality} (z-span={redshift_span:.4f})")
+                    _LOGGER.info(f"  Segment {new_id} (from label {orig_label}): z-span={redshift_span:.4f}")
 
             # Replace optimal cluster count with the number of final segments
             optimal_n_clusters = len(final_clusters)
@@ -809,19 +793,10 @@ def _perform_direct_gmm_clustering(
                     continue
 
                 cluster_redshifts = redshifts[cluster_mask]
-                cluster_rlaps = rlaps[cluster_mask]
                 cluster_metric_values = metric_values[cluster_mask]
                 cluster_matches = [type_matches[i] for i in cluster_indices]
 
                 redshift_span = np.max(cluster_redshifts) - np.min(cluster_redshifts)
-                if redshift_span <= quality_threshold:
-                    redshift_quality = 'tight'
-                elif redshift_span <= quality_threshold * 2:
-                    redshift_quality = 'moderate'
-                elif redshift_span <= quality_threshold * 4:
-                    redshift_quality = 'loose'
-                else:
-                    redshift_quality = 'very_loose'
 
                 weighted_mean_redshift, _, weighted_redshift_err, _, _ = _compute_weighted_cluster_stats(cluster_matches)
 
@@ -829,17 +804,13 @@ def _perform_direct_gmm_clustering(
                     'id': cluster_id,
                     'matches': cluster_matches,
                     'size': len(cluster_matches),
-                    'mean_rlap': np.mean(cluster_rlaps),
-                    'std_rlap': np.std(cluster_rlaps) if len(cluster_rlaps) > 1 else 0.0,
                     'mean_metric': np.mean(cluster_metric_values),
                     'std_metric': np.std(cluster_metric_values) if len(cluster_metric_values) > 1 else 0.0,
                     'metric_key': metric_key,
                     'weighted_mean_redshift': weighted_mean_redshift,
                     'weighted_redshift_err': weighted_redshift_err,
                     'redshift_span': redshift_span,
-                    'redshift_quality': redshift_quality,
                     'cluster_method': 'direct_gmm',
-                    'rlap_range': (np.min(cluster_rlaps), np.max(cluster_rlaps)),
                     'metric_range': (np.min(cluster_metric_values), np.max(cluster_metric_values)),
                     'redshift_range': (np.min(cluster_redshifts), np.max(cluster_redshifts)),
                     'top_5_values': [],
@@ -855,7 +826,7 @@ def _perform_direct_gmm_clustering(
                 final_clusters.append(cluster_info)
 
                 if verbose:
-                    _LOGGER.info(f"  Cluster {cluster_id}: {redshift_quality} (z-span={redshift_span:.4f})")
+                    _LOGGER.info(f"  Cluster {cluster_id}: z-span={redshift_span:.4f}")
 
         return {
             'success': True,
@@ -882,7 +853,6 @@ def _create_single_cluster_result(
     type_matches: List[Dict[str, Any]], 
     sn_type: str, 
     redshifts: np.ndarray, 
-    rlaps: np.ndarray,
     quality_threshold: float,
     metric_key: str = 'best_metric'  # DEPRECATED: Now uses get_best_metric_value()
 ) -> Dict[str, Any]:
@@ -894,13 +864,7 @@ def _create_single_cluster_result(
     from snid_sage.shared.utils.math_utils import get_best_metric_value
     metric_values = np.array([get_best_metric_value(m) for m in type_matches])
     
-    # Quality based on redshift span
-    if redshift_span <= quality_threshold:
-        redshift_quality = 'tight'
-    elif redshift_span <= quality_threshold * 2:
-        redshift_quality = 'moderate'
-    else:
-        redshift_quality = 'loose'
+    # No redshift-quality classification (taxonomy removed).
     
     # Calculate enhanced redshift statistics using joint estimation (just extract redshift)
     weighted_mean_redshift, _, weighted_redshift_sd, _, _ = _compute_weighted_cluster_stats(type_matches)
@@ -909,8 +873,6 @@ def _create_single_cluster_result(
         'id': 0,
         'matches': type_matches,
         'size': len(type_matches),
-        'mean_rlap': np.mean(rlaps),
-        'std_rlap': np.std(rlaps) if len(rlaps) > 1 else 0.0,
         'mean_metric': np.mean(metric_values),  # NEW: Mean of selected metric
         'std_metric': np.std(metric_values) if len(metric_values) > 1 else 0.0,  # NEW
         'metric_key': metric_key,  # NEW: Which metric was used
@@ -918,9 +880,7 @@ def _create_single_cluster_result(
         'weighted_mean_redshift': weighted_mean_redshift,
         'weighted_redshift_err': weighted_redshift_sd,
         'redshift_span': redshift_span,
-        'redshift_quality': redshift_quality,
         'cluster_method': 'single_cluster',
-        'rlap_range': (np.min(rlaps), np.max(rlaps)),
         'metric_range': (np.min(metric_values), np.max(metric_values)),  # NEW
         'redshift_range': (np.min(redshifts), np.max(redshifts)),
         'top_5_values': [],
@@ -996,17 +956,17 @@ def choose_subtype_weighted_voting(
         if not subtype or subtype.strip() == '':
             subtype = 'Unknown'
         
-        # Use best available metric (RLAP-CCC if available, otherwise RLAP)
+        # Use best available metric (HLAP-CCC preferred)
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         metric_value = get_best_metric_value(match)
         # Pull per-match redshift uncertainty if available
-        sigma_z = match.get('redshift_error', match.get('z_err', match.get('sigma_z', None)))
+        sigma_z = match.get('sigma_z', match.get('z_err', None))
         
         cluster_members.append({
             'subtype': subtype,
             'metric_value': metric_value,
             'cluster_membership': gamma[i, k_star],
-            'redshift_error': sigma_z
+            'sigma_z': sigma_z
         })
     
     if not cluster_members:
@@ -1030,7 +990,7 @@ def choose_subtype_weighted_voting(
         from snid_sage.shared.utils.math_utils import compute_cluster_weights
         metrics_array = np.asarray([m['metric_value'] for m in top_members], dtype=float)
         sigmas_array = np.asarray([
-            (m.get('redshift_error') if m.get('redshift_error') is not None else np.nan)
+            (m.get('sigma_z') if m.get('sigma_z') is not None else np.nan)
             for m in top_members
         ], dtype=float)
         # Valid where finite and sigma > 0
@@ -1087,7 +1047,7 @@ def choose_subtype_weighted_voting(
 
 
 def create_3d_visualization_data(clustering_results: Dict[str, Any]) -> Dict[str, np.ndarray]:
-    """Prepare data for 3D visualization: redshift vs type vs RLAP/RLAP-CCC."""
+    """Prepare data for 3D visualization: redshift vs type vs best metric (HLAP-CCC / HLAP)."""
     
     redshifts = []
     metric_values = []
@@ -1113,7 +1073,7 @@ def create_3d_visualization_data(clustering_results: Dict[str, Any]) -> Dict[str
             
             for match in candidate.get('matches', []):
                 redshifts.append(match['redshift'])
-                # Use best available metric (RLAP-CCC if available, otherwise RLAP)
+                # Use best available metric (HLAP-CCC preferred)
                 from snid_sage.shared.utils.math_utils import get_best_metric_value
                 metric_values.append(get_best_metric_value(match))
                 types.append(sn_type)
@@ -1137,7 +1097,7 @@ def create_3d_visualization_data(clustering_results: Dict[str, Any]) -> Dict[str
             for cluster in type_result['clusters']:
                 for match in cluster['matches']:
                     redshifts.append(match['redshift'])
-                    # Use best available metric (RLAP-CCC if available, otherwise RLAP)
+                    # Use best available metric (HLAP-CCC preferred)
                     from snid_sage.shared.utils.math_utils import get_best_metric_value
                     metric_values.append(get_best_metric_value(match))
                     types.append(sn_type)
@@ -1147,12 +1107,13 @@ def create_3d_visualization_data(clustering_results: Dict[str, Any]) -> Dict[str
     
     return {
         'redshifts': np.array(redshifts),
-        'rlaps': np.array(metric_values),  # Keep key name for backward compatibility
+        # Best available metric values (HLAP-CCC preferred; fallback to HLAP)
+        'metric_values': np.array(metric_values),
         'types': types,
         'type_indices': np.array(type_indices),
         'cluster_ids': np.array(cluster_ids),
         'type_mapping': type_to_index,
-        'matches': matches  # NEW: Include matches for access to best metric values
+        'matches': matches  # Include matches for access to best metric values
     }
 
 
@@ -1165,7 +1126,7 @@ def find_winning_cluster_top5_method(
     verbose: bool = False
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """
-    Find the winning cluster using the top-5 best metric method (prefer RLAP-CCC; fallback to RLAP).
+    Find the winning cluster using the top-5 best metric method (HLAP-CCC preferred; fallback to HLAP).
     
     This method:
     1. Takes the top 5 best metric values from each cluster (using get_best_metric_value())
@@ -1192,8 +1153,7 @@ def find_winning_cluster_top5_method(
     
     # DEPRECATED: Parameters not used anymore, see get_best_metric_value() calls
     # Standardize metric naming; do not imply comparison phrasing.
-    # We always prefer the final RLAP-CCC metric when available.
-    metric_name = 'RLAP-CCC'
+    metric_name = 'HLAP-CCC'
     
     # Calculate top-5 means for each cluster
     cluster_scores = []
@@ -1206,10 +1166,10 @@ def find_winning_cluster_top5_method(
         # Extract (metric, sigma_z) pairs and sort descending by metric
         metric_sigma_pairs = []
         for match in matches:
-            # Use get_best_metric_value to automatically prioritize RLAP-CCC
+            # Top-5 penalized scoring / comparisons use HLAP-CCC
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             metric = get_best_metric_value(match)
-            sigma_z = match.get('redshift_error', match.get('z_err', match.get('sigma_z', None)))
+            sigma_z = match.get('sigma_z', match.get('z_err', None))
             metric_sigma_pairs.append((float(metric), (float(sigma_z) if sigma_z is not None else np.nan)))
         
         metric_sigma_pairs.sort(key=lambda x: x[0], reverse=True)  # Highest metric first
@@ -1300,7 +1260,7 @@ def find_winning_cluster_top5_method(
         'confidence_assessment': confidence_assessment,
         'quality_assessment': quality_assessment,
         'metric_used': metric_name,
-        'selection_method': 'top5_rlap_ccc'
+        'selection_method': 'top5_hlap_ccc'
     }
     
     if verbose:
@@ -1387,23 +1347,23 @@ def _calculate_absolute_quality(winning_cluster_info: Dict[str, Any], metric_nam
     penalty_factor = winning_cluster_info['penalty_factor']
     cluster_size = winning_cluster_info['cluster_size']
     
-    # Quality categories based solely on penalized top-5 mean (global rule)
-    #  - Very Low: < 2.5
-    #  - Low: 2.5 to < 4.0
-    #  - Medium: 4.0 to ≤ 10.0
-    #  - High: > 10.0
-    if penalized_score > 10.0:
+    # Quality categories based on penalized top-5 HLAP-CCC score (global rule)
+    #  - Very Low: < 0.6
+    #  - Low: 0.6 to < 1.0
+    #  - Medium: 1.0 to ≤ 2.5
+    #  - High: > 2.5
+    if penalized_score > 2.5:
         quality_category = 'High'
-        quality_description = f'Excellent match quality (Q: {penalized_score:.1f})'
-    elif penalized_score >= 4.0:
+        quality_description = f'Excellent match quality (HLAP-CCC: {penalized_score:.2f})'
+    elif penalized_score >= 1.0:
         quality_category = 'Medium'
-        quality_description = f'Good match quality (Q: {penalized_score:.1f})'
-    elif penalized_score >= 2.5:
+        quality_description = f'Good match quality (HLAP-CCC: {penalized_score:.2f})'
+    elif penalized_score >= 0.6:
         quality_category = 'Low'
-        quality_description = f'Poor match quality (Q: {penalized_score:.1f})'
+        quality_description = f'Poor match quality (HLAP-CCC: {penalized_score:.2f})'
     else:
         quality_category = 'Very Low'
-        quality_description = f'Very poor match quality (Q: {penalized_score:.1f})'
+        quality_description = f'Very poor match quality (HLAP-CCC: {penalized_score:.2f})'
     
     # Add penalty information if applicable
     if penalty_factor < 1.0:

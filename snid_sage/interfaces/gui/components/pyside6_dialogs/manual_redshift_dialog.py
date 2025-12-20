@@ -978,8 +978,8 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                 zmin=0.0,
                 zmax=1.0,
                 # Relaxed correlation parameters for galaxies
-                rlapmin=2.0,  # Lower threshold for galaxy detection
-                lapmin=0.15,  # Lower overlap requirement for galaxies
+                hlapmin=0.01,  # HLAP-min for galaxy detection
+                lapmin=0.2,    # Lower overlap requirement for galaxies
                 peak_window_size=20,  # Larger window for broader galaxy features
                 # Output control: respect configured max_output_templates when available
                 max_output_templates=(
@@ -1002,12 +1002,12 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                 best_match = results.best_matches[0]
                 best_redshift = best_match.get('redshift', 0.0)
                 template_name = best_match.get('template_name', 'Unknown')
-                rlap_score = best_match.get('rlap', 0.0)
+                metric_score = best_match.get('hlap_1mccc', best_match.get('hlap_ccc', best_match.get('hlap', 0.0)))
                 
                 progress.close()
                 
-                # Check if the match is confident enough (rlap >= 3.0 for good matches)
-                if rlap_score >= 3.0:
+                # Check if the match is confident enough (HLAP-CCC >= 0.6 for non-very-low matches)
+                if metric_score >= 0.6:
                     # Directly apply the redshift without asking
                     self.redshift_input.setValue(best_redshift)
                     # Trigger the redshift change which will update the line positions
@@ -1018,7 +1018,7 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                         self.parent_gui.redshift_status_label.setText(
                             f"Auto-detected redshift: z = {best_redshift:.6f}")
                     
-                    _LOGGER.info(f"Applied automatic galaxy redshift: z = {best_redshift:.6f} from template {template_name} (correlation: {rlap_score:.2f})")
+                    _LOGGER.info(f"Applied automatic galaxy redshift: z = {best_redshift:.6f} from template {template_name} (metric: {metric_score:.2f})")
                     
                     # Clean up temporary data
                     processed_spectrum = None
@@ -1031,7 +1031,7 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                         f"⚠️ Weak galaxy template match found:\n\n"
                         f"📋 Template: {template_name}\n"
                         f"🌌 Redshift: z = {best_redshift:.6f}\n"
-                        f"📊 Correlation: {rlap_score:.2f} (weak)\n\n"
+                        f"📊 Metric: {metric_score:.2f} (weak)\n\n"
                         f"Apply this redshift anyway?",
                         QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
                     

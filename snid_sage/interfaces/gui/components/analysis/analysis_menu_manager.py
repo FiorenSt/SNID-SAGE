@@ -293,7 +293,7 @@ class AnalysisMenuManager:
                 zmax=1.0,
                 age_range=None,
                 lapmin=0.3,
-                rlapmin=4.0,
+                hlapmin=0.1,
                 max_output_templates=configured_max,
                 verbose=False,
                 show_plots=False,
@@ -639,15 +639,17 @@ class AnalysisMenuManager:
                     if hasattr(snid_results, 'best_matches') and selected_cluster.get('matches'):
                         cluster_matches = selected_cluster.get('matches', [])
                         
-                        # Sort cluster matches by best available metric (RLAP-CCC if available, otherwise RLAP) descending
+                        # Sort cluster matches by best available metric (HLAP-CCC preferred) descending
                         try:
                             from snid_sage.shared.utils.math_utils import get_best_metric_value
                             cluster_matches_sorted = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
                         except ImportError:
                             # Fallback sorting if math utils not available
-                            cluster_matches_sorted = sorted(cluster_matches, 
-                                                          key=lambda m: m.get('rlap_ccc', m.get('rlap', 0)), 
-                                                          reverse=True)
+                            cluster_matches_sorted = sorted(
+                                cluster_matches,
+                                key=lambda m: m.get('hlap_1mccc', m.get('hlap_ccc', m.get('hlap', 0.0))),
+                                reverse=True
+                            )
                         
                         # Update best_matches to only contain cluster templates
                         # Prefer last run's max_output_templates from controller if present; fallback to config then 10
@@ -680,14 +682,11 @@ class AnalysisMenuManager:
                             snid_results.template_name = template.get('name', 'Unknown')
                             snid_results.consensus_type = template.get('type', 'Unknown')
                             snid_results.redshift = best_cluster_match.get('redshift', 0.0)
-                            snid_results.rlap = best_cluster_match.get('rlap', 0.0)
-                            
-                            # Update RLAP-CCC if available
-                            if 'rlap_ccc' in best_cluster_match:
-                                snid_results.rlap_ccc = best_cluster_match.get('rlap_ccc', 0.0)
+                            snid_results.hlap = best_cluster_match.get('hlap', 0.0)
+                            snid_results.hlap_ccc = best_cluster_match.get('hlap_1mccc', best_cluster_match.get('hlap_ccc', 0.0))
                             
                             _LOGGER.info(f"🎯 Updated result properties: {snid_results.template_name} ({snid_results.consensus_type}) "
-                                        f"z={snid_results.redshift:.6f}, RLAP={snid_results.rlap:.2f}")
+                                        f"z={snid_results.redshift:.6f}")
                     
                     # Update the main GUI display with the new results
                     self._update_gui_after_cluster_selection(snid_results, selected_cluster, cluster_changed)

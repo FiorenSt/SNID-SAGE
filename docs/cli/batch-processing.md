@@ -48,8 +48,8 @@ Notes:
 | `--forced-redshift FLOAT` | Force a fixed redshift for all spectra |
 | `--type-filter TYPE...` | Restrict templates by type (e.g., Ia Ib Ic) |
 | `--template-filter NAME...` | Only use specific templates by name |
-| `--rlapmin FLOAT` / `--lapmin FLOAT` | Quality/overlap thresholds (defaults: 4.0 / 0.3) |
-| `--rlap-ccc-threshold FLOAT` | Clustering quality threshold (default: 1.8) |
+| `--hlapmin FLOAT` / `--lapmin FLOAT` | Quality/overlap thresholds (defaults: 0.1 / 0.3) |
+| `--hlap-ccc-threshold FLOAT` | HLAP-CCC clustering threshold (default: 0.4) |
 | `--output-dir DIR` | Output directory for results |
 | `--stop-on-error` | Stop processing upon first error |
 | `--verbose` | Verbose console output |

@@ -28,17 +28,15 @@ from snid_sage.shared.utils.math_utils.weighted_statistics import (
 )
 
 # ----------------------------------------------------------------------
-# 0.  Constants from Fortran SNID.INC
+# 0.  Constants
 # ----------------------------------------------------------------------
-RLAP_MIN   = 5.0
+HLAP_MIN   = 0.1
 LAP_MIN    = 0.4
 # Z_FILTER constant removed (deprecated)
 EPSFRAC    = 0.01
 EPSSLOPE   = 0.01
-EPSRLAP    = 0.01  # For multiple best template check
-MAXRLAP    = 100   # Maximum rlap value for slope calculations
 
-# DEPRECATED: Legacy RLAP security thresholds removed
+# DEPRECATED: Legacy security thresholds removed
 # Use cluster-based security assessment from cosmological_clustering.py instead
 
 # Fortran type mapping (from enhanced typeinfo.f - 13 types, 70+ subtypes)
@@ -56,7 +54,7 @@ TYPENAME = {
     # Type 4 - SN II (6 subtypes)
     4: {1: 'II', 2: 'IIP', 3: 'II-pec', 4: 'IIn', 5: 'IIL', 6: 'IIn-pec'},
     
-    # Type 5 - NotSN (9 subtypes) - LEGACY, kept for backward compatibility
+    # Type 5 - NotSN (9 subtypes)
     5: {1: 'NotSN', 2: 'AGN', 3: 'Gal', 4: 'QSO', 5: 'M-star', 6: 'C-star', 
         7: 'Afterglow', 8: 'Nova', 9: 'CV'},
     
@@ -217,7 +215,7 @@ class SNIDResult:
     # Basic match parameters
     r: float = 0.0
     lap: float = 0.0
-    rlap: float = 0.0
+    hlap: float = 0.0
     redshift: float = 0.0
     redshift_error: float = 0.0
     template_name: str = "Unknown"
@@ -252,7 +250,7 @@ class SNIDResult:
     
     # Grid parameters
     dwlog: float | None = None
-    min_rlap: float | None = None
+    min_hlap: float | None = None
     log_wave: np.ndarray = field(default_factory=lambda: np.array([]))
     
     # Output files
@@ -271,7 +269,21 @@ class SNIDResult:
         if hasattr(self, 'redshift_error') and self.redshift_error > 0:
             redshift_str += f" ± {self.redshift_error:.5f}"
         
-        quality_str = f"RLAP = {self.rlap:.2f}"
+        # Prefer reporting the best available match metric (HLAP-CCC preferred)
+        metric_name = "HLAP-CCC"
+        metric_value = None
+        try:
+            from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
+            if hasattr(self, "best_matches") and isinstance(self.best_matches, list) and self.best_matches:
+                metric_value = float(get_best_metric_value(self.best_matches[0]))
+                metric_name = str(get_best_metric_name(self.best_matches[0]))
+        except Exception:
+            metric_value = None
+        
+        if metric_value is not None and np.isfinite(metric_value):
+            quality_str = f"{metric_name} = {metric_value:.2f}"
+        else:
+            quality_str = f"{metric_name} = N/A"
         
         # Enhanced type/subtype display with confidence
         if self.consensus_type and self.consensus_type != "Unknown":
@@ -400,36 +412,36 @@ def compute_type_subtype_stats(matches: List[Dict[str, Any]]) -> Dict[str, Any]:
         # Type-level statistics
         all_matches = data['_all']
         z_vals = np.array([m['redshift'] for m in all_matches])
-        z_errs = np.array([m.get('redshift_error', 0.0) for m in all_matches])
-        # Use RLAP-cos if available, otherwise RLAP
+        z_errs = np.array([m.get('sigma_z', np.nan) for m in all_matches])
+        # Use best available metric (HLAP-CCC preferred)
         from snid_sage.shared.utils.math_utils import get_best_metric_value
-        rlap_metrics = np.array([get_best_metric_value(m) for m in all_matches])
+        metric_values = np.array([get_best_metric_value(m) for m in all_matches])
         
         # Weighted mean and error using canonical weights (unbiased weighted SD)
-        z_mean = estimate_weighted_redshift(z_vals, z_errs, rlap_metrics)
-        z_err = weighted_redshift_error(z_vals, z_errs, rlap_metrics)
+        z_mean = estimate_weighted_redshift(z_vals, z_errs, metric_values)
+        z_err = weighted_redshift_error(z_vals, z_errs, metric_values)
         
         # Age statistics
         age_vals = []
-        age_rlap_metrics = []
+        age_metric_values = []
         age_z_errs = []
         for m in all_matches:
             age = m.get('age', m['template'].get('age', 0.0))
             age_flag = m['template'].get('age_flag', 0)
             if age_flag == 0:
-                z_err = m.get('redshift_error', 0.0)
+                z_err = m.get('sigma_z', np.nan)
                 if np.isfinite(age) and np.isfinite(z_err) and z_err > 0:
                     age_vals.append(age)
-                    # Use RLAP-cos if available, otherwise RLAP
-                    age_rlap_metrics.append(get_best_metric_value(m))
+                    # Use best available metric (HLAP-CCC preferred)
+                    age_metric_values.append(get_best_metric_value(m))
                     age_z_errs.append(z_err)
         
         if age_vals:
             age_vals = np.array(age_vals)
-            age_rlap_metrics = np.array(age_rlap_metrics)
+            age_metric_values = np.array(age_metric_values)
             age_z_errs = np.array(age_z_errs)
-            age_mean = estimate_weighted_epoch(age_vals, age_z_errs, age_rlap_metrics)
-            age_err = weighted_epoch_error(age_vals, age_z_errs, age_rlap_metrics)
+            age_mean = estimate_weighted_epoch(age_vals, age_z_errs, age_metric_values)
+            age_err = weighted_epoch_error(age_vals, age_z_errs, age_metric_values)
         else:
             age_mean = age_err = 0.0
         
@@ -445,34 +457,34 @@ def compute_type_subtype_stats(matches: List[Dict[str, Any]]) -> Dict[str, Any]:
                 continue
                 
             z_vals = np.array([m['redshift'] for m in sub_matches])
-            z_errs = np.array([m.get('redshift_error', 0.0) for m in sub_matches])
-            # Use RLAP-cos if available, otherwise RLAP
-            rlap_metrics = np.array([get_best_metric_value(m) for m in sub_matches])
+            z_errs = np.array([m.get('sigma_z', np.nan) for m in sub_matches])
+            # Use best available metric (HLAP-CCC preferred)
+            metric_values = np.array([get_best_metric_value(m) for m in sub_matches])
             
-            z_mean = estimate_weighted_redshift(z_vals, z_errs, rlap_metrics)
-            z_err = weighted_redshift_error(z_vals, z_errs, rlap_metrics)
+            z_mean = estimate_weighted_redshift(z_vals, z_errs, metric_values)
+            z_err = weighted_redshift_error(z_vals, z_errs, metric_values)
             
             # Age statistics
             age_vals = []
-            age_rlap_metrics = []
+            age_metric_values = []
             age_z_errs = []
             for m in sub_matches:
                 age = m.get('age', m['template'].get('age', 0.0))
                 age_flag = m['template'].get('age_flag', 0)
                 if age_flag == 0:
-                    z_err = m.get('redshift_error', 0.0)
+                    z_err = m.get('sigma_z', np.nan)
                     if np.isfinite(age) and np.isfinite(z_err) and z_err > 0:
                         age_vals.append(age)
-                        # Use RLAP-cos if available, otherwise RLAP
-                        age_rlap_metrics.append(get_best_metric_value(m))
+                        # Use best available metric (HLAP-CCC preferred)
+                        age_metric_values.append(get_best_metric_value(m))
                         age_z_errs.append(z_err)
             
             if age_vals:
                 age_vals = np.array(age_vals)
-                age_rlap_metrics = np.array(age_rlap_metrics)
+                age_metric_values = np.array(age_metric_values)
                 age_z_errs = np.array(age_z_errs)
-                age_mean = estimate_weighted_epoch(age_vals, age_z_errs, age_rlap_metrics)
-                age_err = weighted_epoch_error(age_vals, age_z_errs, age_rlap_metrics)
+                age_mean = estimate_weighted_epoch(age_vals, age_z_errs, age_metric_values)
+                age_err = weighted_epoch_error(age_vals, age_z_errs, age_metric_values)
             else:
                 age_mean = age_err = 0.0
             
@@ -497,7 +509,14 @@ def compute_type_fractions(matches: List[Dict[str, Any]],
     
     for m in matches:
         tp = m['template'].get('type', 'Unknown')
-        value = m['rlap'] if weighted else 1.0
+        if weighted:
+            try:
+                from snid_sage.shared.utils.math_utils import get_best_metric_value
+                value = float(get_best_metric_value(m))
+            except Exception:
+                value = float(m.get('hlap', 0.0))
+        else:
+            value = 1.0
         type_values[tp] += value
     
     total = sum(type_values.values())
@@ -518,7 +537,14 @@ def compute_subtype_fractions(matches: List[Dict[str, Any]],
     for m in matches:
         tp = m['template'].get('type', 'Unknown')
         sub = m['template'].get('subtype', 'Unknown')
-        value = m['rlap'] if weighted else 1.0
+        if weighted:
+            try:
+                from snid_sage.shared.utils.math_utils import get_best_metric_value
+                value = float(get_best_metric_value(m))
+            except Exception:
+                value = float(m.get('hlap', 0.0))
+        else:
+            value = 1.0
         type_subtype_values[tp][sub] += value
     
     result = {}
@@ -536,53 +562,14 @@ def compute_subtype_fractions(matches: List[Dict[str, Any]],
 
 
 # ----------------------------------------------------------------------
-# 6.  Legacy functions (for backward compatibility)
-# ----------------------------------------------------------------------
-def determine_best_type(matches: List[Dict[str, Any]], 
-                       min_rlap: float = RLAP_MIN) -> str:
-    """Legacy function - use determine_best_type_fortran instead."""
-    if not matches:
-        return 'Unknown'
-    
-    # Simple type determination based on highest rlap
-    good_matches = [m for m in matches if m['rlap'] >= min_rlap]
-    if not good_matches:
-        return 'Unknown'
-    
-    # Return type of best match
-    return good_matches[0]['template'].get('type', 'Unknown')
-
-
-def determine_type_security_detailed(matches: List[Dict[str, Any]], 
-                                   consensus_type: str,
-                                   min_rlap: float = RLAP_MIN) -> Dict[str, Any]:
-    """Legacy function - use determine_best_type_fortran instead."""
-    good_matches = [m for m in matches if m['rlap'] >= min_rlap]
-    if not good_matches:
-        return {'secure': False, 'score': 0, 'details': {}}
-    
-    # Simple security check
-    type_matches = [m for m in good_matches if m['template'].get('type') == consensus_type]
-    score = len(type_matches) / len(good_matches) * 5  # Scale to 0-5
-    
-    return {
-        'secure': score >= 3,
-        'score': int(score),
-        'details': {'type_fraction': len(type_matches) / len(good_matches)}
-    }
-
-
-# ----------------------------------------------------------------------
 # 7.  Exports
 # ----------------------------------------------------------------------
 __all__ = [
     "SNIDResult",
     "compute_type_fractions", "compute_subtype_fractions",
-    # Legacy functions (simplified)
-    "determine_best_type", "determine_type_security_detailed",
     # Utility functions
     "get_main_type_from_template", "get_type_indices_from_template",
     "linear_fit_weighted",
     # Constants
-    "RLAP_MIN", "MAXRLAP", "EPSRLAP", "EPSFRAC"
+    "HLAP_MIN", "EPSFRAC"
 ]

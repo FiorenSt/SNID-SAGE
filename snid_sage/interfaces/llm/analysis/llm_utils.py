@@ -103,7 +103,7 @@ def build_enhanced_context(snid_results: Union[Dict[str, Any], Any],
                     cluster_matches = getattr(best_cluster, 'matches', [])
                 
                 context['clustering_analysis'] = {
-                    'method': 'top5_rlap_ccc_gmm',
+                    'method': 'top5_hlap_ccc_gmm',
                     'success': True,
                     'winning_cluster': {
                         'type': cluster_type,
@@ -301,7 +301,7 @@ def _extract_template_info(template: Dict) -> Dict[str, Any]:
             'redshift_error': template.get('zerr', 0.0),
             'age': template.get('age', 0.0),
             'lap_score': template.get('lap', 0.0),
-            'rlap_score': template.get('rlap', 0.0),
+            'metric_score': template.get('hlap_1mccc', template.get('hlap_ccc', template.get('hlap', 0.0))),
             'grade': template.get('grade', ''),
             'confidence_assessment': _assess_match_confidence(template)
         }
@@ -315,7 +315,7 @@ def _extract_template_info(template: Dict) -> Dict[str, Any]:
             'redshift_error': getattr(template, 'zerr', 0.0),
             'age': getattr(template, 'age', 0.0),
             'lap_score': getattr(template, 'lap', 0.0),
-            'rlap_score': getattr(template, 'rlap', 0.0),
+            'metric_score': getattr(template, 'hlap_1mccc', getattr(template, 'hlap_ccc', getattr(template, 'hlap', 0.0))),
             'grade': getattr(template, 'grade', ''),
             'confidence_assessment': _assess_match_confidence(template)
         }
@@ -324,17 +324,18 @@ def _assess_match_confidence(template: Dict) -> str:
     """Assess confidence level of template match."""
     # Handle template as either dict or object
     if isinstance(template, dict):
-        rlap = template.get('rlap', 0.0)
+        metric = template.get('hlap_1mccc', template.get('hlap_ccc', template.get('hlap', 0.0)))
         lap = template.get('lap', 0.0)
     else:
-        rlap = getattr(template, 'rlap', 0.0)
+        metric = getattr(template, 'hlap_1mccc', getattr(template, 'hlap_ccc', getattr(template, 'hlap', 0.0)))
         lap = getattr(template, 'lap', 0.0)
     
-    if rlap > 10 and lap > 5:
+    # Heuristic labels for LLM (consistent with pipeline match quality cutoffs)
+    if metric > 2.5 and lap > 0.5:
         return 'High'
-    elif rlap > 5 and lap > 3:
+    elif metric >= 1.0 and lap > 0.3:
         return 'Moderate'
-    elif rlap > 2:
+    elif metric >= 0.6:
         return 'Low'
     else:
         return 'Very Low'
@@ -345,19 +346,19 @@ def _calculate_match_statistics(templates: List[Dict]) -> Dict[str, Any]:
         return {}
     
     # Handle templates as either dicts or objects
-    rlap_values = []
+    metric_values = []
     lap_values = []
     for t in templates:
         if isinstance(t, dict):
-            rlap_values.append(t.get('rlap', 0))
+            metric_values.append(t.get('hlap_1mccc', t.get('hlap_ccc', t.get('hlap', 0.0))))
             lap_values.append(t.get('lap', 0))
         else:
-            rlap_values.append(getattr(t, 'rlap', 0))
+            metric_values.append(getattr(t, 'hlap_1mccc', getattr(t, 'hlap_ccc', getattr(t, 'hlap', 0.0))))
             lap_values.append(getattr(t, 'lap', 0))
     
     return {
-        'best_rlap': max(rlap_values) if rlap_values else 0,
-        'rlap_spread': max(rlap_values) - min(rlap_values) if len(rlap_values) > 1 else 0,
+        'best_metric': max(metric_values) if metric_values else 0,
+        'metric_spread': max(metric_values) - min(metric_values) if len(metric_values) > 1 else 0,
         'consistent_type': _check_type_consistency(templates),
         'redshift_consistency': _check_redshift_consistency(templates)
     }
@@ -400,13 +401,13 @@ def _check_redshift_consistency(templates: List[Dict]) -> Dict[str, Any]:
     
     # Use weighted redshift estimate if weights available, otherwise simple mean
     try:
-        # Try to get RLAP values as weights if available in the template data
+        # Try to get metric values as weights if available in the template data
         weights = []
         for t in templates[:5]:
             if isinstance(t, dict):
-                weights.append(t.get('rlap', 1.0))  # Default weight of 1.0 if no RLAP
+                weights.append(t.get('primary_metric', t.get('hlap', 1.0)))  # Default weight of 1.0 if missing
             else:
-                weights.append(getattr(t, 'rlap', 1.0))
+                weights.append(getattr(t, 'hlap_1mccc', getattr(t, 'hlap_ccc', getattr(t, 'hlap', 1.0))))
         
         # If we have meaningful weights (not all 1.0), use weighted calculation
         if any(w != 1.0 for w in weights):
@@ -442,13 +443,13 @@ def _assess_analysis_quality(snid_results: Dict) -> Dict[str, Any]:
         
         # Handle best_match as either dict or object
         if isinstance(best_match, dict):
-            rlap = best_match.get('rlap', 0)
+            metric = best_match.get('hlap_1mccc', best_match.get('hlap_ccc', best_match.get('hlap', 0.0)))
             zerr = best_match.get('zerr', 1)
         else:
-            rlap = getattr(best_match, 'rlap', 0)
+            metric = getattr(best_match, 'hlap_1mccc', getattr(best_match, 'hlap_ccc', getattr(best_match, 'hlap', 0.0)))
             zerr = getattr(best_match, 'zerr', 1)
         
-        if rlap < 3:
+        if float(metric) < 0.6:
             quality['potential_issues'].append('Low correlation score - weak match')
         if zerr > 0.1:
             quality['potential_issues'].append('Large redshift uncertainty')
@@ -597,19 +598,19 @@ def _assess_classification_confidence(templates: List[Dict]) -> str:
     
     # Handle best_match as either dict or object
     if isinstance(best_match, dict):
-        rlap = best_match.get('rlap', 0)
+        metric = best_match.get('hlap_1mccc', best_match.get('hlap_ccc', best_match.get('hlap', 0.0)))
     else:
-        rlap = getattr(best_match, 'rlap', 0)
+        metric = getattr(best_match, 'hlap_1mccc', getattr(best_match, 'hlap_ccc', getattr(best_match, 'hlap', 0.0)))
     
     # Check consistency among top matches
     type_consistency = _check_type_consistency(templates)
     redshift_consistency = _check_redshift_consistency(templates)
     
-    if rlap > 10 and type_consistency and redshift_consistency.get('consistent', False):
+    if float(metric) > 2.5 and type_consistency and redshift_consistency.get('consistent', False):
         return 'High'
-    elif rlap > 5 and type_consistency:
+    elif float(metric) >= 1.0 and type_consistency:
         return 'Moderate'
-    elif rlap > 3:
+    elif float(metric) >= 0.6:
         return 'Low'
     else:
         return 'Very Low'

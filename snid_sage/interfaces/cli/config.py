@@ -4,7 +4,7 @@ SNID Config Command
 
 Unified configuration management CLI backed by the shared ConfigurationManager
 used by both GUI and CLI. Stores config at a single platform-appropriate path
-and uses a common schema (e.g., paths.templates_dir, analysis.rlapmin).
+and uses a common schema (e.g., paths.templates_dir, analysis.hlapmin).
 """
 
 import argparse

@@ -128,9 +128,9 @@ class ConfigurationManager:
                     error_message="Wavelength tolerance must be between 1.0 and 100.0 Å"
                 ),
                 # SNID-specific analysis parameters
-                'rlapmin': ConfigValidationRule(
+                'hlapmin': ConfigValidationRule(
                     min_value=0.0, max_value=100.0,
-                    error_message="rlapmin must be between 0.0 and 100.0"
+                    error_message="hlapmin must be between 0.0 and 100.0"
                 ),
                 'lapmin': ConfigValidationRule(
                     min_value=0.0, max_value=1.0,
@@ -273,9 +273,9 @@ class ConfigurationManager:
                 'max_output_templates': 10,
                 'wavelength_tolerance': 10.0,
                 # SNID-specific parameters
-                'rlapmin': 4.0,
+                'hlapmin': 0.1,
                 'lapmin': 0.3,
-                'rlap_ccc_threshold': 1.8,  # NEW: RLAP-CCC threshold for clustering
+                'hlap_ccc_threshold': 0.4,  # Best-metric threshold for clustering (HLAP-CCC)
 
                 'wmin': None,  # Optional wavelength limits
                 'wmax': None,
@@ -462,7 +462,7 @@ class ConfigurationManager:
           output.default_dir -> paths.output_dir
           analysis.zmin -> analysis.redshift_min
           analysis.zmax -> analysis.redshift_max
-          analysis.rlapmin -> analysis.rlapmin (same)
+          analysis.hlapmin -> analysis.hlapmin (same)
           analysis.lapmin -> analysis.lapmin (same)
           preprocessing.* -> processing.* (map selected keys)
         """
@@ -496,8 +496,8 @@ class ConfigurationManager:
                 migrated['analysis']['redshift_min'] = la['zmin']
             if 'zmax' in la:
                 migrated['analysis']['redshift_max'] = la['zmax']
-            if 'rlapmin' in la:
-                migrated['analysis']['rlapmin'] = la['rlapmin']
+            if 'hlapmin' in la:
+                migrated['analysis']['hlapmin'] = la['hlapmin']
             if 'lapmin' in la:
                 migrated['analysis']['lapmin'] = la['lapmin']
         except Exception:

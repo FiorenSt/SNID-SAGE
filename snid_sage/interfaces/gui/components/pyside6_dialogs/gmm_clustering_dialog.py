@@ -468,7 +468,7 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
                     quality_threshold=0.02,
                     max_clusters_per_type=10,
                     verbose=True,
-                    rlap_ccc_threshold=1.8  # Default RLAP-CCC threshold
+                    hlap_ccc_threshold=0.4  # Default HLAP-CCC threshold
                 )
                 
                 # If clustering failed (e.g., too few/weak survivors), create a weak fallback so UI can still render
@@ -651,7 +651,7 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
                     from snid_sage.shared.utils.math_utils import get_best_metric_value
                     matches_sorted = sorted(matches, key=get_best_metric_value, reverse=True)
                 except Exception:
-                    matches_sorted = sorted(matches, key=lambda m: m.get('rlap_ccc', m.get('rlap', 0.0)), reverse=True)
+                    matches_sorted = sorted(matches, key=lambda m: m.get('hlap_1mccc', m.get('hlap_ccc', m.get('hlap', 0.0))), reverse=True)
                 best_match = matches_sorted[0]
             
             # Get input spectrum data
@@ -770,7 +770,7 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
                 if not matches:
                     continue
                 
-                # Extract axes: X=redshift, Y=type index, Z=RLAP-CCC (best metric)
+                # Extract axes: X=redshift, Y=type index, Z=best metric (HLAP-CCC preferred)
                 xs = []
                 ys = []
                 zs = []
@@ -804,8 +804,8 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
             self.ax.set_xlabel('Redshift (z)', fontsize=15, labelpad=15)
             # Keep shorter label text ("Type") but with larger font
             self.ax.set_ylabel('Type', fontsize=15, labelpad=15)
-            # Z is the best metric (RLAP-CCC preferred)
-            self.ax.set_zlabel('RLAP-CCC', fontsize=15, labelpad=15)
+            # Z is the best metric (HLAP-CCC preferred)
+            self.ax.set_zlabel('HLAP-CCC', fontsize=15, labelpad=15)
             # No title for clean look
             try:
                 self.ax.set_title('')
@@ -836,7 +836,7 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
             self.ax.xaxis.label.set_color('#000000')
             self.ax.yaxis.label.set_color('#000000')
             self.ax.zaxis.label.set_color('#000000')
-            # Slightly smaller tick labels on all axes (z values, RLAP-CCC values, and type indices)
+            # Slightly smaller tick labels on all axes (z values, HLAP-CCC values, and type indices)
             self.ax.tick_params(colors='#666666', labelsize=10)
             self.ax.grid(True, alpha=0.4, color='gray', linestyle='-', linewidth=0.5)
             

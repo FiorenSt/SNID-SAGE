@@ -1222,7 +1222,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                             # No clustering - tailor message based on match quality and keep open briefly
                             results = getattr(self.app_controller, 'snid_results', None)
                             type_conf = getattr(results, 'type_confidence', 0.0) if results else 0.0
-                            # Weak if low confidence OR no matches above RLAP-CCC threshold
+                            # Weak if low confidence OR no matches above best-metric threshold
                             fm = getattr(results, 'filtered_matches', []) if results else []
                             is_above_threshold = bool(fm and len(fm) > 0)
                             is_weak = (type_conf < 0.30) or (not is_above_threshold)
@@ -1325,7 +1325,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                             self,
                             "No Reliable Matches",
                             (
-                                "The analysis completed, but no reliable matches were found above the RLAP-CCC threshold.\n\n"
+                                "The analysis completed, but no reliable matches were found above the best-metric threshold.\n\n"
                                 "Try Advanced Preprocessing (smoothing, wavelength masks, continuum adjustments) to improve the results."
                             )
                         )
@@ -1334,7 +1334,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                             self,
                             "Weak Matches",
                             (
-                                "Only weak match(es) were found above the RLAP-CCC threshold. Results may be unreliable.\n\n"
+                                "Only weak match(es) were found above the best-metric threshold. Results may be unreliable.\n\n"
                                 "You can try Advanced Preprocessing (smoothing, wavelength masks, continuum adjustments) to improve the results."
                             )
                         )
@@ -1855,14 +1855,14 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                     elif result.clustering_results.get('best_cluster'):
                         cluster_info = " [Auto Selected Cluster]"
                 
-                # Use best available metric (RLAP-CCC if available, otherwise RLAP)
+                # Use best available metric (HLAP-CCC preferred)
                 from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
                 if hasattr(result, 'best_matches') and result.best_matches:
                     best_metric_value = get_best_metric_value(result.best_matches[0])
                     metric_name = get_best_metric_name(result.best_matches[0])
                     metric_text = f"{metric_name}: {best_metric_value:.2f}"
                 else:
-                    metric_text = f"RLAP: {getattr(result, 'rlap', 0.0):.2f}"
+                    metric_text = f"HLAP: {getattr(result, 'hlap', getattr(result, 'hlapmin', 0.0)):.2f}"
                 
                 summary = (f"SNID Analysis Complete!\n\n"
                           f"Best match: {getattr(result, 'template_name', 'Unknown')}\n"
@@ -2175,7 +2175,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                     
                     _LOGGER.info(f"🤖 Automatically selected best cluster: {best_cluster.get('type', 'Unknown')} "
                                 f"(Size: {len(best_cluster.get('matches', []))}, "
-                                f"Quality: {best_cluster.get('mean_rlap', 0):.2f})")
+                                f"Quality: {best_cluster.get('mean_metric', 0):.2f})")
                     
                     # Directly call the cluster selection handler
                     self.app_controller.on_cluster_selected(best_cluster, best_index, snid_result)

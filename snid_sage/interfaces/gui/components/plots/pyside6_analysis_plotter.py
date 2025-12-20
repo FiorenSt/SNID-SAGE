@@ -114,7 +114,7 @@ class PySide6AnalysisPlotter:
             ax1 = self.matplotlib_figure.add_subplot(gs[0, 0])
             # Top right: Bar chart
             ax2 = self.matplotlib_figure.add_subplot(gs[0, 1])
-            # Bottom: RLAP threshold analysis (spanning both columns)
+            # Bottom: metric threshold analysis (spanning both columns)
             ax3 = self.matplotlib_figure.add_subplot(gs[1, :])
             
             # Extract cluster data
@@ -129,7 +129,7 @@ class PySide6AnalysisPlotter:
             
             # Calculate subtype proportions
             subtype_counts = defaultdict(int)
-            subtype_rlaps = defaultdict(list)
+            subtype_metric_values = defaultdict(list)
             subtype_redshifts = defaultdict(list)
             
             for match in cluster_matches:
@@ -139,7 +139,11 @@ class PySide6AnalysisPlotter:
                     subtype = 'Unknown'
                 
                 subtype_counts[subtype] += 1
-                subtype_rlaps[subtype].append(match.get('rlap', 0))
+                try:
+                    from snid_sage.shared.utils.math_utils import get_best_metric_value
+                    subtype_metric_values[subtype].append(float(get_best_metric_value(match)))
+                except Exception:
+                    subtype_metric_values[subtype].append(float(match.get('hlap', 0.0) or 0.0))
                 subtype_redshifts[subtype].append(match.get('redshift', 0))
             
             if not subtype_counts:
@@ -185,10 +189,10 @@ class PySide6AnalysisPlotter:
             ax1.set_title(f'Subtype Distribution\n{cluster_type} Cluster', fontsize=11, fontweight='bold', pad=10)
             
             # Plot 2: Statistics table (like old GUI)
-            self._create_statistics_table(ax2, subtype_counts, subtype_rlaps, subtype_redshifts, cluster_type)
+            self._create_statistics_table(ax2, subtype_counts, subtype_metric_values, subtype_redshifts, cluster_type)
             
-            # Plot 3: RLAP threshold analysis (like old GUI)
-            self.create_threshold_analysis(ax3, subtype_rlaps, color_mapping)
+            # Plot 3: metric threshold analysis (like old GUI)
+            self.create_threshold_analysis(ax3, subtype_metric_values, color_mapping)
             
             # Tight layout and refresh
             self.matplotlib_figure.tight_layout()
@@ -234,12 +238,12 @@ class PySide6AnalysisPlotter:
             for subtype, points in subtype_data.items():
                 redshifts = [p['redshift'] for p in points]
                 ages = [p['age'] for p in points]
-                rlaps = [p['rlap'] for p in points]
+                metrics = [p.get('metric', 0.0) for p in points]
                 
                 color = color_mapping.get(subtype, self.subtype_colors['Unknown'])
                 
-                # Use RLAP for point sizes
-                sizes = [max(20, r * 3) for r in rlaps]
+                # Use metric for point sizes
+                sizes = [max(20, float(m) * 3) for m in metrics]
                 
                 scatter = ax.scatter(redshifts, ages, c=color, s=sizes, alpha=0.7, 
                                    label=f'{subtype} (n={len(points)})', edgecolors='black', linewidth=0.5)
@@ -260,8 +264,8 @@ class PySide6AnalysisPlotter:
             _LOGGER.error(f"Error creating redshift vs age plot: {e}")
             self._show_error(f"Error creating plot: {str(e)}")
     
-    def create_threshold_analysis(self, ax, subtype_rlaps, subtype_colors):
-        """Create RLAP threshold analysis plot (bottom panel like old GUI)"""
+    def create_threshold_analysis(self, ax, subtype_metric_values, subtype_colors):
+        """Create metric threshold analysis plot (bottom panel like old GUI)."""
         try:
             # Need cluster matches for proportion calculation like old GUI
             if not hasattr(self.app_controller, 'snid_results') or not self.app_controller.snid_results:
@@ -285,36 +289,45 @@ class PySide6AnalysisPlotter:
             elif hasattr(result, 'best_matches') and result.best_matches:
                 cluster_matches = result.best_matches
             
-            if not cluster_matches or not subtype_rlaps:
-                ax.text(0.5, 0.5, "No RLAP data available", 
+            if not cluster_matches or not subtype_metric_values:
+                ax.text(0.5, 0.5, "No metric data available", 
                        ha='center', va='center', transform=ax.transAxes)
                 ax.axis('off')
                 return
             
-            # Find RLAP range from all cluster matches
-            all_rlaps = [match.get('rlap', 0) for match in cluster_matches if match.get('rlap', 0) > 0]
+            # Find metric range from all cluster matches
+            try:
+                from snid_sage.shared.utils.math_utils import get_best_metric_value
+                all_metrics = [float(get_best_metric_value(m)) for m in cluster_matches]
+            except Exception:
+                all_metrics = [float(m.get('hlap', 0.0) or 0.0) for m in cluster_matches]
             
-            if not all_rlaps:
-                ax.text(0.5, 0.5, "No valid RLAP values", 
+            all_metrics = [m for m in all_metrics if np.isfinite(m)]
+            
+            if not all_metrics:
+                ax.text(0.5, 0.5, "No valid metric values", 
                        ha='center', va='center', transform=ax.transAxes)
                 ax.axis('off')
                 return
             
-            # Create RLAP thresholds (similar to old GUI)
-            min_rlap = max(3.0, min(all_rlaps))  # Start from 3.0 or higher
-            max_rlap = min(max(all_rlaps), 30.0)  # Cap at 30.0
-            thresholds = np.linspace(min_rlap, max_rlap, 15)
+            # Create metric thresholds
+            min_metric = min(all_metrics)
+            max_metric = max(all_metrics)
+            thresholds = np.linspace(min_metric, max_metric, 15) if max_metric > min_metric else np.array([min_metric])
             
             # Get sorted subtypes for consistent processing
-            sorted_subtypes = sorted(subtype_rlaps.keys())
+            sorted_subtypes = sorted(subtype_metric_values.keys())
             
             # Calculate proportions at each threshold (like old GUI)
             subtype_proportions_by_threshold = {subtype: [] for subtype in sorted_subtypes}
             
             for threshold in thresholds:
                 # Get all matches above this threshold
-                qualified_matches = [match for match in cluster_matches 
-                                   if match.get('rlap', 0) >= threshold]
+                try:
+                    from snid_sage.shared.utils.math_utils import get_best_metric_value
+                    qualified_matches = [match for match in cluster_matches if get_best_metric_value(match) >= threshold]
+                except Exception:
+                    qualified_matches = [match for match in cluster_matches if (match.get('hlap', 0.0) or 0.0) >= threshold]
                 
                 if qualified_matches:
                     # Count subtypes in qualified matches
@@ -346,8 +359,8 @@ class PySide6AnalysisPlotter:
                     plotted_any = True
             
             if plotted_any:
-                ax.set_title('Subtype Proportions vs RLAP Threshold', fontsize=12, fontweight='bold', pad=15)
-                ax.set_xlabel('RLAP Threshold', fontsize=10, fontweight='bold')
+                ax.set_title('Subtype Proportions vs Metric Threshold', fontsize=12, fontweight='bold', pad=15)
+                ax.set_xlabel('Metric Threshold', fontsize=10, fontweight='bold')
                 ax.set_ylabel('Subtype Proportion', fontsize=10, fontweight='bold')
                 ax.grid(True, alpha=0.3)
                 ax.legend(fontsize=9, loc='upper right')
@@ -381,13 +394,13 @@ class PySide6AnalysisPlotter:
             elif hasattr(result, 'best_matches') and result.best_matches:
                 matches = result.best_matches
             
-            # Apply RLAP threshold filtering only if clustering did not succeed (match CLI behavior)
+            # Apply HLAP-min threshold filtering only if clustering did not succeed (match CLI behavior)
             clustering_ok = bool(getattr(result, 'clustering_results', None)) and bool(getattr(result, 'clustering_results', {}).get('success', False))
             if not clustering_ok:
-                rlapmin = getattr(result, 'min_rlap', getattr(result, 'rlapmin', 5.0))
-                filtered_matches = [m for m in matches if m.get('rlap', 0) >= rlapmin]
+                hlapmin = getattr(result, 'min_hlap', getattr(result, 'hlapmin', 0.1))
+                filtered_matches = [m for m in matches if m.get('hlap', 0) >= hlapmin]
             else:
-                # Respect clustering survivors without additional RLAP filtering
+                # Respect clustering survivors without additional metric filtering
                 filtered_matches = matches
             
             # Extract plot data including subtype information
@@ -396,7 +409,8 @@ class PySide6AnalysisPlotter:
                 z = match.get('redshift', None)
                 age = match.get('age', None)
                 sn_type = match.get('type', 'Unknown')
-                rlap = match.get('rlap', 0)
+                from snid_sage.shared.utils.math_utils import get_best_metric_value
+                metric = float(get_best_metric_value(match))
                 
                 # Extract subtype from template
                 template = match.get('template', {})
@@ -410,7 +424,7 @@ class PySide6AnalysisPlotter:
                         'age': float(age),
                         'type': sn_type,
                         'subtype': subtype,
-                        'rlap': float(rlap)
+                        'metric': float(metric)
                     })
             
             return plot_data
@@ -470,7 +484,7 @@ class PySide6AnalysisPlotter:
         
         return color_mapping
     
-    def _create_statistics_table(self, ax, subtype_counts, subtype_rlaps, subtype_redshifts, cluster_type):
+    def _create_statistics_table(self, ax, subtype_counts, subtype_metric_values, subtype_redshifts, cluster_type):
         """Create a text-based statistics table on the right side of the plot."""
         ax.axis('off')  # Hide the axis
         
@@ -483,21 +497,21 @@ class PySide6AnalysisPlotter:
         
         # Create table data similar to old GUI
         table_data = []
-        headers = ['Subtype', 'Count', '%', 'Avg RLAP', 'Avg Z']
+        headers = ['Subtype', 'Count', '%', 'Avg metric', 'Avg Z']
         
         # Sort subtypes by count (descending)
         sorted_subtypes = sorted(subtype_counts.items(), key=lambda x: x[1], reverse=True)
         
         for subtype, count in sorted_subtypes:
             percentage = (count / total_matches) * 100
-            avg_rlap = np.mean(subtype_rlaps[subtype]) if subtype_rlaps[subtype] else 0
+            avg_metric = np.mean(subtype_metric_values[subtype]) if subtype_metric_values[subtype] else 0
             avg_z = np.mean(subtype_redshifts[subtype]) if subtype_redshifts[subtype] else 0
             
             table_data.append([
                 subtype,
                 str(count),
                 f"{percentage:.1f}%",
-                f"{avg_rlap:.1f}",
+                f"{avg_metric:.2f}",
                 f"{avg_z:.4f}"
             ])
         

@@ -930,7 +930,8 @@ class PySide6PlotManager:
             subtype = template.get('subtype', current_match.get('type', 'Unknown'))
             redshift = current_match.get('redshift', 0.0)
             age = template.get('age', 0.0)
-            rlap = current_match.get('rlap', 0.0)
+            # Keep as local variable for layout only
+            hlap_for_layout = float(current_match.get('hlap', 0.0) or 0.0)
             
             # Get current match index for display
             app_controller = self.main_window.app_controller
@@ -938,13 +939,13 @@ class PySide6PlotManager:
             total_matches = len(app_controller.snid_results.best_matches) if hasattr(app_controller, 'snid_results') and app_controller.snid_results else 1
             
             # Get redshift uncertainty if available (show 6 decimals like CLI)
-            redshift_error = current_match.get('redshift_error', 0)
-            if redshift_error > 0:
-                redshift_text = f"z = {redshift:.6f} ±{redshift_error:.6f}"
+            sigma_z = current_match.get('sigma_z', float('nan'))
+            if np.isfinite(sigma_z) and sigma_z > 0:
+                redshift_text = f"z = {redshift:.6f} ±{sigma_z:.6f}"
             else:
                 redshift_text = f"z = {redshift:.6f}"
             
-            # Use best available metric (RLAP-CCC if available, otherwise RLAP)
+            # Use best available metric (HLAP-CCC preferred)
             from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
             best_metric_value = get_best_metric_value(current_match)
             metric_name = get_best_metric_name(current_match)

@@ -2,36 +2,143 @@
 Similarity and composite metric utilities for SNID SAGE.
 
 The primary metric used is the concordance correlation coefficient (CCC),
-which is combined with RLAP to form the RLAP-CCC composite metric for improved
-template discrimination. CCC/RLAP-CCC is preferred when available.
+which is combined with HLAP (height * lap) to form the HLAP-CCC composite metric:
+    HLAP/(1-CCC)
+with CCC estimated using 99.5% trimming (drop top 0.5% contributors).
 """
 
 from __future__ import annotations
 
 import numpy as np
+from dataclasses import dataclass
 from typing import Dict, List, Any, Optional, Tuple
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-# Default alpha for rational soft-clip used in CCC-based RLAP-CCC metric
-DEFAULT_CCC_SOFTCLIP_ALPHA: float = 3.0
-
-
-def _rational_softclip_transform(x: np.ndarray, alpha: float = DEFAULT_CCC_SOFTCLIP_ALPHA) -> np.ndarray:
+def concordance_correlation_coefficient_trimmed(
+    spec1: np.ndarray,
+    spec2: np.ndarray,
+    *,
+    trim_percentile: float = 99.5,
+) -> float:
     """
-    Apply a rational soft-clip directly to a (possibly zero‑centred) spectrum.
+    Compute Lin's CCC after trimming (dropping) the top (100-trim_percentile)% bins
+    with the highest absolute contribution |(a-μa)(b-μb)|.
 
-    y = x / (1 + alpha * |x|)
-
-    - Linear near 0
-    - Soft saturation to ±(1/alpha) for large |x|
+    This mirrors the demo logic in scripts/demo_softclip_hlap_ccc.py, and is meant
+    to reduce domination by extreme peaks.
     """
-    arr = np.asarray(x, dtype=float)
-    if alpha is None or alpha <= 0:
-        return arr
-    return arr / (1.0 + float(alpha) * np.abs(arr))
+    a = np.asarray(spec1, dtype=float)
+    b = np.asarray(spec2, dtype=float)
+    n = min(len(a), len(b))
+    if n < 2:
+        return 0.0
+    a = a[:n]
+    b = b[:n]
+
+    tol = 1e-12
+    mask = np.isfinite(a) & np.isfinite(b) & (np.abs(a) > tol) & (np.abs(b) > tol)
+    if not np.any(mask):
+        return 0.0
+    a = a[mask]
+    b = b[mask]
+    if a.size < 2:
+        return 0.0
+
+    mu_a = float(np.mean(a))
+    mu_b = float(np.mean(b))
+    contributions = np.abs((a - mu_a) * (b - mu_b))
+
+    trim_percentile = float(trim_percentile)
+    trim_fraction = (100.0 - trim_percentile) / 100.0
+    trim_fraction = max(0.0, min(0.99, trim_fraction))
+
+    if trim_fraction > 0.0 and a.size > 2:
+        # drop top trim_fraction by contribution
+        drop_threshold = float(np.quantile(contributions, 1.0 - trim_fraction))
+        keep = contributions < drop_threshold
+        if np.sum(keep) < 2:
+            keep = np.ones(a.size, dtype=bool)
+    else:
+        keep = np.ones(a.size, dtype=bool)
+
+    a_t = a[keep]
+    b_t = b[keep]
+    if a_t.size < 2:
+        return 0.0
+
+    mu_x = float(np.mean(a_t))
+    mu_y = float(np.mean(b_t))
+    var_x = float(np.var(a_t, ddof=1))
+    var_y = float(np.var(b_t, ddof=1))
+    if a_t.size > 1:
+        cov_xy = float(np.sum((a_t - mu_x) * (b_t - mu_y)) / (a_t.size - 1))
+    else:
+        cov_xy = 0.0
+    std_x = float(np.sqrt(var_x))
+    std_y = float(np.sqrt(var_y))
+    if std_x == 0.0 or std_y == 0.0:
+        return 0.0
+    rho = cov_xy / (std_x * std_y)
+    numerator = 2.0 * rho * std_x * std_y
+    denominator = var_x + var_y + (mu_x - mu_y) ** 2
+    if denominator == 0.0:
+        return 0.0
+    return float(np.clip(numerator / denominator, -1.0, 1.0))
+
+
+def residual_noise_clipped_std(
+    a_window: np.ndarray,
+    b_window: np.ndarray,
+    *,
+    clip_percentile: float = 99.5,
+) -> Tuple[float, Dict[str, float]]:
+    """
+    Compute residual noise as std(residuals) after clipping extreme residuals.
+
+    Clipping rule: compute threshold = quantile(|residual|, clip_percentile/100),
+    then keep bins with |residual| <= threshold, compute std on kept residuals.
+
+    Returns (noise_std, diagnostics).
+    """
+    a = np.asarray(a_window, dtype=float)
+    b = np.asarray(b_window, dtype=float)
+    n = min(len(a), len(b))
+    if n == 0:
+        return float("nan"), {"n_bins": 0.0, "n_kept": 0.0, "clip_threshold": float("nan")}
+    a = a[:n]
+    b = b[:n]
+    resid = a - b
+    mask = np.isfinite(resid)
+    resid = resid[mask]
+    if resid.size == 0:
+        return float("nan"), {"n_bins": float(n), "n_kept": 0.0, "clip_threshold": float("nan")}
+
+    abs_resid = np.abs(resid)
+    try:
+        thr = float(np.quantile(abs_resid, float(clip_percentile) / 100.0))
+    except Exception:
+        thr = float("nan")
+
+    if np.isfinite(thr):
+        keep = abs_resid <= thr
+        resid_kept = resid[keep]
+    else:
+        resid_kept = resid
+
+    if resid_kept.size == 0:
+        resid_kept = resid
+
+    # Use population std (ddof=0) to match typical numpy/std usage in demos.
+    noise = float(np.std(resid_kept, ddof=0)) if resid_kept.size > 0 else float("nan")
+    diag = {
+        "n_bins": float(resid.size),
+        "n_kept": float(resid_kept.size),
+        "clip_threshold": float(thr),
+    }
+    return noise, diag
 
 
 def _common_checks(spec1: np.ndarray, spec2: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -167,86 +274,58 @@ def _extract_template_flux(match: Dict[str, Any]) -> np.ndarray:
     return tpl_flux
 
 
-def compute_rlap_ccc_metric(
-    matches: List[Dict[str, Any]], 
-    processed_spectrum: Dict[str, Any],
-    verbose: bool = False,
-    *,
-    use_local_rlap: bool = False,
-) -> List[Dict[str, Any]]:
-    """
-    Compute RLAP-CCC metric (RLAP * capped_concordance_correlation_coefficient) for template matches.
-    
-    Uses the exact same spectrum preparation as snid_enhanced_metrics.py:
-    - Prefers tapered_flux (apodized flattened spectrum) for consistency with SNID analysis
-    - Trims to valid data range (left_edge:right_edge)
-    - Template flux extraction follows the same priority order
-    
-    Parameters
-    ----------
-    matches : List[Dict[str, Any]]
-        List of template matches from SNID analysis
-    processed_spectrum : Dict[str, Any]
-        Processed spectrum data from SNID preprocessing 
-    verbose : bool, optional
-        Enable detailed logging
-        
-    Returns
-    -------
-    List[Dict[str, Any]]
-        Enhanced matches with ccc_similarity, ccc_similarity_capped, and rlap_ccc fields
-    """
-    if not matches:
-        return matches
-    
-    # Check if RLAP-CCC is already computed for all matches
-    already_computed = all('rlap_ccc' in match for match in matches)
-    if already_computed:
-        if verbose:
-            logger.info(f"🔄 RLAP-CCC already computed for all {len(matches)} matches - skipping computation")
-        return matches
-    
-    # Check if partially computed - count how many need computation
-    needs_computation = [match for match in matches if 'rlap_ccc' not in match]
-    if len(needs_computation) < len(matches):
-        if verbose:
-            logger.info(f"🔄 RLAP-CCC partially computed - computing for {len(needs_computation)}/{len(matches)} matches")
-    else:
-        logger.info(f"🔄 Computing RLAP-CCC metric for {len(matches)} matches")
-    
-    # ============================================================================
-    
-    # ============================================================================
-    
-    # 1a) Choose the best version of the flattened input flux
-    
-    # snid_sage.snid.py:1145
+# =============================================================================
+# Match-level metrics (HLAP, HLAP-CCC) and overlap diagnostics (CCC, residual noise)
+# =============================================================================
+
+def _extract_match_height_width_lap(match: Dict[str, Any]) -> Tuple[float, float, float]:
+    """Best-effort extract (height, width, lap) from a match dict."""
+    try:
+        height = float(match.get("height", match.get("peak_height", 0.0)) or 0.0)
+    except Exception:
+        height = 0.0
+    try:
+        width = float(match.get("width", match.get("peak_width", 0.0)) or 0.0)
+    except Exception:
+        width = 0.0
+    try:
+        lap = float(match.get("lap", 0.0) or 0.0)
+    except Exception:
+        lap = 0.0
+    return height, width, lap
+
+
+@dataclass(frozen=True)
+class PreparedOverlap:
+    """Prepared phase-2 overlap window for CCC/noise diagnostics."""
+    a_window: np.ndarray
+    b_window: np.ndarray
+    start_idx: int
+    end_idx: int
+
+
+def _select_base_flux(processed_spectrum: Dict[str, Any], *, verbose: bool = False) -> Optional[np.ndarray]:
+    """Select the base spectrum flux used for phase-2 overlap diagnostics."""
     if "tapered_flux" in processed_spectrum and processed_spectrum["tapered_flux"] is not None:
-        base_flux = processed_spectrum["tapered_flux"]  # Apodized flattened spectrum (what SNID uses)
         if verbose:
-            logger.info("Using tapered_flux (apodized flattened spectrum) for RLAP-CCC metrics")
-    elif "display_flat" in processed_spectrum and processed_spectrum["display_flat"] is not None:
-        base_flux = processed_spectrum["display_flat"]  # GUI's apodized version
+            logger.info("Using tapered_flux for overlap diagnostics")
+        return np.asarray(processed_spectrum["tapered_flux"], dtype=float)
+    if "display_flat" in processed_spectrum and processed_spectrum["display_flat"] is not None:
         if verbose:
-            logger.info("Using display_flat (GUI apodized flattened spectrum) for RLAP-CCC metrics")
-    elif "flat_flux" in processed_spectrum and processed_spectrum["flat_flux"] is not None:
-        base_flux = processed_spectrum["flat_flux"]  # Non-apodized flattened spectrum
+            logger.info("Using display_flat for overlap diagnostics")
+        return np.asarray(processed_spectrum["display_flat"], dtype=float)
+    if "flat_flux" in processed_spectrum and processed_spectrum["flat_flux"] is not None:
         if verbose:
-            logger.warning("Using flat_flux (non-apodized flattened spectrum) - may not match SNID analysis")
-    else:
-        # Fall back to tapered_flux (continuum-removed but not flattened)
-        base_flux = processed_spectrum["tapered_flux"]
-        if verbose:
-            logger.warning("Using tapered_flux fallback (continuum-removed but not flattened)")
-    
-    if base_flux is None:
-        logger.error("No suitable input flux found for RLAP-CCC computation")
-        return matches
-        
-    base_flux = np.asarray(base_flux, dtype=float)
-    
-    # 1b) Always trim to the valid data range used in plotting – unless it is
-    #     *already* trimmed (e.g., when display_flat is pre-cropped by GUI preprocessing).
+            logger.warning("Using flat_flux (non-apodized) for overlap diagnostics")
+        return np.asarray(processed_spectrum["flat_flux"], dtype=float)
+    if verbose:
+        logger.warning("Using tapered_flux fallback for overlap diagnostics")
+    bf = processed_spectrum.get("tapered_flux")
+    return None if bf is None else np.asarray(bf, dtype=float)
+
+
+def _trim_flux_to_edges(base_flux: np.ndarray, processed_spectrum: Dict[str, Any]) -> np.ndarray:
+    """Trim base_flux to [left_edge:right_edge] (inclusive) when needed."""
     le_val = processed_spectrum.get("left_edge", 0)
     re_val = processed_spectrum.get("right_edge", None)
     if le_val is None:
@@ -256,159 +335,244 @@ def compute_rlap_ccc_metric(
     left_edge = int(le_val)
     right_edge = int(re_val)
     expected_len = right_edge - left_edge + 1
-    
     if len(base_flux) == expected_len:
-        input_flux = base_flux  # already trimmed
-    else:
-        input_flux = base_flux[left_edge : right_edge + 1]
-    
-    if verbose:
-        logger.info(f"Input spectrum: length={len(input_flux)}, range=[{left_edge}:{right_edge}]")
-    
-    # ============================================================================
-    # Compute enhanced metrics for each match
-    # ============================================================================
-    
-    enhanced_matches = []
-    successful_computations = 0
-    
-    for i, match in enumerate(matches):
-        # Skip if already computed
-        if 'rlap_ccc' in match:
-            enhanced_matches.append(match)
-            successful_computations += 1
-            continue
-        
-        # Extract template flux using the exact same logic as snid_enhanced_metrics.py
-        tpl_flux = _extract_template_flux_exact(match)
-        
-        if tpl_flux is None or tpl_flux.size == 0:
-            if verbose:
-                logger.debug(f"Template flux missing for match {i} – skipping RLAP-CCC calculation")
-            # Keep original match without enhancement
-            enhanced_matches.append(match.copy())
-            continue
-        
-        # Compute CCC (Concordance Correlation Coefficient) on rational
-        # soft‑clipped spectra. Prefer the exact RLAP overlap window if
-        # provided on the match.
-        try:
-            a = np.asarray(input_flux, dtype=float)
-            b = np.asarray(tpl_flux, dtype=float)
-            n = min(len(a), len(b))
-            if n == 0:
-                ccc_sim = 0.0
-            else:
-                a = a[:n]
-                b = b[:n]
+        return base_flux
+    return base_flux[left_edge:right_edge + 1]
 
-                # If match carries overlap indices relative to plotting range, use them
+
+def prepare_overlap_window(
+    match: Dict[str, Any],
+    input_flux: np.ndarray,
+    *,
+    apodize_percent: float = 10.0,
+) -> Optional[PreparedOverlap]:
+    """Prepare the overlap window (a_window, b_window) for a match.
+
+    Uses match['overlap_indices'] when available; otherwise infers the joint valid contiguous overlap.
+    """
+    tpl_flux = _extract_template_flux_exact(match)
+    if tpl_flux is None or np.asarray(tpl_flux).size == 0:
+        return None
+
+    a = np.asarray(input_flux, dtype=float)
+    b = np.asarray(tpl_flux, dtype=float)
+    n = min(len(a), len(b))
+    if n < 2:
+        return None
+    a = a[:n]
+    b = b[:n]
+
+    start_idx: Optional[int] = None
+    end_idx: Optional[int] = None
+    try:
+        overlap_indices = match.get("overlap_indices") or {}
+        if isinstance(overlap_indices, dict):
+            start_idx = int(overlap_indices.get("start"))
+            end_idx = int(overlap_indices.get("end")) + 1  # inclusive -> exclusive
+            if start_idx < 0 or end_idx <= start_idx or end_idx > n:
                 start_idx = None
                 end_idx = None
+    except Exception:
+        start_idx = None
+        end_idx = None
+
+    if start_idx is None or end_idx is None:
+        tol = 1e-12
+        joint_mask = np.isfinite(a) & np.isfinite(b) & (np.abs(a) > tol) & (np.abs(b) > tol)
+        if not np.any(joint_mask):
+            return None
+        idxs = np.flatnonzero(joint_mask)
+        start_idx = int(idxs[0])
+        end_idx = int(idxs[-1]) + 1
+
+    a_window = a[start_idx:end_idx]
+    b_window = b[start_idx:end_idx]
+    if a_window.size < 2 or b_window.size < 2:
+        return None
+
+    # Local apodization once; shared by CCC + residual-noise.
+    try:
+        from snid_sage.snid.preprocessing import apodize as _snid_apodize  # type: ignore
+        ap = float(apodize_percent)
+        if np.isfinite(ap) and ap > 0.0:
+            n1 = 0
+            n2 = a_window.size - 1
+            if n2 >= n1:
+                a_window = _snid_apodize(a_window, n1, n2, percent=ap)
+                b_window = _snid_apodize(b_window, n1, n2, percent=ap)
+    except Exception:
+        pass
+
+    return PreparedOverlap(a_window=a_window, b_window=b_window, start_idx=int(start_idx), end_idx=int(end_idx))
+
+
+def compute_phase2_overlap_diagnostics(
+    matches: List[Dict[str, Any]],
+    processed_spectrum: Dict[str, Any],
+    verbose: bool = False,
+    *,
+    trim_percentile: float = 99.5,
+    residual_clip_percentile: float = 99.5,
+    apodize_percent: float = 10.0,
+    compute_ccc: bool = True,
+    compute_noise: bool = True,
+) -> List[Dict[str, Any]]:
+    """Compute CCC (99.5% trimmed) and/or residual-noise diagnostics on the phase-2 overlap windows.
+
+    This reuses a single prepared overlap window per match for both CCC and residual-noise.
+    """
+    if not matches:
+        return matches
+
+    base_flux = _select_base_flux(processed_spectrum, verbose=verbose)
+    if base_flux is None:
+        return matches
+    input_flux = _trim_flux_to_edges(base_flux, processed_spectrum)
+
+    enhanced_matches: List[Dict[str, Any]] = []
+    for match in matches:
+        enhanced = match.copy()
+
+        prepared = prepare_overlap_window(match, input_flux, apodize_percent=float(apodize_percent))
+
+        ccc_trim = 0.0
+        ccc_trim_capped = 0.0
+        noise_std = float("nan")
+        noise_diag: Dict[str, float] = {"n_bins": float("nan"), "n_kept": float("nan"), "clip_threshold": float("nan")}
+
+        if prepared is not None:
+            if compute_ccc:
                 try:
-                    overlap_indices = match.get('overlap_indices') or {}
-                    if isinstance(overlap_indices, dict):
-                        start_idx = int(overlap_indices.get('start'))
-                        end_idx = int(overlap_indices.get('end'))
-                        # Inclusive end in SNID trimming -> convert to Python slice end (exclusive)
-                        end_idx = end_idx + 1
-                        # Validate bounds
-                        if start_idx < 0 or end_idx <= start_idx or end_idx > n:
-                            start_idx = None
-                            end_idx = None
+                    ccc_trim = concordance_correlation_coefficient_trimmed(
+                        prepared.a_window, prepared.b_window, trim_percentile=float(trim_percentile)
+                    )
+                    ccc_trim_capped = max(0.0, float(ccc_trim))
                 except Exception:
-                    start_idx = None
-                    end_idx = None
-
-                if start_idx is None or end_idx is None:
-                    # Fallback: contiguous region where BOTH are non-zero/finite
-                    tol = 1e-12
-                    joint_mask = np.isfinite(a) & np.isfinite(b) & (np.abs(a) > tol) & (np.abs(b) > tol)
-                    if not np.any(joint_mask):
-                        ccc_sim = 0.0
-                    else:
-                        idx = np.flatnonzero(joint_mask)
-                        start_idx = int(idx[0])
-                        end_idx = int(idx[-1]) + 1
-                        a_window = a[start_idx:end_idx]
-                        b_window = b[start_idx:end_idx]
-                else:
-                    a_window = a[start_idx:end_idx]
-                    b_window = b[start_idx:end_idx]
-
-                # ------------------------------------------------------------------
-                # Local apodization of the overlap window before CCC
-                # ------------------------------------------------------------------
+                    ccc_trim = 0.0
+                    ccc_trim_capped = 0.0
+            if compute_noise:
                 try:
-                    from snid_sage.snid.preprocessing import apodize as _snid_apodize  # type: ignore
-                    if a_window.size > 1 and b_window.size > 1:
-                        apodize_percent = 10.0  # Match phase-2 correlation default
-                        n1 = 0
-                        n2 = a_window.size - 1
-                        if n2 >= n1:
-                            a_window = _snid_apodize(a_window, n1, n2, percent=apodize_percent)
-                            b_window = _snid_apodize(b_window, n1, n2, percent=apodize_percent)
+                    noise_std, noise_diag = residual_noise_clipped_std(
+                        prepared.a_window, prepared.b_window, clip_percentile=float(residual_clip_percentile)
+                    )
                 except Exception:
-                    # If apodization is unavailable for any reason, fall back silently
-                    pass
+                    noise_std = float("nan")
 
-                # Apply rational soft-clip before CCC
-                if 'ccc_sim' not in locals() or (start_idx is not None and end_idx is not None):
-                    a_t = _rational_softclip_transform(a_window, alpha=DEFAULT_CCC_SOFTCLIP_ALPHA)
-                    b_t = _rational_softclip_transform(b_window, alpha=DEFAULT_CCC_SOFTCLIP_ALPHA)
-                    ccc_sim = concordance_correlation_coefficient(a_t, b_t)
-        except Exception:
-            ccc_sim = 0.0
-        
-        # Cap CCC to [0, 1] (negative similarities are bad, as requested by user)
-        ccc_sim_capped = max(0.0, ccc_sim)
-        
-        # Compute RLAP-CCC metric. When requested and available, prefer the
-        # local RLAP variant (based on local antisymmetry) as the primary
-        # metric, while still retaining the global RLAP-CCC for diagnostics.
-        try:
-            rlap_global = float(match.get("rlap", 0.0) or 0.0)
-        except Exception:
-            rlap_global = 0.0
-        try:
-            rlap_local = float(match.get("rlap_local", 0.0) or 0.0)
-        except Exception:
-            rlap_local = 0.0
+        if compute_ccc:
+            enhanced["ccc_similarity_trimmed"] = float(ccc_trim)
+            enhanced["ccc_similarity_trimmed_capped"] = float(ccc_trim_capped)
+            # Alias keys: CCC values here are the trimmed CCC.
+            enhanced["ccc_similarity"] = float(ccc_trim)
+            enhanced["ccc_similarity_capped"] = float(ccc_trim_capped)
+            enhanced["ccc_trim_percentile"] = float(trim_percentile)
 
-        use_local_here = bool(
-            use_local_rlap and np.isfinite(rlap_local) and (rlap_local > 0.0)
+        if compute_noise:
+            enhanced["residual_noise_std"] = float(noise_std) if np.isfinite(noise_std) else float("nan")
+            enhanced["residual_clip_percentile"] = float(residual_clip_percentile)
+            enhanced["residual_clip_threshold"] = float(noise_diag.get("clip_threshold", float("nan")))
+            enhanced["residual_n_bins"] = float(noise_diag.get("n_bins", float("nan")))
+            enhanced["residual_n_kept"] = float(noise_diag.get("n_kept", float("nan")))
+
+        enhanced_matches.append(enhanced)
+
+    return enhanced_matches
+
+
+def compute_sigma_z_metrics(matches: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Compute per-match sigma_z = width * residual_noise_std.
+
+    Failure policy: if width/noise is missing or invalid, sigma_z is NaN.
+    """
+    if not matches:
+        return matches
+    out: List[Dict[str, Any]] = []
+    for match in matches:
+        m = match.copy()
+        _, width, _ = _extract_match_height_width_lap(m)
+        try:
+            noise = float(m.get("residual_noise_std", float("nan")))
+        except Exception:
+            noise = float("nan")
+        sigma_z = float("nan")
+        if np.isfinite(width) and width > 0.0 and np.isfinite(noise) and noise >= 0.0:
+            sigma_z = float(width * noise)
+        m["sigma_z"] = float(sigma_z) if (np.isfinite(sigma_z) and sigma_z > 0.0) else float("nan")
+        out.append(m)
+    return out
+
+
+def _compute_hlap_ccc_from_ccc(hlap: float, ccc_trimmed_capped: float, *, denom_eps: float = 1e-3) -> float:
+    """Compute HLAP/(1-CCC) using capped CCC in [0,1]."""
+    if not (np.isfinite(hlap) and hlap > 0.0):
+        return float("nan")
+    ccc_clip = float(np.clip(float(ccc_trimmed_capped), 0.0, 0.999999))
+    denom = max(float(denom_eps), 1.0 - ccc_clip)
+    return float(hlap / denom)
+
+
+def compute_hlap_ccc_metric(
+    matches: List[Dict[str, Any]],
+    processed_spectrum: Dict[str, Any],
+    verbose: bool = False,
+    *,
+    trim_percentile: float = 99.5,
+    residual_clip_percentile: float = 99.5,
+    denom_eps: float = 1e-3,
+) -> List[Dict[str, Any]]:
+    """Compute HLAP/(1-CCC) where CCC is the 99.5% trimmed CCC over the phase-2 overlap region.
+
+    Important: this function is **scoring-only**. It does **not** compute per-match uncertainty.
+    Use `compute_phase2_overlap_diagnostics()` + `compute_sigma_z_metrics()` for sigma_z.
+    """
+    if not matches:
+        return matches
+
+    # Ensure CCC diagnostics exist (trimmed, capped). Avoid computing noise here.
+    need_ccc = any(isinstance(m, dict) and ("ccc_similarity_trimmed_capped" not in m) for m in matches)
+    if need_ccc:
+        matches = compute_phase2_overlap_diagnostics(
+            matches,
+            processed_spectrum,
+            verbose=verbose,
+            trim_percentile=float(trim_percentile),
+            residual_clip_percentile=float(residual_clip_percentile),
+            compute_ccc=True,
+            compute_noise=False,
         )
 
-        rlap_ccc_global = rlap_global * ccc_sim_capped
-        if use_local_here:
-            rlap_ccc_local = rlap_local * ccc_sim_capped
-            primary_rlap_ccc = rlap_ccc_local
-        else:
-            rlap_ccc_local = float("nan")
-            primary_rlap_ccc = rlap_ccc_global
-        
-        # Create enhanced match
-        enhanced_match = match.copy()
-        enhanced_match.update({
-            "ccc_similarity": ccc_sim,
-            "ccc_similarity_capped": ccc_sim_capped,
-            # Primary composite metric used by clustering / summaries
-            "rlap_ccc": primary_rlap_ccc,
-            # Diagnostics: keep track of which flavour was actually used
-            "rlap_ccc_global": rlap_ccc_global,
-            "rlap_ccc_local": rlap_ccc_local,
-        })
-        
-        enhanced_matches.append(enhanced_match)
-        successful_computations += 1
-        
-        if verbose and i < 5:  # Log first few for debugging
-            template_name = match.get('template', {}).get('name', 'Unknown') if isinstance(match.get('template'), dict) else match.get('name', 'Unknown')
-            logger.debug(f"  Match {i}: {template_name} - RLAP={rlap:.2f}, ccc_sim={ccc_sim:.3f}, capped={ccc_sim_capped:.3f}, RLAP-CCC={rlap_ccc:.3f}")
-    
-    if len(needs_computation) > 0:
-        logger.info(f"✅ RLAP-CCC computation complete: {successful_computations}/{len(matches)} matches enhanced")
-    
+    enhanced_matches: List[Dict[str, Any]] = []
+    for i, match in enumerate(matches):
+        enhanced = match.copy()
+
+        height, _, lap = _extract_match_height_width_lap(enhanced)
+        hlap = float(height * lap) if (np.isfinite(height) and np.isfinite(lap)) else float("nan")
+
+        try:
+            ccc_capped = float(
+                enhanced.get("ccc_similarity_trimmed_capped", enhanced.get("ccc_similarity_capped", 0.0))
+            )
+        except Exception:
+            ccc_capped = 0.0
+        if not np.isfinite(ccc_capped):
+            ccc_capped = 0.0
+
+        hlap_ccc = _compute_hlap_ccc_from_ccc(hlap, ccc_capped, denom_eps=float(denom_eps))
+
+        enhanced["hlap"] = hlap
+        enhanced["hlap_1mccc"] = hlap_ccc
+        enhanced["hlap_ccc"] = hlap_ccc
+
+        if verbose and i < 5:
+            logger.debug(
+                "HLAP-CCC %d: hlap=%.3g ccc=%.3g metric=%.3g",
+                i,
+                float(hlap) if np.isfinite(hlap) else float("nan"),
+                float(ccc_capped),
+                float(hlap_ccc) if np.isfinite(hlap_ccc) else float("nan"),
+            )
+
+        enhanced_matches.append(enhanced)
+
     return enhanced_matches
 
 
@@ -454,9 +618,7 @@ def get_best_metric_value(match: Dict[str, Any]) -> float:
     """
     Get the best available metric value for sorting/display.
     
-    Returns RLAP-CCC if available, otherwise falls back to RLAP.
-    This ensures consistent behavior across the codebase when enhanced metrics
-    are available from the enhanced clustering.
+    Returns HLAP-CCC if available, otherwise falls back to HLAP (height × lap).
     
     Parameters
     ----------
@@ -468,14 +630,62 @@ def get_best_metric_value(match: Dict[str, Any]) -> float:
     float
         Best available metric value
     """
-    return match.get('rlap_ccc', match.get('rlap', 0.0))
+    if not isinstance(match, dict):
+        return 0.0
+    # Prefer HLAP/(1-CCC) when available
+    v = match.get("hlap_1mccc", match.get("hlap_ccc", None))
+    try:
+        if v is not None:
+            return float(v)
+    except Exception:
+        pass
+    # Fallback: HLAP (height × lap)
+    try:
+        if "hlap" in match:
+            return float(match["hlap"])
+    except Exception:
+        pass
+    try:
+        h = float(match.get("height", match.get("peak_height", 0.0)) or 0.0)
+    except Exception:
+        h = 0.0
+    try:
+        lap = float(match.get("lap", 0.0) or 0.0)
+    except Exception:
+        lap = 0.0
+    return float(h * lap)
+
+
+def get_hlap_value(match: Dict[str, Any]) -> float:
+    """
+    Get HLAP (height × lap) from a match dict.
+
+    This is intentionally independent of HLAP-CCC / CCC diagnostics and is used
+    for HLAP-based thresholding and quality labeling.
+    """
+    if not isinstance(match, dict):
+        return 0.0
+    try:
+        if "hlap" in match:
+            return float(match["hlap"])
+    except Exception:
+        pass
+    try:
+        h = float(match.get("height", match.get("peak_height", 0.0)) or 0.0)
+    except Exception:
+        h = 0.0
+    try:
+        lap = float(match.get("lap", 0.0) or 0.0)
+    except Exception:
+        lap = 0.0
+    return float(h * lap)
 
 
 def get_metric_name_for_match(match: Dict[str, Any]) -> str:
     """
     Get the name of the metric being used for a match.
     
-    Returns 'RLAP-CCC' if available, otherwise 'RLAP'.
+    Returns 'HLAP-CCC' if available, otherwise 'HLAP'.
     
     Parameters
     ----------
@@ -487,17 +697,16 @@ def get_metric_name_for_match(match: Dict[str, Any]) -> str:
     str
         Name of the metric
     """
-    if 'rlap_ccc' in match:
-        return 'RLAP-CCC'
-    else:
-        return 'RLAP'
+    if isinstance(match, dict) and ("hlap_1mccc" in match or "hlap_ccc" in match):
+        return "HLAP-CCC"
+    return "HLAP"
 
 
 def get_best_metric_name(match: Dict[str, Any]) -> str:
     """
     Get the name of the best available metric for a match.
     
-    Returns 'RLAP-CCC' if available, otherwise 'RLAP'.
+    Returns 'HLAP-CCC' if available, otherwise 'HLAP'.
     This is a convenience function for summary reports.
     
     Parameters
@@ -510,19 +719,16 @@ def get_best_metric_name(match: Dict[str, Any]) -> str:
     str
         Name of the best available metric
     """
-    # Check if this is a summary dict with rlap_ccc or a match dict
-    if 'rlap_ccc' in match or (isinstance(match, dict) and any('rlap_ccc' in str(k) for k in match.keys())):
-        return 'RLAP-CCC'
-    else:
-        return 'RLAP'
+    if isinstance(match, dict) and any(k in match for k in ("hlap_1mccc", "hlap_ccc")):
+        return "HLAP-CCC"
+    return "HLAP"
 
 
 def get_metric_display_values(match: Dict[str, Any]) -> Dict[str, float]:
     """
     Get all available metric values for display purposes.
     
-    Returns a dictionary with all available metric values including
-    original RLAP and RLAP-CCC when available.
+    Returns a dictionary with available metric values for display purposes.
     
     Parameters
     ----------
@@ -535,325 +741,18 @@ def get_metric_display_values(match: Dict[str, Any]) -> Dict[str, float]:
         Dictionary containing available metric values
     """
     values = {
-        'rlap': match.get('rlap', 0.0),
         'primary_metric': get_best_metric_value(match),
         'metric_name': get_metric_name_for_match(match)
     }
     
-    if 'rlap_ccc' in match:
-        values['rlap_ccc'] = match['rlap_ccc']
-        values['ccc_similarity'] = match.get('ccc_similarity', 0.0)
-        values['ccc_similarity_capped'] = match.get('ccc_similarity_capped', 0.0)
+    if 'hlap_1mccc' in match or 'hlap_ccc' in match:
+        values['hlap_1mccc'] = match.get('hlap_1mccc', match.get('hlap_ccc', 0.0))
+        values['hlap'] = match.get('hlap', 0.0)
+        values['ccc_similarity_trimmed'] = match.get('ccc_similarity_trimmed', match.get('ccc_similarity', 0.0))
+        values['ccc_similarity_trimmed_capped'] = match.get('ccc_similarity_trimmed_capped', match.get('ccc_similarity_capped', 0.0))
+        values['residual_noise_std'] = match.get('residual_noise_std', float('nan'))
+
+    # Legacy fields intentionally not exposed.
     
     return values 
-
-
-# =============================================================================
-# Locality-aware similarity metric
-# =============================================================================
-
-def _windowed_cosines(a: np.ndarray, b: np.ndarray, window: int, step: int) -> np.ndarray:
-    """Compute cosine similarity over sliding windows.
-    Arrays a and b should already be 1D, finite, and aligned to the same region.
-    """
-    a = np.asarray(a, dtype=float)
-    b = np.asarray(b, dtype=float)
-    n = min(len(a), len(b))
-    if n == 0 or window <= 1:
-        return np.array([], dtype=float)
-    window = int(max(2, min(window, n)))
-    step = int(max(1, step))
-    vals: list[float] = []
-    for start in range(0, n - window + 1, step):
-        aw = a[start:start + window]
-        bw = b[start:start + window]
-        # Normalise per-window to avoid scale bias
-        aw, bw = _common_checks(aw, bw)
-        if aw.size == 0:
-            continue
-        num = float(np.dot(aw, bw))
-        den = float(np.linalg.norm(aw) * np.linalg.norm(bw))
-        vals.append(0.0 if den == 0.0 else float(np.clip(num / den, -1.0, 1.0)))
-    return np.asarray(vals, dtype=float)
-
-
-def _compute_overlap_slice(a: np.ndarray, b: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Trim to the contiguous joint non-zero/finite region (excludes zero-padded edges)."""
-    a = np.asarray(a, dtype=float)
-    b = np.asarray(b, dtype=float)
-    n = min(len(a), len(b))
-    if n == 0:
-        return np.array([]), np.array([])
-    a = a[:n]
-    b = b[:n]
-    tol = 1e-12
-    joint_mask = np.isfinite(a) & np.isfinite(b) & (np.abs(a) > tol) & (np.abs(b) > tol)
-    if not np.any(joint_mask):
-        return np.array([]), np.array([])
-    idx = np.flatnonzero(joint_mask)
-    start_idx = int(idx[0])
-    end_idx = int(idx[-1]) + 1
-    return a[start_idx:end_idx], b[start_idx:end_idx]
-
-
-def _locality_similarity_from_series(
-    a_series: np.ndarray,
-    b_series: np.ndarray,
-    *,
-    window: int = 64,
-    step: int = 32,
-    q: float = 0.25,
-    include_derivative: bool = True,
-    include_roughness: bool = True,
-) -> float:
-    """Compute a locality-aware similarity in [0, 1] from aligned series.
-
-    Components:
-      - Windowed cosine aggregated as mean-quantile blend to punish local mismatches
-      - Optional derivative-cosine factor to enforce local shape agreement
-      - Optional roughness-ratio factor to penalize swingy vs smooth mismatches
-    """
-    # Trim to joint valid, contiguous overlap and normalise
-    a_win, b_win = _compute_overlap_slice(a_series, b_series)
-    if a_win.size == 0:
-        return 0.0
-
-    # Windowed cosine aggregation
-    wcos = _windowed_cosines(a_win, b_win, window=window, step=step)
-    if wcos.size == 0:
-        agg = 0.0
-    else:
-        mean_val = float(np.mean(wcos))
-        q = float(np.clip(q, 0.0, 1.0))
-        qval = float(np.quantile(wcos, q))
-        agg = 0.5 * (mean_val + qval)
-    agg = max(0.0, min(1.0, agg))
-
-    # Derivative cosine factor
-    deriv_factor = 1.0
-    if include_derivative and a_win.size >= 3:
-        da = np.diff(a_win)
-        db = np.diff(b_win)
-        da, db = _common_checks(da, db)
-        if da.size > 0:
-            num = float(np.dot(da, db))
-            den = float(np.linalg.norm(da) * np.linalg.norm(db))
-            deriv = 0.0 if den == 0.0 else float(np.clip(num / den, -1.0, 1.0))
-            deriv_factor = max(0.0, deriv)
-        else:
-            deriv_factor = 0.0
-
-    # Roughness ratio (total variation consistency)
-    rough_factor = 1.0
-    if include_roughness and a_win.size >= 3:
-        tva = float(np.sum(np.abs(np.diff(a_win))))
-        tvb = float(np.sum(np.abs(np.diff(b_win))))
-        if tva > 0.0 and tvb > 0.0:
-            rough_factor = float(min(tva, tvb) / max(tva, tvb))
-        else:
-            rough_factor = 0.0
-
-    sim = agg * deriv_factor * rough_factor
-    return float(np.clip(sim, 0.0, 1.0))
-
-
-def compute_locality_metric(
-    matches: List[Dict[str, Any]],
-    processed_spectrum: Dict[str, Any],
-    *,
-    window: int = 64,
-    step: int = 32,
-    q: float = 0.25,
-    include_derivative: bool = True,
-    include_roughness: bool = True,
-    verbose: bool = False,
-) -> List[Dict[str, Any]]:
-    """
-    Compute a locality-aware metric per match and attach fields:
-      - 'locality_similarity' in [0,1]
-      - 'rlap_local' = rlap * locality_similarity
-
-    Uses the same flux extraction and overlap handling as RLAP-CCC to ensure
-    the zero-padded template edges are excluded and only the real overlap is used.
-    """
-    if not matches:
-        return matches
-
-    # Choose base flattened spectrum like in compute_rlap_ccc_metric
-    if "tapered_flux" in processed_spectrum and processed_spectrum["tapered_flux"] is not None:
-        base_flux = processed_spectrum["tapered_flux"]
-    elif "display_flat" in processed_spectrum and processed_spectrum["display_flat"] is not None:
-        base_flux = processed_spectrum["display_flat"]
-    elif "flat_flux" in processed_spectrum and processed_spectrum["flat_flux"] is not None:
-        base_flux = processed_spectrum["flat_flux"]
-    else:
-        base_flux = processed_spectrum.get("tapered_flux")
-
-    if base_flux is None:
-        return matches
-
-    base_flux = np.asarray(base_flux, dtype=float)
-    le_val = processed_spectrum.get("left_edge", 0)
-    re_val = processed_spectrum.get("right_edge", None)
-    if le_val is None:
-        le_val = 0
-    if re_val is None:
-        re_val = len(base_flux) - 1
-    left_edge = int(le_val)
-    right_edge = int(re_val)
-    expected_len = right_edge - left_edge + 1
-    if len(base_flux) == expected_len:
-        input_flux = base_flux
-    else:
-        input_flux = base_flux[left_edge:right_edge + 1]
-
-    enhanced: list[Dict[str, Any]] = []
-    for i, match in enumerate(matches):
-        tpl_flux = _extract_template_flux_exact(match)
-        if tpl_flux is None or tpl_flux.size == 0:
-            enhanced.append(match.copy())
-            continue
-
-        try:
-            a = np.asarray(input_flux, dtype=float)
-            b = np.asarray(tpl_flux, dtype=float)
-            n = min(len(a), len(b))
-            if n == 0:
-                loc_sim = 0.0
-            else:
-                # Honour explicit overlap indices if present on match
-                start_idx = None
-                end_idx = None
-                try:
-                    overlap_indices = match.get('overlap_indices') or {}
-                    if isinstance(overlap_indices, dict):
-                        start_idx = int(overlap_indices.get('start'))
-                        end_idx = int(overlap_indices.get('end')) + 1  # inclusive → exclusive
-                        if start_idx < 0 or end_idx <= start_idx or end_idx > n:
-                            start_idx = None
-                            end_idx = None
-                except Exception:
-                    start_idx = None
-                    end_idx = None
-
-                if start_idx is None or end_idx is None:
-                    a_win, b_win = _compute_overlap_slice(a[:n], b[:n])
-                else:
-                    a_win = a[start_idx:end_idx]
-                    b_win = b[start_idx:end_idx]
-
-                loc_sim = _locality_similarity_from_series(
-                    a_win, b_win,
-                    window=window,
-                    step=step,
-                    q=q,
-                    include_derivative=include_derivative,
-                    include_roughness=include_roughness,
-                )
-        except Exception:
-            loc_sim = 0.0
-
-        rlap = float(match.get('rlap', 0.0))
-        rlap_local = rlap * max(0.0, min(1.0, float(loc_sim)))
-
-        new_match = match.copy()
-        new_match.update({
-            'locality_similarity': float(loc_sim),
-            'rlap_local': float(rlap_local),
-        })
-        enhanced.append(new_match)
-
-        if verbose and i < 5:
-            logger.debug(
-                f"Match {i}: RLAP={rlap:.2f}, locality={loc_sim:.3f}, RLAP-Local={rlap_local:.3f}"
-            )
-
-    return enhanced
-
-
-# =============================================================================
-# Chi-square style metric over overlap
-# =============================================================================
-
-def _fit_scale_coefficient(observed: np.ndarray, template: np.ndarray, weights: Optional[np.ndarray] = None) -> float:
-    """Least-squares scaling factor alpha to fit observed ≈ alpha * template.
-    Supports optional weights (1/σ^2). Returns 0.0 if degenerate.
-    """
-    a = np.asarray(observed, dtype=float)
-    b = np.asarray(template, dtype=float)
-    n = min(len(a), len(b))
-    if n == 0:
-        return 0.0
-    a = a[:n]
-    b = b[:n]
-    if weights is None:
-        denom = float(np.dot(b, b))
-        if denom <= 0.0:
-            return 0.0
-        return float(np.dot(b, a) / denom)
-    else:
-        w = np.asarray(weights, dtype=float)
-        w = w[:n]
-        # Guard against invalid weights
-        w = np.where(np.isfinite(w) & (w > 0), w, 0.0)
-        if not np.any(w > 0):
-            return 0.0
-        bw = b * w
-        denom = float(np.dot(b, bw))
-        if denom <= 0.0:
-            return 0.0
-        return float(np.dot(a, bw) / denom)
-
-
-def _robust_sigma(residual: np.ndarray, *, mode: str = "mad", window: int = 51, min_sigma: float = 1e-6) -> Tuple[np.ndarray, float]:
-    """Estimate sigma for chi-square.
-    Returns (sigma_array, sigma_summary). If a scalar sigma is used, sigma_array is filled with that scalar.
-    Modes:
-      - 'mad': global sigma = 1.4826 * MAD(residual)
-      - 'local_mad': rolling MAD with given window (odd), padded at edges
-      - 'constant1': sigma = 1.0
-      - 'std': global sigma = clipped standard deviation
-    """
-    r = np.asarray(residual, dtype=float)
-    n = len(r)
-    if n == 0:
-        return np.array([]), 0.0
-    mode = (mode or "mad").lower()
-    if mode == "constant1":
-        sigma_val = 1.0
-        return np.full(n, sigma_val, dtype=float), sigma_val
-    if mode == "std":
-        # Clip extreme outliers for stability
-        rr = r[np.isfinite(r)]
-        if rr.size == 0:
-            sigma_val = 1.0
-        else:
-            m = float(np.median(rr))
-            dev = np.abs(rr - m)
-            thr = float(np.quantile(dev, 0.95)) if dev.size > 0 else 0.0
-            mask = dev <= max(thr, 1e-12)
-            sigma_val = float(np.std(rr[mask])) if np.any(mask) else float(np.std(rr))
-        sigma_val = max(min_sigma, sigma_val)
-        return np.full(n, sigma_val, dtype=float), sigma_val
-    if mode == "local_mad":
-        w = int(max(3, window | 1))  # force odd
-        half = w // 2
-        sig = np.empty(n, dtype=float)
-        for i in range(n):
-            lo = max(0, i - half)
-            hi = min(n, i + half + 1)
-            seg = r[lo:hi]
-            med = float(np.median(seg))
-            mad = float(np.median(np.abs(seg - med)))
-            sig[i] = max(min_sigma, 1.4826 * mad)
-        return sig, float(np.median(sig))
-    # default: global MAD
-    rr = r[np.isfinite(r)]
-    if rr.size == 0:
-        sigma_val = 1.0
-    else:
-        med = float(np.median(rr))
-        mad = float(np.median(np.abs(rr - med)))
-        sigma_val = max(min_sigma, 1.4826 * mad)
-    return np.full(n, sigma_val, dtype=float), sigma_val
 

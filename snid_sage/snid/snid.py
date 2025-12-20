@@ -37,13 +37,13 @@ from .preprocessing import (
 )
 from .fft_tools import (
     apply_filter as bandpass,
-    overlap, aspart,
+    overlap,
     calculate_rms,
     shiftit,
     dtft_drms
 )
 from .snidtype import (
-    determine_best_type, SNIDResult,
+    SNIDResult,
     compute_type_fractions,
     compute_subtype_fractions,
 )
@@ -58,7 +58,7 @@ from snid_sage.shared.profiles.registry import get_profile
 from snid_sage.shared.profiles.builtins import register_builtins
 from snid_sage.shared.profiles.bandpass import k_indices
 
-# Constants (legacy defaults preserved for optical profile when no profile provided)
+# Constants (defaults align with the optical profile when no profile is provided)
 NW = 1024
 MINW = 2500
 MAXW = 10000
@@ -88,6 +88,22 @@ try:
     _LOG = get_logger('snid.pipeline')
 except ImportError:
     _LOG = logging.getLogger("snid.pipeline")
+
+# Half-height FWHM width estimation is robust, but can fail on pathological peaks.
+# When we fall back to a conservative default width, log a warning (rate-limited).
+_WIDTH_FWHM_FALLBACK_WARN_COUNT = 0
+_WIDTH_FWHM_FALLBACK_WARN_MAX = 10
+
+
+def _warn_width_fwhm_fallback(message: str) -> None:
+    global _WIDTH_FWHM_FALLBACK_WARN_COUNT
+    try:
+        if _WIDTH_FWHM_FALLBACK_WARN_COUNT < _WIDTH_FWHM_FALLBACK_WARN_MAX:
+            _LOG.warning(message)
+        elif _WIDTH_FWHM_FALLBACK_WARN_COUNT == _WIDTH_FWHM_FALLBACK_WARN_MAX:
+            _LOG.warning("Half-height FWHM width fallback used frequently; suppressing further warnings.")
+    finally:
+        _WIDTH_FWHM_FALLBACK_WARN_COUNT += 1
 
 # Note: SNID-SAGE now requires the optimized/vectorized backend for correlation.
 # We intentionally do not support runtime "disable optimization" toggles; failures
@@ -564,7 +580,7 @@ def _process_template_peaks(
     DWLOG_grid: float,
     k1: int, k2: int, k3: int, k4: int,
     lapmin: float,
-    rlapmin: float,
+    hlapmin: float,
     zmin: float,
     zmax: float,
     peak_window_size: int,
@@ -582,7 +598,7 @@ def _process_template_peaks(
     This function handles the common peak processing logic used by both
     optimized and standard correlation methods.
     """
-    from .fft_tools import shiftit, overlap, calculate_rms, aspart
+    from .fft_tools import shiftit, overlap, calculate_rms
     from .preprocessing import apodize, pad_to_NW
     
     matches = []
@@ -761,48 +777,47 @@ def _process_template_peaks(
                 if z_est < zmin or z_est > zmax:
                     continue
                 
-                # Width calculation from parabola fit
-                if a_p < 0:  # Check if it's a maximum
-                    # Ensure we don't take sqrt of negative number
-                    sqrt_arg = -hgt_p / (2 * a_p)
-                    if sqrt_arg >= 0:
-                        width = np.sqrt(sqrt_arg)  # Gaussian σ in pixel units
-                        fwhm_pix = 2.355 * width   # Convert σ → FWHM
-                        # Include Jacobian dz/dlag = (1+z) * DWLOG_grid
-                        z_width = fwhm_pix * DWLOG_grid * (1.0 + z_est)
-                    else:
-                        width = 0.0
-                        z_width = 0.0
-                else:
-                    width = 0.0
-                    z_width = 0.0
-                
-                # Calculate R value and final rlap (Tonry-Davis R with correct antisymmetric RMS normalisation)
-                arms_raw, _ = aspart(cross_power_peak, k1, k2, k3, k4, peak_lag)
-                arms_norm = arms_raw / (NW_grid * drms_peak * trms_peak)
-
-                if arms_norm > 0:
-                    # Tonry antisymmetric RMS metric: use sqrt(2) in the denominator rather than 2
-                    r_value = hgt_p / (np.sqrt(2.0) * arms_norm)
-                else:
-                    r_value = 0.0
-                # Apply optional profile-aware scaling to R
+                # Width: half-height FWHM of the phase-2 correlation peak (Δz units).
+                z_width = 0.0
+                used_fallback = False
+                fallback_reason = ""
                 try:
-                    r_value *= float(r_scale)
-                except Exception:
-                    pass
+                    from .peak_width_utils import halfheight_fwhm_bins_from_corr, width_dz_from_fwhm_bins
 
-                rlap = r_value * lpeak
+                    fwhm_bins, _ = halfheight_fwhm_bins_from_corr(
+                        Rz_peak,
+                        peak_idx=int(peak_idx),
+                        window_radius_bins=200,
+                        baseline=0.0,
+                    )
+                    z_width_tmp = width_dz_from_fwhm_bins(fwhm_bins, dwlog=float(DWLOG_grid), z=float(z_est))
+                    if np.isfinite(z_width_tmp) and z_width_tmp > 0.0:
+                        z_width = float(z_width_tmp)
+                    else:
+                        used_fallback = True
+                        fallback_reason = "non-finite half-height FWHM"
+                except Exception as exc:
+                    used_fallback = True
+                    fallback_reason = f"error: {exc}"
+
+                if used_fallback and np.isfinite(hgt_p) and hgt_p > 0.0:
+                    # Conservative default (kept consistent with forced-redshift fallback):
+                    # FWHM ≈ 4.7 bins (≈ 2.0 * 2.35).
+                    fwhm_bins_fallback = 2.0 * 2.35
+                    z_width = float(fwhm_bins_fallback * float(DWLOG_grid) * (1.0 + float(z_est)))
+                    _warn_width_fwhm_fallback(
+                        f"Half-height FWHM width failed; using fallback width for template={tpl.get('name','?')} "
+                        f"(z≈{float(z_est):.6f}; {fallback_reason})"
+                    )
                 
-                if rlap < rlapmin:
+                # Arms / antisymmetric-noise machinery is intentionally disabled in SNID-SAGE:
+                # it is not used by the HLAP/HLAP-CCC pipeline and is computationally expensive.
+
+                # HLAP gate (HLAP = phase-2 peak height * lap).
+                hlap = float(hgt_p) * float(lap) if (np.isfinite(hgt_p) and np.isfinite(lap)) else 0.0
+                if hlap < hlapmin:
                     continue
                 
-                # Calculate formal redshift error with global scaling Z_K
-                if r_value > 0 and lap > 0:
-                    formal_z_error = Z_K * z_width / (1.0 + r_value)
-                else:
-                    formal_z_error = Z_K * z_width if z_width > 0 else 0.0
-
                 # Prepare spectra data for plotting (required by GUI plotting system)
                 # Use the same approach as the original working code - global spectrum edges
                 plot_wave = log_wave[left_edge:right_edge+1]
@@ -815,13 +830,15 @@ def _process_template_peaks(
             # global antisymmetry diagnostics.
                 match = {
                     "template": tpl,
-                    "rlap": rlap,
                     "lag": final_lag,
                     "redshift": z_est,
-                    "redshift_error": formal_z_error,
-                    "r": r_value,
+                    # Per-match uncertainty is computed later from overlap residuals:
+                    # sigma_z = width * residual_noise_std (NaN if unavailable).
+                    "sigma_z": float('nan'),
+                    "r": 0.0,
                     "width": z_width,
                     "height": hgt_p,
+                    "hlap": hlap,
                     "lap": lap,
                     "type": tpl.get("type", ""),
                     "age": tpl.get("age", 0),
@@ -830,7 +847,7 @@ def _process_template_peaks(
                     "slope": tpl.get("slope", 0),
                     "position": peak_idx,
                     "normalized_height": hgt_p,
-                    "processed_flux": plot_template_flat,  # For legacy plotting compatibility
+                    "processed_flux": plot_template_flat,  # used by plotting code paths
                     "spectra": {
                         "flux": {
                             "wave": plot_wave,
@@ -847,10 +864,9 @@ def _process_template_peaks(
                     "drms": drms_peak,
                     "trms": trms_peak,
                 },
-                # Global antisymmetry metrics
-                "arms_global": float(arms_norm),
-                "r_global": float(r_value),
-                "rlap_global": float(rlap),
+                # Antisymmetry metrics (arms disabled)
+                "arms_global": 0.0,
+                "r_global": 0.0,
             }
                 
                 matches.append(match)
@@ -886,7 +902,7 @@ def _run_forced_redshift_analysis_optimized(
     DWLOG_grid: float,
     k1: int, k2: int, k3: int, k4: int,
     lapmin: float, 
-    rlapmin: float, 
+    hlapmin: float, 
     zmin: float, 
     zmax: float,
     log_wave: np.ndarray,
@@ -903,7 +919,7 @@ def _run_forced_redshift_analysis_optimized(
     """
     import math
     import time
-    from .fft_tools import shiftit, overlap, calculate_rms, aspart, apply_filter as bandpass, dtft_drms
+    from .fft_tools import shiftit, overlap, calculate_rms, apply_filter as bandpass, dtft_drms
     from .preprocessing import apodize, pad_to_NW
     from .core.integration import load_templates_unified, integrate_fft_optimization
     from .core.config import SNIDConfig
@@ -949,11 +965,11 @@ def _run_forced_redshift_analysis_optimized(
         )
         _LOG.info(f"✅ Loaded {len(templates)} templates using UNIFIED STORAGE for forced redshift analysis")
     except Exception as e:
-        _LOG.warning(f"Unified storage failed in forced analysis, falling back to legacy loader: {e}")
+        _LOG.warning(f"Unified storage failed in forced analysis, falling back to filesystem loader: {e}")
         from .io import load_templates
         templates, _ = load_templates(templates_dir, flatten=True)
         
-        # Apply template filtering to legacy templates
+        # Apply template filtering to filesystem templates
         if template_filter:
             templates = [t for t in templates if t.get('name', '') in template_filter]
             _LOG.info(f"Applied template filter: {len(templates)} templates remaining")
@@ -1120,7 +1136,7 @@ def _run_forced_redshift_analysis_optimized(
                     k3,
                     k4,
                     lapmin,
-                    rlapmin,
+                    hlapmin,
                     left_edge,
                     right_edge,
                     lap,
@@ -1150,8 +1166,12 @@ def _run_forced_redshift_analysis_optimized(
     _LOG.info(f"⚡ Performance: {total_time:.2f}s total, {templates_per_second:.1f} templates/sec")
     _LOG.info(f"⚡ Average: {total_time/len(templates)*1000:.1f}ms per template")
     
-    # Sort matches by rlap (descending) to get best matches first
-    matches.sort(key=lambda x: x['rlap'], reverse=True)
+    # Sort matches by best available metric (HLAP-CCC preferred)
+    try:
+        from snid_sage.shared.utils.math_utils import get_best_metric_value
+        matches.sort(key=get_best_metric_value, reverse=True)
+    except Exception:
+        matches.sort(key=lambda x: x.get('hlap', 0.0), reverse=True)
     
     return matches
 
@@ -1170,7 +1190,7 @@ def _process_forced_redshift_match(
     DWLOG_grid: float,
     k1: int, k2: int, k3: int, k4: int,
     lapmin: float,
-    rlapmin: float,
+    hlapmin: float,
     left_edge: int,
     right_edge: int,
     lap: float,
@@ -1184,7 +1204,7 @@ def _process_forced_redshift_match(
     This function handles the detailed correlation analysis for a template at the forced redshift,
     calculating all necessary metrics and quality indicators.
     """
-    from .fft_tools import calculate_rms, aspart, apply_filter as bandpass
+    from .fft_tools import calculate_rms, apply_filter as bandpass
     from .preprocessing import apodize, pad_to_NW
 
     try:
@@ -1238,73 +1258,49 @@ def _process_forced_redshift_match(
         # For forced redshift mode, we don't need peak fitting - use direct values
         z_est = forced_redshift
         
-        # Calculate width for uncertainty estimation
+        # Width: half-height FWHM of the phase-2 correlation peak (Δz units).
         width = 0.0
         z_width = 0.0
-        fwhm_pixels = 0.0
-        
-        # Half-maximum width estimate
+        used_fallback = False
         try:
-            half_max = hgt_p * 0.5
-            if half_max > 0:
-                left_idx = peak_idx
-                right_idx = peak_idx
-                
-                # Search left and right
-                for i in range(peak_idx - 1, max(0, peak_idx - 10), -1):
-                    if Rz_peak[i] <= half_max:
-                        left_idx = i
-                        break
-                for i in range(peak_idx + 1, min(NW_grid, peak_idx + 10)):
-                    if Rz_peak[i] <= half_max:
-                        right_idx = i
-                        break
-                
-                if right_idx > left_idx:
-                    fwhm_pixels = float(right_idx - left_idx)
-                    width = fwhm_pixels / 2.35
-                    # Include Jacobian dz/dlag = (1+z) * DWLOG_grid
-                    z_width = fwhm_pixels * DWLOG_grid * (1.0 + z_est)
-        except:
-            pass
-        
-        # Conservative fallback estimate (assume a modest FWHM in pixel units)
-        if width == 0.0:
-            fwhm_pixels = 2.0 * 2.35
-            # Include Jacobian with forced redshift
-            z_width = fwhm_pixels * DWLOG_grid * (1.0 + z_est)
-        
-        # Calculate R value and final rlap (Tonry-Davis R with correct antisymmetric RMS normalisation)
-        arms_raw, _ = aspart(cross_power_peak, k1, k2, k3, k4, 0)
-        arms_norm = arms_raw / (NW_grid * drms_peak * trms_peak)
+            from .peak_width_utils import halfheight_fwhm_bins_from_corr, width_dz_from_fwhm_bins
 
-        if arms_norm > 0:
-            # Tonry antisymmetric RMS metric: use sqrt(2) in the denominator rather than 2
-            r_value = hgt_p / (np.sqrt(2.0) * arms_norm)
-        else:
-            r_value = 0.0
-        # Apply optional profile-aware scaling
-        try:
-            r_value *= float(r_scale)
+            fwhm_bins, _ = halfheight_fwhm_bins_from_corr(
+                Rz_peak,
+                peak_idx=int(peak_idx),
+                window_radius_bins=200,
+                baseline=0.0,
+            )
+            z_width_tmp = width_dz_from_fwhm_bins(fwhm_bins, dwlog=float(DWLOG_grid), z=float(z_est))
+            z_width = float(z_width_tmp) if (np.isfinite(z_width_tmp) and z_width_tmp > 0.0) else 0.0
+            width = float(z_width)
+            if not (np.isfinite(z_width) and z_width > 0.0):
+                used_fallback = True
         except Exception:
-            pass
+            used_fallback = True
+            width = 0.0
+            z_width = 0.0
 
-        rlap = r_value * lpeak
+        # Conservative fallback estimate (assume a modest FWHM in bin units)
+        if not (np.isfinite(z_width) and z_width > 0.0):
+            fwhm_bins_fallback = 2.0 * 2.35  # matches prior fallback (FWHM≈4.7 bins)
+            z_width = float(fwhm_bins_fallback * float(DWLOG_grid) * (1.0 + float(z_est)))
+            width = float(z_width)
+            if used_fallback:
+                _warn_width_fwhm_fallback(
+                    f"Half-height FWHM width failed; using fallback width in forced-redshift match "
+                    f"for template={tpl.get('name','?')} (z≈{float(z_est):.6f})"
+                )
+        
+        # Arms / antisymmetric-noise machinery is intentionally disabled in SNID-SAGE:
+        # it is not used by the HLAP/HLAP-CCC pipeline and is computationally expensive.
 
         # Store results if they pass quality criteria
-        if rlap >= rlapmin and lap >= lapmin:
-            # Calculate formal redshift error (SAGE no 3/8): z_width / (1 + r)
-            if z_width > 0 and r_value > 0:
-                formal_z_error = z_width / (1.0 + r_value)
-            else:
-                formal_z_error = z_width if z_width > 0 else 0.0
-
-            # ------------------------------------------------------------------
-            # Convert global overlap indices to the plotting / CCC index range
-            # [left_edge:right_edge]. We store them as inclusive indices
-            # relative to this trimmed range so that RLAP-CCC / locality / chi²
-            # metrics can re‑use the *exact* RLAP overlap window.
-            # ------------------------------------------------------------------
+        # HLAP gate (HLAP = phase-2 peak height * lap).
+        # HLAP-min gate
+        hlap = float(hgt_p) * float(lap) if (np.isfinite(hgt_p) and np.isfinite(lap)) else 0.0
+        if hlap >= hlapmin and lap >= lapmin:
+            # Convert overlap indices into [left_edge:right_edge] coordinates for downstream metrics.
             overlap_indices = None  # type: Optional[Dict[str, int]]
             try:
                 total_len = int(right_edge - left_edge + 1)
@@ -1327,10 +1323,13 @@ def _process_forced_redshift_match(
                 "subtype": tpl.get("subtype", ""),
                 "age": tpl.get("age", 0.0),
                 "redshift": z_est,
-                "redshift_error": formal_z_error,
-                "r": r_value,
+                "sigma_z": float('nan'),
+                "r": 0.0,
                 "lap": lap,
-                "rlap": rlap,
+                # Canonical phase-2 peak diagnostics (used by HLAP-CCC + sigma_z)
+                "width": width,
+                "height": hgt_p,
+                "hlap": hlap,
                 "peak_height": hgt_p,
                 "peak_width": width,
                 "processed_flux": tpl_shifted[left_edge:right_edge+1],
@@ -1359,10 +1358,9 @@ def _process_forced_redshift_match(
                     },
                 },
                 "forced_redshift": True,  # Flag to indicate this was forced
-                # Global antisymmetry metrics
-                "arms_global": float(arms_norm),
-                "r_global": float(r_value),
-                "rlap_global": float(rlap),
+                # Antisymmetry metrics (arms disabled)
+                "arms_global": 0.0,
+                "r_global": 0.0,
             }
 
             # Attach overlap_indices when available
@@ -1371,9 +1369,8 @@ def _process_forced_redshift_match(
 
             # Debug block for phase-2 (optional consumers)
             debug_phase2 = {
-                "arms_norm_global": float(arms_norm),
-                "r_global": float(r_value),
-                "rlap_global": float(rlap),
+                "arms_norm_global": 0.0,
+                "r_global": 0.0,
                 # Phase-2 refined peak diagnostics (forced-redshift path)
                 "phase2_peak_height": float(hgt_p),
                 "final_lag": float(forced_lag),
@@ -1402,8 +1399,10 @@ def run_snid_analysis(
     exclude_templates: Optional[List[str]] = None,
     peak_window_size: int = 10,
     lapmin: float = 0.3,
-    rlapmin: float = 4,
-    rlap_ccc_threshold: float = 1.8,  # NEW: RLAP-CCC threshold for clustering
+    hlapmin: float = 0.1,
+    hlap_ccc_threshold: float = 0.4,  # Best-metric threshold for clustering
+    # Soft-clipping is not used (kept only for signature compatibility).
+    ccc_softclip: str = "none",
     # NEW: Forced redshift parameter
     forced_redshift: Optional[float] = None,
     # Output options
@@ -1447,8 +1446,8 @@ def run_snid_analysis(
         Window size for finding correlation peaks
     lapmin : float
         Minimum overlap fraction required
-    rlapmin : float
-        Minimum rlap value required for a match
+    hlapmin : float
+        Minimum HLAP value required for a match (HLAP = height * lap)
     forced_redshift : float, optional
         If provided, bypass redshift search and force all templates to this redshift.
         When set, all templates will be shifted to this exact redshift value,
@@ -1523,9 +1522,18 @@ def run_snid_analysis(
     # Initialize result object
     result = SNIDResult(
         success=False,
-        min_rlap=rlapmin,
+        min_hlap=hlapmin,
         dwlog=DWLOG_grid
     )
+    # Persist thresholds used for downstream reporting/plotting
+    try:
+        result.hlapmin = float(hlapmin)
+    except Exception:
+        result.hlapmin = hlapmin
+    try:
+        result.hlap_ccc_threshold = float(hlap_ccc_threshold)
+    except Exception:
+        result.hlap_ccc_threshold = hlap_ccc_threshold
     
     # Store input spectrum info
     result.input_spectrum = processed_spectrum['input_spectrum']
@@ -1591,14 +1599,14 @@ def run_snid_analysis(
 
             # If unified storage is present but returns zero templates (e.g. missing
             # index/HDF5 files, mismatched profile index, etc.), fall back to the
-            # legacy loader so analysis can still run with plain template folders.
+            # filesystem loader so analysis can still run with plain template folders.
             if not templates:
                 raise RuntimeError("Unified storage returned 0 templates")
         except Exception as e:
-            _LOG.warning(f"Unified storage failed, falling back to legacy loader: {e}")
+            _LOG.warning(f"Unified storage failed, falling back to filesystem loader: {e}")
             templates, _ = load_templates(templates_dir, flatten=True)
             
-            # Apply template filtering to legacy templates
+            # Apply template filtering to filesystem templates
             if template_filter:
                 templates = [t for t in templates if t.get('name', '') in template_filter]
                 _LOG.info(f"Applied template filter: {len(templates)} templates remaining")
@@ -1759,7 +1767,7 @@ def run_snid_analysis(
                 k3,
                 k4,
                 lapmin,
-                rlapmin,
+                hlapmin,
                 zmin,
                 zmax,
                 log_wave,
@@ -1768,7 +1776,7 @@ def run_snid_analysis(
                 profile_id=profile_id,
             )
             
-            _LOG.info(f"Phase 1 complete: Forced redshift analysis found {len(matches)} matches with rlap >= {rlapmin}")
+            _LOG.info(f"Phase 1 complete: Forced redshift analysis found {len(matches)} matches with hlap >= {hlapmin}")
             
         except Exception as e:
             _LOG.error(f"Error in forced redshift analysis: {e}")
@@ -1933,7 +1941,7 @@ def run_snid_analysis(
                                     k3,
                                     k4,
                                     lapmin,
-                                    rlapmin,
+                                    hlapmin,
                                     zmin_phase1,
                                     zmax,
                                     peak_window_size,
@@ -1978,7 +1986,7 @@ def run_snid_analysis(
                                 k3,
                                 k4,
                                 lapmin,
-                                rlapmin,
+                                hlapmin,
                                 zmin_phase1,
                                 zmax,
                                 peak_window_size,
@@ -2016,7 +2024,7 @@ def run_snid_analysis(
             _LOG.error(f"Vectorized FFT correlation failed (fatal): {e}")
             raise
 
-        _LOG.info(f"Phase 1 complete: Normal correlation analysis found {len(matches)} matches with rlap >= {rlapmin}")
+        _LOG.info(f"Phase 1 complete: Normal correlation analysis found {len(matches)} matches with hlap >= {hlapmin}")
 
     # END of if/else block for forced_redshift vs normal analysis
 
@@ -2027,61 +2035,83 @@ def run_snid_analysis(
     _LOG.info("Phase 2: Processing results and computing statistics...")
 
     # ============================================================================
-    # COMPUTE RLAP-CCC METRIC FOR ENHANCED GMM CLUSTERING
+    # PHASE-2 METRICS: overlap diagnostics (CCC + residual-noise), HLAP-CCC scoring, and sigma_z
     # ============================================================================
     
-    # Compute RLAP-CCC metric before clustering (multiply RLAP with capped CCC similarity)
-    # Always compute when we have any matches so weak/single-match cases still use RLAP-CCC
+    # Always compute when we have any matches so weak/single-match cases still get consistent metrics.
     if len(matches) >= 1:
-        # Check if RLAP-CCC is already computed for all matches
-        already_computed = all('rlap_ccc' in match for match in matches)
-        
-        if already_computed:
-            _LOG.info("RLAP-CCC metric already computed for all matches - skipping computation")
-        else:
-            try:
-                from snid_sage.shared.utils.math_utils import compute_rlap_ccc_metric
-                report_progress("Computing RLAP-CCC similarity metrics")
-                _LOG.info("Computing RLAP-CCC metric for enhanced GMM clustering")
-                
-                # Pass the full processed spectrum for exact spectrum preparation matching snid_enhanced_metrics.py
-                processed_spectrum_for_ccc = {
-                    'tapered_flux': tapered_flux,
-                    'display_flat': processed_spectrum.get('display_flat'),  # May be None, which is fine
-                    'flat_flux': flat_flux, 
-                    'left_edge': left_edge,
-                    'right_edge': right_edge,
-                    'log_wave': log_wave
-                }
-                
-                # Enhance matches with RLAP-CCC metric using exact spectrum preparation
-                matches = compute_rlap_ccc_metric(
-                    matches,
-                    processed_spectrum_for_ccc,
-                    verbose=verbose,
-                    use_local_rlap=False,
-                )
-                
-                _LOG.info(f"RLAP-CCC metric computed for {len(matches)} matches")
-                
-            except Exception as e:
-                _LOG.warning(f"RLAP-CCC computation failed, using original RLAP: {e}")
-                # Add dummy rlap_ccc field equal to original rlap for compatibility
-                for match in matches:
-                    match['rlap_ccc'] = match.get('rlap', 0.0)
-                    match['original_rlap'] = match.get('rlap', 0.0)
-                    match['ccc_similarity'] = 0.0
-                    match['ccc_similarity_capped'] = 0.0
+        try:
+            from snid_sage.shared.utils.math_utils import (
+                compute_phase2_overlap_diagnostics,
+                compute_hlap_ccc_metric,
+                compute_sigma_z_metrics,
+            )
+            report_progress("Computing phase-2 overlap diagnostics (CCC + residual noise)")
+            _LOG.info("Computing phase-2 overlap diagnostics (CCC trimmed + residual noise)")
+
+            processed_spectrum_for_metrics = {
+                'tapered_flux': tapered_flux,
+                'display_flat': processed_spectrum.get('display_flat'),  # May be None
+                'flat_flux': flat_flux,
+                'left_edge': left_edge,
+                'right_edge': right_edge,
+                'log_wave': log_wave
+            }
+
+            # 1) Compute CCC (trimmed) + residual-noise on the same prepared overlap windows
+            matches = compute_phase2_overlap_diagnostics(
+                matches,
+                processed_spectrum_for_metrics,
+                verbose=verbose,
+                trim_percentile=99.5,
+                residual_clip_percentile=99.5,
+            )
+
+            # 2) Compute HLAP-CCC score (HLAP/(1-CCCtrim)); scoring-only
+            report_progress("Computing HLAP-CCC match scores")
+            matches = compute_hlap_ccc_metric(
+                matches,
+                processed_spectrum_for_metrics,
+                verbose=verbose,
+                trim_percentile=99.5,
+            )
+
+            # 3) Compute sigma_z = width * residual_noise_std (NaN when unavailable)
+            report_progress("Computing per-match sigma_z")
+            matches = compute_sigma_z_metrics(matches)
+
+            _LOG.info(f"Phase-2 metrics computed for {len(matches)} matches")
+        except Exception as e:
+            _LOG.warning(f"Phase-2 metrics computation failed; proceeding with minimal fields: {e}")
+            for match in matches:
+                try:
+                    h = float(match.get('height', match.get('peak_height', 0.0)) or 0.0)
+                except Exception:
+                    h = 0.0
+                try:
+                    lap_v = float(match.get('lap', 0.0) or 0.0)
+                except Exception:
+                    lap_v = 0.0
+                hlap = float(h * lap_v)
+                match['hlap'] = hlap
+                match['hlap_1mccc'] = hlap  # CCC treated as 0 -> denom=1
+                match['hlap_ccc'] = hlap
+                match['ccc_similarity_trimmed'] = 0.0
+                match['ccc_similarity_trimmed_capped'] = 0.0
+                match['ccc_similarity'] = 0.0
+                match['ccc_similarity_capped'] = 0.0
+                match['residual_noise_std'] = float('nan')
+                match['sigma_z'] = float('nan')
 
     # ============================================================================
-    # IMPROVED RLAP-CCC GMM CLUSTERING (DEFAULT)
+    # IMPROVED BEST-METRIC GMM CLUSTERING (DEFAULT)
     # ============================================================================
     
     clustering_results = None
-    # Pre-compute RLAP-CCC thresholded list for fallback paths and summary logic
+    # Pre-compute best-metric thresholded list for fallback paths and summary logic
     try:
         from snid_sage.shared.utils.math_utils import get_best_metric_value
-        thresholded_matches = [m for m in matches if get_best_metric_value(m) >= float(rlap_ccc_threshold)]
+        thresholded_matches = [m for m in matches if get_best_metric_value(m) >= float(hlap_ccc_threshold)]
     except Exception:
         thresholded_matches = list(matches)
     
@@ -2090,7 +2120,7 @@ def run_snid_analysis(
             from .cosmological_clustering import perform_direct_gmm_clustering
             
             report_progress("Performing cosmological GMM clustering analysis with best metric")
-            _LOG.info("Using direct GMM clustering on redshift values with best available metric RLAP-CCC (fallback to RLAP when absent)")
+            _LOG.info("Using direct GMM clustering on redshift values with best available metric (HLAP-CCC preferred)")
             
             clustering_results = perform_direct_gmm_clustering(
                 matches, 
@@ -2098,7 +2128,7 @@ def run_snid_analysis(
                 quality_threshold=0.05,  # Fixed threshold in z space
                 max_clusters_per_type=10,
                 verbose=verbose,
-                rlap_ccc_threshold=rlap_ccc_threshold,  # RLAP-CCC threshold
+                hlap_ccc_threshold=hlap_ccc_threshold,
                 use_weighted_gmm=bool(use_weighted_gmm),
                 # Wire progress so GUI can show incremental updates in Results & Clustering
                 progress_callback=(progress_callback if 'progress_callback' in locals() else None),
@@ -2120,10 +2150,10 @@ def run_snid_analysis(
             else:
                 # Separate cases: no survivors vs weak survivors
                 if len(thresholded_matches) == 0:
-                    _LOG.info("No matches survived RLAP-CCC threshold; skipping clustering")
+                    _LOG.info("No matches survived best-metric threshold; skipping clustering")
                 else:
                     _LOG.info("Clustering not reliable; proceeding with weak matches without forming a cluster")
-                # If nothing survives the RLAP-CCC threshold, treat as no matches
+                # If nothing survives the best-metric threshold, treat as no matches
                 # Otherwise, treat surviving matches as weak (no clusters)
                 filtered_matches = thresholded_matches
                 result.clustering_method = 'none'
@@ -2211,11 +2241,11 @@ def run_snid_analysis(
                 'subtype_margin_over_second': margin_over_second,
                 'second_best_subtype': second_best_subtype,
                 'cluster_metrics': {
-                    'cluster_quality': best_cluster.get('redshift_quality', 'loose'),
+                    'cluster_quality': '',
                     'top_5_mean': best_cluster.get('top_5_mean', 0.0),
                     'cluster_size': best_cluster.get('size', 0),
                     'redshift_span': best_cluster.get('redshift_span', 0.0),
-                    'mean_rlap': best_cluster.get('mean_rlap', 0.0)
+                    'mean_metric': best_cluster.get('mean_metric', 0.0)
                 },
                 'statistics': {
                     'getzt': {
@@ -2252,11 +2282,11 @@ def run_snid_analysis(
                 'consensus_type': winning_type,
                 'consensus_subtype': 'Unknown',
                 'cluster_metrics': {
-                    'cluster_quality': best_cluster.get('redshift_quality', 'loose'),
+                    'cluster_quality': '',
                     'top_5_mean': best_cluster.get('top_5_mean', 0.0),
                     'cluster_size': best_cluster.get('size', 0),
                     'redshift_span': best_cluster.get('redshift_span', 0.0),
-                    'mean_rlap': best_cluster.get('mean_rlap', 0.0)
+                    'mean_metric': best_cluster.get('mean_metric', 0.0)
                 },
                 'statistics': {
                     'getzt': {
@@ -2284,42 +2314,41 @@ def run_snid_analysis(
         if filtered_matches:
             # Find most common type among filtered matches
             type_counts = {}
-            type_rlaps = {}  # Track RLAP-cos values for each type
+            type_metrics = {}  # Track best metric values for each type (HLAP-CCC preferred)
             for match in filtered_matches:
                 tp = match['template'].get('type', 'Unknown')
                 type_counts[tp] = type_counts.get(tp, 0) + 1
-                if tp not in type_rlaps:
-                    type_rlaps[tp] = []
-                # Use RLAP-cos if available, otherwise RLAP
+                if tp not in type_metrics:
+                    type_metrics[tp] = []
                 from snid_sage.shared.utils.math_utils import get_best_metric_value
-                type_rlaps[tp].append(get_best_metric_value(match))
+                type_metrics[tp].append(get_best_metric_value(match))
             
             if type_counts:
                 consensus_type = max(type_counts.items(), key=lambda x: x[1])[0]
                 
                 # Match quality and quantity metrics
                 type_match_count = type_counts[consensus_type]
-                max_rlap = max(type_rlaps[consensus_type]) if type_rlaps[consensus_type] else 0
-                mean_rlap = sum(type_rlaps[consensus_type]) / len(type_rlaps[consensus_type]) if type_rlaps[consensus_type] else 0
+                max_metric = max(type_metrics[consensus_type]) if type_metrics[consensus_type] else 0
+                mean_metric = sum(type_metrics[consensus_type]) / len(type_metrics[consensus_type]) if type_metrics[consensus_type] else 0
             else:
                 consensus_type = 'Unknown'
             
             # Use proper statistical redshift calculations instead of simple mean
             redshifts = [m['redshift'] for m in filtered_matches]
             if redshifts:
-                # Use balanced weighting with best metric (RLAP-CCC if available) and per-match σ
+                # Use balanced weighting with best metric (HLAP-CCC preferred) and per-match σ
                 from snid_sage.shared.utils.math_utils import (
                     estimate_weighted_redshift,
                     get_best_metric_value,
                     weighted_redshift_error,
                 )
-                rlap_ccc_values = [get_best_metric_value(m) for m in filtered_matches]
-                redshift_errors = [m.get('redshift_error', 0.0) for m in filtered_matches]
+                metric_values = [get_best_metric_value(m) for m in filtered_matches]
+                sigmas = [m.get('sigma_z', float('nan')) for m in filtered_matches]
                 weighted_redshift = estimate_weighted_redshift(
-                    redshifts, redshift_errors, rlap_ccc_values
+                    redshifts, sigmas, metric_values
                 )
                 # Compute uncertainty as unbiased weighted SD for the simple path
-                weighted_error = weighted_redshift_error(redshifts, redshift_errors, rlap_ccc_values)
+                weighted_error = weighted_redshift_error(redshifts, sigmas, metric_values)
             else:
                 weighted_redshift = result.initial_redshift
                 weighted_error = 0.0
@@ -2330,8 +2359,8 @@ def run_snid_analysis(
                 'consensus_subtype': 'Unknown',  # No subtype without clustering
                 'match_metrics': {
                     'type_match_count': type_counts.get(consensus_type, 0),
-                    'max_rlap': max(type_rlaps.get(consensus_type, [0])),
-                    'mean_rlap': sum(type_rlaps.get(consensus_type, [0])) / max(len(type_rlaps.get(consensus_type, [0])), 1),
+                    'max_metric': max(type_metrics.get(consensus_type, [0])),
+                    'mean_metric': sum(type_metrics.get(consensus_type, [0])) / max(len(type_metrics.get(consensus_type, [0])), 1),
                     'total_matches': len(filtered_matches)
                 },
                 'statistics': {
@@ -2361,8 +2390,8 @@ def run_snid_analysis(
                 'consensus_subtype': 'Unknown',
                 'match_metrics': {
                     'type_match_count': 0,
-                    'max_rlap': 0.0,
-                    'mean_rlap': 0.0,
+                    'max_metric': 0.0,
+                    'mean_metric': 0.0,
                     'total_matches': 0
                 },
                 'statistics': {
@@ -2460,9 +2489,10 @@ def run_snid_analysis(
         best_match = filtered_matches[0]
         result.r = best_match['r']
         result.lap = best_match['lap']
-        result.rlap = best_match['rlap']
+        # Legacy scalar retained; primary metric is HLAP-CCC
+        result.hlap_ccc = best_match.get('hlap_1mccc', best_match.get('hlap_ccc', 0.0))
         result.redshift = best_match['redshift']
-        result.redshift_error = best_match.get('redshift_error', 0.0)
+        result.redshift_error = best_match.get('sigma_z', float('nan'))
         raw_template_name = best_match['template'].get('name', 'Unknown')
         # Clean template name to remove _epoch_X suffix
         from snid_sage.shared.utils import clean_template_name
@@ -2476,44 +2506,9 @@ def run_snid_analysis(
             result.correlation = best_match['correlation'].get('correlation_full', np.array([]))
             result.redshift_axis = best_match['correlation'].get('z_axis_full', np.array([]))
         
-        # Calculate confidence using new cluster-aware metrics
-        type_matches = [m for m in filtered_matches if m['template'].get('type') == result.consensus_type]
-        if type_matches:
-            # Use RLAP-cos if available, otherwise RLAP
-            from snid_sage.shared.utils.math_utils import get_best_metric_value
-            max_rlap = max(get_best_metric_value(m) for m in type_matches)
-            
-            # Use cluster metrics if available for confidence calculation
-            if hasattr(result, 'clustering_results') and result.clustering_results:
-                # Cluster-based confidence incorporates multiple factors
-                cluster_metrics = type_determination.get('cluster_metrics', {})
-                match_metrics = type_determination.get('match_metrics', {})
-                
-                if cluster_metrics:
-                    # Use cluster quality and top-5 mean for confidence
-                    quality_factor = {'tight': 1.0, 'moderate': 0.8, 'loose': 0.6, 'very_loose': 0.4}.get(
-                        cluster_metrics.get('cluster_quality', 'loose'), 0.5)
-                    top_5_factor = min(1.0, cluster_metrics.get('top_5_mean', 0.0) / 8.0)  # Normalize by good RLAP
-                    size_factor = min(1.0, cluster_metrics.get('cluster_size', 0) / 10.0)  # Normalize by expected size
-                    rlap_factor = min(1.0, cluster_metrics.get('mean_rlap', 0.0) / 8.0)  # Normalize by good RLAP
-                    
-                    result.type_confidence = (quality_factor * 0.3 + top_5_factor * 0.3 + 
-                                            size_factor * 0.2 + rlap_factor * 0.2)
-                elif match_metrics:
-                    # Use match-based metrics for confidence
-                    count_factor = min(1.0, match_metrics.get('type_match_count', 0) / 10.0)
-                    rlap_factor = min(1.0, match_metrics.get('max_rlap', 0.0) / 8.0)
-                    mean_rlap_factor = min(1.0, match_metrics.get('mean_rlap', 0.0) / 6.0)
-                    
-                    result.type_confidence = (count_factor * 0.4 + rlap_factor * 0.3 + mean_rlap_factor * 0.3)
-                else:
-                    # Simple fallback based on RLAP-cos
-                    result.type_confidence = min(1.0, max_rlap / 8.0)
-            else:
-                # Simple RLAP-cos-based confidence without clustering
-                result.type_confidence = min(1.0, max_rlap / 8.0)
-        else:
-            result.type_confidence = 0.0
+        # Type confidence: rely on cluster/top-5 penalized scoring and relative comparisons.
+        # Legacy confidence normalizations (/8, /6 and redshift_quality taxonomy) removed.
+        result.type_confidence = float(result.subtype_confidence) if np.isfinite(getattr(result, "subtype_confidence", 0.0)) else 0.0
             
         _LOG.info(f"Analysis complete: {result.consensus_type} (confidence: {result.type_confidence:.2f})")
         result.success = True
@@ -2522,14 +2517,14 @@ def run_snid_analysis(
         # No good matches
         result.r = 0.0
         result.lap = 0.0
-        result.rlap = 0.0
+        result.hlap_ccc = 0.0
         result.consensus_type = 'Unknown'
         result.type_confidence = 0.0
 
         result.success = False
         report_progress("No good matches found")
 
-    # Store matches for plotting - prefer clustered, thresholded, and RLAP-CCC-sorted results
+    # Store matches for plotting - prefer clustered, thresholded, and best-metric-sorted results
     try:
         _mot = int(max_output_templates)
     except Exception:
@@ -2553,24 +2548,24 @@ def run_snid_analysis(
     except Exception:
         overlay_candidates = list(matches)
 
-    # If RLAP-CCC exists, apply the same threshold used for clustering to what we display
+    # If enhanced metric exists, apply the same threshold used for clustering to what we display
     try:
-        any_ccc = any(('rlap_ccc' in m) for m in overlay_candidates)
-        if any_ccc and isinstance(rlap_ccc_threshold, (int, float)):
+        any_metric = any(('hlap_1mccc' in m or 'hlap_ccc' in m) for m in overlay_candidates)
+        if any_metric and isinstance(hlap_ccc_threshold, (int, float)):
             from snid_sage.shared.utils.math_utils import get_best_metric_value
-            filtered = [m for m in overlay_candidates if get_best_metric_value(m) >= float(rlap_ccc_threshold)]
+            filtered = [m for m in overlay_candidates if get_best_metric_value(m) >= float(hlap_ccc_threshold)]
             # Do not fallback if filtering removes all; an empty list correctly signals no reliable matches
             overlay_candidates = filtered
     except Exception:
         pass
 
-    # Sort by best available metric (prefer RLAP-CCC; fallback to RLAP)
+    # Sort by best available metric (HLAP-CCC preferred)
     try:
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         overlay_candidates.sort(key=get_best_metric_value, reverse=True)
     except Exception:
-        # Fallback stable sort by rlap when utilities are unavailable
-        overlay_candidates.sort(key=lambda m: m.get('rlap_ccc', m.get('rlap', 0.0)), reverse=True)
+        # Fallback stable sort by HLAP/HLAP-CCC when utilities are unavailable
+        overlay_candidates.sort(key=lambda m: m.get('hlap_1mccc', m.get('hlap_ccc', m.get('hlap', 0.0))), reverse=True)
 
     # Expose top-N to GUI
     result.best_matches = overlay_candidates[:_mot]
@@ -2682,7 +2677,7 @@ def run_snid(
     apodize_percent: float = 10.0,
     peak_window_size: int = 10,
     lapmin: float = 0.3,
-    rlapmin: float = 4,
+    hlapmin: float = 0.1,
 
     # NEW: Forced redshift parameter
     forced_redshift: Optional[float] = None,
@@ -2721,7 +2716,7 @@ def run_snid(
         --output-dir results/ --plot-dir plots/ \\
         --output-main --output-fluxed --output-flattened --output-correlation \\
         --save-plots --show-plots --verbose \\
-        --max-output-templates 10 --rlapmin 5.0 --lapmin 0.3 \\
+        --max-output-templates 10 --hlapmin 5.0 --lapmin 0.3 \\
         --zmin -0.01 --zmax 1.0 --aband-remove --skyclip
     
     Parameters
@@ -2764,8 +2759,8 @@ def run_snid(
         Window size for finding correlation peaks
     lapmin : float, optional
         Minimum overlap fraction required
-    rlapmin : float, optional
-        Minimum rlap value required for a match
+    hlapmin : float, optional
+        Minimum HLAP value required for a match (HLAP = height * lap)
     output_dir : str or Path, optional
         Directory for output files
     output_main : bool, optional
@@ -2811,7 +2806,7 @@ def run_snid(
     _LOG.info(f"Input spectrum: {spectrum_path}")
     _LOG.info(f"Templates directory: {templates_dir}")
     _LOG.info(f"Redshift range: {zmin:.6f} - {zmax:.6f}")
-    _LOG.info(f"RLAP threshold: {rlapmin}")
+    _LOG.info(f"HLAP-min threshold: {hlapmin}")
     _LOG.info("="*80)
     
     full_trace = {}
@@ -2895,7 +2890,8 @@ def run_snid(
         exclude_templates=exclude_templates,
         peak_window_size=peak_window_size,
         lapmin=lapmin,
-        rlapmin=rlapmin,
+        hlapmin=hlapmin,
+        hlap_ccc_threshold=hlap_ccc_threshold,
         
         forced_redshift=forced_redshift,
         max_output_templates=max_output_templates,
@@ -2976,7 +2972,7 @@ def run_snid(
                 "emclip_z": emclip_z,
                 "emwidth": emwidth,
                 "lapmin": lapmin,
-                "rlapmin": rlapmin,
+                "hlapmin": hlapmin,
         
                 "apodize_percent": apodize_percent,
                 "output_plots": int(output_plots),
@@ -3019,12 +3015,17 @@ def run_snid(
         _LOG.info(f"   Best type: {result.consensus_type}")
         _LOG.info(f"   Best template: {result.template_name}")
         _LOG.info(f"   Redshift: {result.redshift:.5f} ± {result.redshift_error:.5f}")
-        _LOG.info(f"   RLAP: {result.rlap:.2f}")
+        try:
+            from snid_sage.shared.utils.math_utils import get_best_metric_name, get_best_metric_value
+            if getattr(result, 'best_matches', None):
+                _LOG.info(f"   {get_best_metric_name(result.best_matches[0])}: {get_best_metric_value(result.best_matches[0]):.2f}")
+        except Exception:
+            pass
         _LOG.info(f"   Confidence: {result.type_confidence:.2f}")
     
     else:
         _LOG.error(f"[FAILED] NO GOOD MATCH FOUND")
-        _LOG.error(f"   Try lowering lapmin (overlap) and/or rlapmin. If you expect z > 1, use the 'onir' profile (supports up to z≈2.5).")
+        _LOG.error(f"   Try lowering lapmin (overlap) and/or hlapmin. If you expect z > 1, use the 'onir' profile (supports up to z≈2.5).")
     
     _LOG.info(f"   Runtime: {result.runtime_sec:.2f} seconds")
     _LOG.info("="*80)
@@ -3051,7 +3052,7 @@ if __name__ == "__main__":
     parser.add_argument("--output-dir", "-o", help="Directory for output files")
     parser.add_argument("--zmin", type=float, default=-0.01, help="Minimum redshift to consider")
     parser.add_argument("--zmax", type=float, default=1.0, help="Maximum redshift to consider")
-    parser.add_argument("--rlapmin", type=float, default=4.0, help="Minimum rlap value required")
+    parser.add_argument("--hlapmin", type=float, default=0.1, help="Minimum HLAP value required (HLAP = height * lap)")
     parser.add_argument("--lapmin", type=float, default=0.3, help="Minimum overlap fraction required")
     parser.add_argument("--aband-remove", action="store_true", help="Remove telluric A-band")
     parser.add_argument("--skyclip", action="store_true", help="Clip sky emission lines")
@@ -3076,7 +3077,7 @@ if __name__ == "__main__":
             output_dir=args.output_dir,
             zmin=args.zmin,
             zmax=args.zmax,
-            rlapmin=args.rlapmin,
+            hlapmin=args.hlapmin,
             lapmin=args.lapmin,
             aband_remove=args.aband_remove,
             skyclip=args.skyclip,

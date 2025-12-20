@@ -8,7 +8,7 @@ Displays pie charts and statistics for SN subtype distribution within clusters.
 Features:
 - Interactive matplotlib pie chart with subtype proportions
 - Cluster-aware data selection (user-selected > winning > best matches)
-- Detailed statistics table with RLAP thresholds
+- Detailed statistics table with quality metrics
 - Multi-panel layout with pie chart, statistics, and threshold analysis
 - Export functionality for plots and data
 - Modern Qt styling
@@ -60,7 +60,7 @@ class PySide6SubtypeProportionsDialog(QtWidgets.QDialog):
     - Interactive matplotlib pie chart with subtype distribution
     - Cluster-aware data selection prioritizing user selection
     - Detailed statistics table with quality metrics
-    - RLAP threshold analysis
+    - Metric-threshold analysis (best metric; HLAP-CCC preferred)
     - Export functionality for plots and data
     """
     
@@ -161,7 +161,7 @@ class PySide6SubtypeProportionsDialog(QtWidgets.QDialog):
             
             # Create subplot grid: 2x2 layout
             # Top: pie chart (left) and statistics bar chart (right)
-            # Bottom: RLAP threshold analysis (spanning both columns)
+            # Bottom: metric threshold analysis (spanning both columns)
             self.figure.clear()
             
             # Embed in Qt widget
@@ -212,7 +212,7 @@ class PySide6SubtypeProportionsDialog(QtWidgets.QDialog):
         self.stats_table = QtWidgets.QTableWidget()
         self.stats_table.setColumnCount(5)
         self.stats_table.setHorizontalHeaderLabels([
-            "Subtype", "Count", "Percentage", "Avg RLAP", "Avg Redshift"
+            "Subtype", "Count", "Percentage", "Avg metric", "Avg Redshift"
         ])
         self.stats_table.horizontalHeader().setStretchLastSection(True)
         self.stats_table.setAlternatingRowColors(False)
@@ -355,7 +355,7 @@ Please check your analysis results and try again.
         
         # Calculate subtype proportions
         subtype_counts = defaultdict(int)
-        subtype_rlaps = defaultdict(list)
+        subtype_metric_values = defaultdict(list)
         subtype_redshifts = defaultdict(list)
         
         for match in self.cluster_matches:
@@ -365,7 +365,13 @@ Please check your analysis results and try again.
                 subtype = 'Unknown'
             
             subtype_counts[subtype] += 1
-            subtype_rlaps[subtype].append(match.get('rlap', 0))
+            if MATH_UTILS_AVAILABLE:
+                try:
+                    subtype_metric_values[subtype].append(float(get_best_metric_value(match)))
+                except Exception:
+                    subtype_metric_values[subtype].append(float(match.get('hlap', 0.0) or 0.0))
+            else:
+                subtype_metric_values[subtype].append(float(match.get('hlap', 0.0) or 0.0))
             subtype_redshifts[subtype].append(match.get('redshift', 0))
         
         # Build summary text
@@ -396,13 +402,13 @@ Please check your analysis results and try again.
         sorted_subtypes = sorted(subtype_counts.items(), key=lambda x: x[1], reverse=True)
         for subtype, count in sorted_subtypes:
             percentage = (count / total_matches) * 100
-            avg_rlap = np.mean(subtype_rlaps[subtype]) if subtype_rlaps[subtype] else 0
-            lines.append(f"   {subtype}: {count} matches ({percentage:.1f}%) - Avg RLAP: {avg_rlap:.1f}")
+            avg_metric = np.mean(subtype_metric_values[subtype]) if subtype_metric_values[subtype] else 0
+            lines.append(f"   {subtype}: {count} matches ({percentage:.1f}%) - Avg metric: {avg_metric:.2f}")
         
         lines.extend([
             "",
             "📏 QUALITY METRICS:",
-            f"   RLAP Range: {min([min(rlaps) for rlaps in subtype_rlaps.values() if rlaps]):.1f} - {max([max(rlaps) for rlaps in subtype_rlaps.values() if rlaps]):.1f}",
+            f"   Metric Range: {min([min(vs) for vs in subtype_metric_values.values() if vs]):.2f} - {max([max(vs) for vs in subtype_metric_values.values() if vs]):.2f}",
             f"   Redshift Range: {min([min(zs) for zs in subtype_redshifts.values() if zs]):.4f} - {max([max(zs) for zs in subtype_redshifts.values() if zs]):.4f}",
         ])
         
@@ -416,7 +422,7 @@ Please check your analysis results and try again.
             return
         
         # Calculate statistics by subtype
-        subtype_stats = defaultdict(lambda: {'count': 0, 'rlaps': [], 'redshifts': []})
+        subtype_stats = defaultdict(lambda: {'count': 0, 'metric_values': [], 'redshifts': []})
         total_matches = len(self.cluster_matches)
         
         for match in self.cluster_matches:
@@ -426,7 +432,13 @@ Please check your analysis results and try again.
                 subtype = 'Unknown'
             
             subtype_stats[subtype]['count'] += 1
-            subtype_stats[subtype]['rlaps'].append(match.get('rlap', 0))
+            if MATH_UTILS_AVAILABLE:
+                try:
+                    subtype_stats[subtype]['metric_values'].append(float(get_best_metric_value(match)))
+                except Exception:
+                    subtype_stats[subtype]['metric_values'].append(float(match.get('hlap', 0.0) or 0.0))
+            else:
+                subtype_stats[subtype]['metric_values'].append(float(match.get('hlap', 0.0) or 0.0))
             subtype_stats[subtype]['redshifts'].append(match.get('redshift', 0))
         
         # Sort by count (descending)
@@ -454,11 +466,11 @@ Please check your analysis results and try again.
             percent_item.setTextAlignment(QtCore.Qt.AlignCenter)
             self.stats_table.setItem(row, 2, percent_item)
             
-            # Average RLAP
-            avg_rlap = np.mean(stats['rlaps']) if stats['rlaps'] else 0
-            rlap_item = QtWidgets.QTableWidgetItem(f"{avg_rlap:.1f}")
-            rlap_item.setTextAlignment(QtCore.Qt.AlignCenter)
-            self.stats_table.setItem(row, 3, rlap_item)
+            # Average metric
+            avg_metric = np.mean(stats['metric_values']) if stats['metric_values'] else 0
+            metric_item = QtWidgets.QTableWidgetItem(f"{avg_metric:.2f}")
+            metric_item.setTextAlignment(QtCore.Qt.AlignCenter)
+            self.stats_table.setItem(row, 3, metric_item)
             
             # Average redshift
             avg_z = np.mean(stats['redshifts']) if stats['redshifts'] else 0
@@ -485,14 +497,14 @@ Please check your analysis results and try again.
             ax1 = self.figure.add_subplot(gs[0, 0])
             # Top right: Statistics table (will be text-based)
             ax2 = self.figure.add_subplot(gs[0, 1])
-            # Bottom: RLAP threshold analysis (spanning both columns)
+            # Bottom: metric threshold analysis (spanning both columns)
             ax3 = self.figure.add_subplot(gs[1, :])
             
             self.axes = [ax1, ax2, ax3]
             
             # Calculate subtype data
             subtype_counts = defaultdict(int)
-            subtype_rlaps = defaultdict(list)
+            subtype_metric_values = defaultdict(list)
             subtype_redshifts = defaultdict(list)
             
             for match in self.cluster_matches:
@@ -502,7 +514,13 @@ Please check your analysis results and try again.
                     subtype = 'Unknown'
                 
                 subtype_counts[subtype] += 1
-                subtype_rlaps[subtype].append(match.get('rlap', 0))
+                if MATH_UTILS_AVAILABLE:
+                    try:
+                        subtype_metric_values[subtype].append(float(get_best_metric_value(match)))
+                    except Exception:
+                        subtype_metric_values[subtype].append(float(match.get('hlap', 0.0) or 0.0))
+                else:
+                    subtype_metric_values[subtype].append(float(match.get('hlap', 0.0) or 0.0))
                 subtype_redshifts[subtype].append(match.get('redshift', 0))
             
             if not subtype_counts:
@@ -517,10 +535,10 @@ Please check your analysis results and try again.
             self._create_pie_chart(ax1, subtype_counts)
             
             # Plot 2: Statistics table (like old GUI)
-            self._create_statistics_table(ax2, subtype_counts, subtype_rlaps, subtype_redshifts)
+            self._create_statistics_table(ax2, subtype_counts, subtype_metric_values, subtype_redshifts)
             
-            # Plot 3: RLAP threshold analysis
-            self._create_threshold_analysis(ax3, subtype_rlaps)
+            # Plot 3: metric threshold analysis
+            self._create_threshold_analysis(ax3, subtype_metric_values)
             
             # Adjust layout
             self.figure.tight_layout()
@@ -591,34 +609,36 @@ Please check your analysis results and try again.
     
 
     
-    def _create_threshold_analysis(self, ax, subtype_rlaps):
-        """Create RLAP threshold analysis plot showing proportions like old GUI"""
-        if not subtype_rlaps or not self.cluster_matches:
-            ax.text(0.5, 0.5, "No RLAP data available", 
+    def _create_threshold_analysis(self, ax, subtype_metric_values):
+        """Create metric threshold analysis plot showing proportions like old GUI."""
+        if not subtype_metric_values or not self.cluster_matches:
+            ax.text(0.5, 0.5, "No metric data available", 
                    ha='center', va='center', transform=ax.transAxes)
             ax.axis('off')
             return
         
-        # Find RLAP range from all cluster matches
-        all_rlaps = []
-        for match in self.cluster_matches:
-            rlap = match.get('rlap', 0)
-            if rlap > 0:
-                all_rlaps.append(rlap)
+        # Find metric range from all cluster matches
+        try:
+            from snid_sage.shared.utils.math_utils import get_best_metric_value
+            all_metrics = [float(get_best_metric_value(m)) for m in self.cluster_matches]
+        except Exception:
+            all_metrics = [float(m.get('hlap', 0.0) or 0.0) for m in self.cluster_matches]
         
-        if not all_rlaps:
-            ax.text(0.5, 0.5, "No valid RLAP values", 
+        all_metrics = [m for m in all_metrics if np.isfinite(m)]
+        
+        if not all_metrics:
+            ax.text(0.5, 0.5, "No valid metric values", 
                    ha='center', va='center', transform=ax.transAxes)
             ax.axis('off')
             return
         
-        # Create RLAP thresholds (similar to old GUI)
-        min_rlap = max(3.0, min(all_rlaps))  # Start from 3.0 or higher
-        max_rlap = min(max(all_rlaps), 30.0)  # Cap at 30.0
-        thresholds = np.linspace(min_rlap, max_rlap, 15)
+        # Create metric thresholds
+        min_metric = min(all_metrics)
+        max_metric = max(all_metrics)
+        thresholds = np.linspace(min_metric, max_metric, 15) if max_metric > min_metric else np.array([min_metric])
         
         # Get sorted subtypes for consistent color assignment
-        sorted_subtypes = sorted(subtype_rlaps.keys())
+        sorted_subtypes = sorted(subtype_metric_values.keys())
         subtype_color_map = {}
         for i, subtype in enumerate(sorted_subtypes):
             if subtype in self.subtype_colors:
@@ -631,8 +651,11 @@ Please check your analysis results and try again.
         
         for threshold in thresholds:
             # Get all matches above this threshold
-            qualified_matches = [match for match in self.cluster_matches 
-                               if match.get('rlap', 0) >= threshold]
+            try:
+                from snid_sage.shared.utils.math_utils import get_best_metric_value
+                qualified_matches = [match for match in self.cluster_matches if get_best_metric_value(match) >= threshold]
+            except Exception:
+                qualified_matches = [match for match in self.cluster_matches if (match.get('hlap', 0.0) or 0.0) >= threshold]
             
             if qualified_matches:
                 # Count subtypes in qualified matches
@@ -664,8 +687,8 @@ Please check your analysis results and try again.
                 plotted_any = True
         
         if plotted_any:
-            ax.set_title('Subtype Proportions vs RLAP Threshold', fontsize=12, fontweight='bold', pad=15)
-            ax.set_xlabel('RLAP Threshold', fontsize=10, fontweight='bold')
+            ax.set_title('Subtype Proportions vs Metric Threshold', fontsize=12, fontweight='bold', pad=15)
+            ax.set_xlabel('Metric Threshold', fontsize=10, fontweight='bold')
             ax.set_ylabel('Subtype Proportion', fontsize=10, fontweight='bold')
             ax.grid(True, alpha=0.3)
             ax.legend(fontsize=9, loc='upper right')
@@ -676,7 +699,7 @@ Please check your analysis results and try again.
                    ha='center', va='center', transform=ax.transAxes)
             ax.axis('off')
     
-    def _create_statistics_table(self, ax, subtype_counts, subtype_rlaps, subtype_redshifts):
+    def _create_statistics_table(self, ax, subtype_counts, subtype_metric_values, subtype_redshifts):
         """Create a text-based statistics table on the right side of the plot."""
         ax.axis('off')  # Hide the axis
         
@@ -689,21 +712,21 @@ Please check your analysis results and try again.
         
         # Create table data similar to old GUI
         table_data = []
-        headers = ['Subtype', 'Count', '%', 'Avg RLAP', 'Avg Z']
+        headers = ['Subtype', 'Count', '%', 'Avg metric', 'Avg Z']
         
         # Sort subtypes by count (descending)
         sorted_subtypes = sorted(subtype_counts.items(), key=lambda x: x[1], reverse=True)
         
         for subtype, count in sorted_subtypes:
             percentage = (count / total_matches) * 100
-            avg_rlap = np.mean(subtype_rlaps[subtype]) if subtype_rlaps[subtype] else 0
+            avg_metric = np.mean(subtype_metric_values[subtype]) if subtype_metric_values[subtype] else 0
             avg_z = np.mean(subtype_redshifts[subtype]) if subtype_redshifts[subtype] else 0
             
             table_data.append([
                 subtype,
                 str(count),
                 f"{percentage:.1f}%",
-                f"{avg_rlap:.1f}",
+                f"{avg_metric:.2f}",
                 f"{avg_z:.4f}"
             ])
         
@@ -787,7 +810,7 @@ Please check your analysis results and try again.
                     # Write header
                     writer.writerow([
                         'Template_Name', 'Type', 'Subtype', 'Redshift', 
-                        'Age_days', 'RLAP', 'LAP'
+                        'Age_days', 'Metric', 'LAP'
                     ])
                     
                     # Write data
@@ -799,7 +822,7 @@ Please check your analysis results and try again.
                             template.get('subtype', 'Unknown'),
                             match.get('redshift', 0),
                             template.get('age', 0),
-                            match.get('rlap', 0),
+                            (float(get_best_metric_value(match)) if MATH_UTILS_AVAILABLE else float(match.get('hlap', 0.0) or 0.0)),
                             match.get('lap', 0)
                         ])
                 

@@ -115,9 +115,9 @@ sage batch --list-csv input.csv --path-column "Spectrum Path" --redshift-column 
 | `--list-csv FILE` | CSV list of spectra (columns: path[, redshift]) |
 | `--path-column NAME` | Column for paths in `--list-csv` (default: path) |
 | `--redshift-column NAME` | Column for redshift in `--list-csv` (default: redshift) |
-| `--rlapmin FLOAT` | Minimum RLAP (default: 4.0) |
+| `--hlapmin FLOAT` | Minimum HLAP (default: 0.1) |
 | `--lapmin FLOAT` | Minimum overlap fraction (default: 0.3) |
-| `--rlap-ccc-threshold FLOAT` | Clustering quality threshold (default: 1.8) |
+| `--hlap-ccc-threshold FLOAT` | HLAP-CCC clustering threshold (HLAP/(1−CCC), default: 0.4) |
 | `--type-filter TYPE...` | Restrict templates to these types |
 | `--template-filter NAME...` | Only use specified template names |
 | `--exclude-templates NAME...` | Exclude specified template names |
@@ -167,7 +167,7 @@ sage config <command> [options]
 | `paths.templates_dir` | Template directory |
 | `paths.output_dir` | Default output directory |
 | `paths.data_dir` | Data directory |
-| `analysis.rlapmin` | Minimum RLAP |
+| `analysis.hlapmin` | Minimum HLAP |
 | `analysis.lapmin` | Minimum overlap fraction |
 | `analysis.redshift_min`, `analysis.redshift_max` | Redshift bounds |
 | `processing.apodize_percent` | Apodization percentage |

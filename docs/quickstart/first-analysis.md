@@ -138,7 +138,7 @@ Measurements:
 Template matches:
 A ranked list of best matching templates showing:
 - Template name and type
-- RLAP-CCC score (final metric)
+- HLAP-CCC score (final metric)
 - Individual redshift and age estimates
 
 ![Redshift vs Age](../images/7.RedshiftVsAge.png)
@@ -201,9 +201,12 @@ Measurements:
 - **Redshift**: Determined redshift with uncertainty
 - **Age**: Days from maximum light with uncertainty
 
+Match quality:
+- HLAP-CCC scores and individual estimates
+
 Template matches:
 - Ranked list of best matching templates
-- RLAP-CCC scores and individual estimates
+- HLAP-CCC scores and individual estimates
 
 ### CLI Options
 

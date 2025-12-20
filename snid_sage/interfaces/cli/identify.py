@@ -212,16 +212,24 @@ Examples:
         help="Maximum redshift to consider (default: 1.0 for optical, 2.5 for ONIR)"
     )
     analysis_group.add_argument(
-        "--rlapmin", 
-        type=float, 
-        default=4.0, 
-        help="Minimum rlap value required"
+        "--hlapmin",
+        dest="hlapmin",
+        type=float,
+        default=0.1,
+        help="Minimum HLAP value required (HLAP = height * lap)"
     )
     analysis_group.add_argument(
         "--lapmin", 
         type=float, 
         default=0.3, 
         help="Minimum overlap fraction required"
+    )
+    analysis_group.add_argument(
+        "--hlap-ccc-threshold",
+        dest="hlap_ccc_threshold",
+        type=float,
+        default=0.4,
+        help="Minimum HLAP-CCC value required for clustering (HLAP-CCC: HLAP/(1−CCC))"
     )
     # Analysis options completed
     
@@ -443,7 +451,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
     
     if winning_cluster:
         cluster_matches = winning_cluster.get('matches', [])
-        # Sort cluster matches by best available metric (RLAP-CCC if available, otherwise RLAP) descending
+        # Sort cluster matches by best available metric (HLAP-CCC preferred) descending
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
     
@@ -451,12 +459,12 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
     if not cluster_matches:
         if hasattr(result, 'filtered_matches') and result.filtered_matches:
             cluster_matches = result.filtered_matches
-            # Sort by best available metric (RLAP-CCC if available, otherwise RLAP) descending
+            # Sort by best available metric (HLAP-CCC preferred) descending
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
         elif hasattr(result, 'best_matches') and result.best_matches:
             cluster_matches = result.best_matches
-            # Sort by best available metric (RLAP-CCC if available, otherwise RLAP) descending
+            # Sort by best available metric (HLAP-CCC preferred) descending
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
     
@@ -472,7 +480,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
         'consensus_subtype': result.best_subtype,
         'redshift': result.redshift,
         'redshift_error': result.redshift_error,
-        'rlap': result.rlap,
+        'hlap_ccc': getattr(result, 'hlap_ccc', 0.0),
 
 
         'runtime': result.runtime_sec,
@@ -503,7 +511,6 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
         
         # Calculate enhanced cluster statistics using hybrid methods
         if cluster_matches:
-            rlaps = np.array([m['rlap'] for m in cluster_matches])
             
             # Collect redshift data with uncertainties for balanced estimation
             redshifts_with_errors = []
@@ -519,7 +526,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 
                 # Always collect redshift data (uncertainties are always available)
                 z = m.get('redshift')
-                z_err = m.get('redshift_error', 0.0)
+                z_err = m.get('sigma_z', float('nan'))
                 metric_val = get_best_metric_value(m)
                 
                 if z is not None and np.isfinite(z) and z_err > 0:
@@ -553,7 +560,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 summary['cluster_age_weighted'] = np.nan
                 summary['cluster_age_err_weighted'] = np.nan
             
-            summary['cluster_rlap_mean'] = np.mean(rlaps)
+            # Legacy field removed: cluster mean is already available via best-metric-derived stats
             
             # Subtype composition within cluster (GUI-style)
             from collections import Counter
@@ -664,7 +671,7 @@ def _save_spectrum_outputs(
                     elif hasattr(result, 'best_matches') and result.best_matches:
                         plot_matches = result.best_matches
                 
-                # CRITICAL: Sort all plot matches by best available metric (RLAP-CCC if available, otherwise RLAP) descending
+                # CRITICAL: Sort all plot matches by best available metric (HLAP-CCC preferred) descending
                 if plot_matches:
                     from snid_sage.shared.utils.math_utils import get_best_metric_value
                     plot_matches = sorted(plot_matches, key=get_best_metric_value, reverse=True)
@@ -852,7 +859,7 @@ def main(args: argparse.Namespace) -> int:
             logger.info(f"Starting SNID-SAGE analysis for: {args.spectrum_path}")
             logger.info(f"Templates directory: {args.templates_dir}")
             logger.info(f"Redshift range: {args.zmin} to {args.zmax}")
-            logger.info(f"RLAP threshold: {args.rlapmin}")
+            logger.info(f"HLAP-min threshold: {args.hlapmin}")
         
         # Run preprocessing and analysis
         spectrum_name = _extract_spectrum_name(args.spectrum_path)
@@ -996,7 +1003,8 @@ def main(args: argparse.Namespace) -> int:
             exclude_templates=getattr(args, 'exclude_templates', None),
             peak_window_size=args.peak_window_size,
             lapmin=args.lapmin,
-                rlapmin=args.rlapmin,
+                hlapmin=args.hlapmin,
+                hlap_ccc_threshold=getattr(args, 'hlap_ccc_threshold', 0.4),
 
             forced_redshift=args.forced_redshift,
             max_output_templates=args.max_output_templates,
@@ -1138,7 +1146,15 @@ def main(args: argparse.Namespace) -> int:
                     else:
                         print(formatter.get_cli_one_line_summary())
                 except ImportError:
-                    print(f"{spectrum_name}: {result.consensus_type} z={result.redshift:.6f} RLAP={result.rlap:.1f}")
+                    # Fallback minimal one-line output without formatter
+                    try:
+                        from snid_sage.shared.utils.math_utils import get_best_metric_name, get_best_metric_value
+                        bm = (result.best_matches[0] if getattr(result, 'best_matches', None) else {})
+                        metric_name = get_best_metric_name(bm) if bm else "HLAP-CCC"
+                        metric_value = get_best_metric_value(bm) if bm else float('nan')
+                        print(f"{spectrum_name}: {result.consensus_type} z={result.redshift:.6f} {metric_name}={metric_value:.2f}")
+                    except Exception:
+                        print(f"{spectrum_name}: {result.consensus_type} z={result.redshift:.6f}")
             
 
             
@@ -1148,7 +1164,7 @@ def main(args: argparse.Namespace) -> int:
                     print(f"\nResults saved to: {args.output_dir}/")
                     if args.complete:
                         print(f"   3D Plots: Static PNG files with optimized viewing angle")
-                        print(f"   Top 5 templates: Sorted by RLAP (highest quality first)")
+                        print(f"   Top 5 templates: Sorted by best metric (highest quality first)")
                 else:
                     print(f"Main result file saved to: {args.output_dir}/")
             

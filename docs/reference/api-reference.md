@@ -46,7 +46,7 @@ result, analysis_trace = run_snid_analysis(
 # Access results
 print(f"Type: {result.consensus_type}")
 print(f"Redshift: {result.redshift}")
-print(f"Confidence: {result.rlap}")
+print(f"Confidence: {getattr(result, 'hlap_ccc', None)}")
 ```
 
 ---
@@ -84,7 +84,7 @@ def run_snid(
     forced_redshift: Optional[float] = None,
     peak_window_size: int = 10,
     lapmin: float = 0.3,
-    rlapmin: float = 4,
+    hlapmin: float = 0.1,
     # Output options
     output_dir: Optional[str] = None,
     output_main: bool = False,
@@ -131,7 +131,7 @@ def run_snid(
 | forced_redshift | float or None | None | Force analysis at specific redshift |
 | peak_window_size | int | 10 | Window size for peak detection |
 | lapmin | float | 0.3 | Minimum overlap fraction |
-| rlapmin | float | 4 | Minimum RLAP value |
+| hlapmin | float | 0.1 | Minimum HLAP value (HLAP = height × lap) |
 | output_dir | str or None | None | Directory for output files |
 | output_main | bool | False | Generate main output file |
 | output_fluxed | bool | False | Generate fluxed spectrum file |
@@ -251,8 +251,8 @@ def run_snid_analysis(
     forced_redshift: Optional[float] = None,
     peak_window_size: int = 10,
     lapmin: float = 0.3,
-    rlapmin: float = 4,
-    rlap_ccc_threshold: float = 1.8,
+    hlapmin: float = 0.1,
+    hlap_ccc_threshold: float = 0.4,
     max_output_templates: int = 5,
     verbose: bool = False,
     show_plots: bool = True,
@@ -277,8 +277,8 @@ def run_snid_analysis(
 | forced_redshift | float or None | None | Force specific redshift |
 | peak_window_size | int | 10 | Peak detection window |
 | lapmin | float | 0.3 | Minimum overlap |
-| rlapmin | float | 4 | Minimum RLAP |
-| rlap_ccc_threshold | float | 1.8 | Threshold for clustering quality (RLAP-CCC) |
+| hlapmin | float | 0.1 | Minimum HLAP |
+| hlap_ccc_threshold | float | 0.4 | Threshold for clustering quality (HLAP-CCC: HLAP/(1−CCC)) |
 | max_output_templates | int | 5 | Maximum output templates |
 | verbose | bool | False | Verbose output |
 | show_plots | bool | True | Show plots |
@@ -310,7 +310,7 @@ Class containing SNID analysis results.
 - `redshift_error` (float): Redshift uncertainty
 - `age` (float): Age from maximum light
 - `age_error` (float): Age uncertainty
-- `rlap` (float): Best rlap value
+- `hlap_ccc` (float): Best HLAP-CCC value (when available)
 - `lap` (float): Best overlap fraction
 - `runtime_sec` (float): Analysis runtime
 - `best_matches` (list): List of best template matches

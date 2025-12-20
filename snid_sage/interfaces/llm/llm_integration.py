@@ -174,7 +174,7 @@ Provide a concise, scientifically rigorous summary that includes the key classif
                 "1) Optional lead-in: If observation metadata (Reporting Group/Name, Telescope/Instrument, Observation Date) is present in the data, include them in one short clause; otherwise omit this entirely. Avoid personal attributions; use neutral, professional wording.\n\n"
                 "2) Classification focus:\n"
                 "   - Identify the best subtype (from ‘Best Subtype’) and the subtype of the best template (from ‘Best Template’).\n"
-                "   - If subtypes match: mention the best template by name with the (type/subtype) and briefly qualify match quality in a few words (e.g., ‘high RLAP’, ‘moderate confidence’).\n"
+                "   - If subtypes match: mention the best template by name with the (type/subtype) and briefly qualify match quality in a few words (e.g., ‘high match quality’, ‘moderate confidence’).\n"
                 "   - If subtypes differ: explicitly note the disagreement (best subtype vs best-template subtype) and add a short qualifier (e.g., margin/consistency). Proceed with the best subtype as the primary conclusion.\n\n"
                 "3) Key measurements: Report redshift ± uncertainty (prefer enhanced/cluster-weighted if present) and age ± uncertainty if available; keep to one compact sentence.\n\n"
                 "4) Spectral features: If user-identified or detected spectral lines are listed, comment on each briefly by name with a quick relevance note for the inferred type/subtype (e.g., ‘Si II 6150 Å: hallmark of Type Ia’; ‘Hα: consistent with Type II’). If only wavelengths are given, infer cautiously and indicate uncertainty.\n\n"
@@ -429,10 +429,11 @@ Strict response policy:
                 
             except ImportError:
                 # Fallback if unified formatter not available
+                from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
                 return f"SNID analysis completed for {getattr(result, 'spectrum_name', 'Unknown')}\n" \
                        f"Type: {result.consensus_type}\n" \
                        f"Redshift: {result.redshift:.6f}\n" \
-                       f"Quality: {result.rlap:.2f} RLAP"
+                       f"Quality: {get_best_metric_value(best_match):.2f} {get_best_metric_name(best_match)}"
             
         except Exception as e:
             return f"Error formatting SNID results: {str(e)}"

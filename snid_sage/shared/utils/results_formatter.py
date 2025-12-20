@@ -78,15 +78,18 @@ class UnifiedResultsFormatter:
             self.spectrum_name = getattr(result, 'spectrum_name', 'Unknown')
         
         # Determine which metric is being used
-        self.metric_name = "RLAP"
+        self.metric_name = "HLAP-CCC"
         if hasattr(result, 'clustering_results') and result.clustering_results:
-            self.metric_name = result.clustering_results.get('metric_used', 'RLAP-CCC')
+            self.metric_name = result.clustering_results.get('metric_used', 'HLAP-CCC')
         else:
             try:
                 # Inspect best match to decide metric label
                 best_list = getattr(result, 'filtered_matches', None) or getattr(result, 'best_matches', None) or []
-                if best_list and isinstance(best_list, list) and ('rlap_ccc' in best_list[0]):
-                    self.metric_name = 'RLAP-CCC'
+                if best_list and isinstance(best_list, list):
+                    if ('hlap_1mccc' in best_list[0]) or ('hlap_ccc' in best_list[0]):
+                        self.metric_name = 'HLAP-CCC'
+                    else:
+                        self.metric_name = 'HLAP'
             except Exception:
                 pass
         
@@ -151,7 +154,7 @@ class UnifiedResultsFormatter:
         cluster_matches = []
         if winning_cluster:
             cluster_matches = winning_cluster.get('matches', [])
-            # Sort by best available metric (RLAP-CCC if available, otherwise RLAP) descending
+            # Sort by best available metric (HLAP-CCC preferred) descending
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
         
@@ -226,38 +229,38 @@ class UnifiedResultsFormatter:
                 try:
                     from snid_sage.shared.utils.math_utils import calculate_combined_weights
                     ages = []
-                    age_rlaps = []
+                    age_metric_values = []
                     for m in cluster_matches:
                         template = m.get('template', {})
                         age = template.get('age', 0.0) if template else 0.0
                         # Check for valid age (negative ages are valid for pre-peak)
                         if age is not None and np.isfinite(age):
                             ages.append(age)
-                            # Use RLAP-cos if available, otherwise RLAP
+                            # Use best available metric (HLAP-CCC preferred)
                             from snid_sage.shared.utils.math_utils import get_best_metric_value
-                            age_rlaps.append(get_best_metric_value(m))
+                            age_metric_values.append(get_best_metric_value(m))
                     
                     if ages:
                         ages = np.array(ages)
                         # Use same reliability weights as redshift for age: (metric)^2 / sigma_z^2
                         # Build arrays aligned with ages list
-                        rlap_values = []
+                        metric_values = []
                         z_errors = []
                         for m in cluster_matches:
                             template = m.get('template', {})
                             age_val = template.get('age', 0.0) if template else 0.0
                             if age_val is not None and np.isfinite(age_val):
                                 from snid_sage.shared.utils.math_utils import get_best_metric_value
-                                rlap_values.append(get_best_metric_value(m))
-                                z_errors.append(m.get('redshift_error', 0.0))
-                        if len(rlap_values) == len(ages) and any(e > 0 for e in z_errors):
-                            weights = calculate_combined_weights(np.array(rlap_values, dtype=float), np.array(z_errors, dtype=float))
+                                metric_values.append(get_best_metric_value(m))
+                                z_errors.append(m.get('sigma_z', float('nan')))
+                        if len(metric_values) == len(ages) and any(e > 0 for e in z_errors):
+                            weights = calculate_combined_weights(np.array(metric_values, dtype=float), np.array(z_errors, dtype=float))
                             # Use canonical weights for age via redshift errors if available (fallback to quality-only)
                             try:
                                 from snid_sage.shared.utils.math_utils import estimate_weighted_epoch, weighted_epoch_error
                                 # If we don't have redshift errors aligned, keep previous behavior minimally
-                                age_mean = estimate_weighted_epoch(ages, [1.0]*len(ages), rlap_values)
-                                age_total_error = weighted_epoch_error(ages, [1.0]*len(ages), rlap_values)
+                                age_mean = estimate_weighted_epoch(ages, [1.0]*len(ages), metric_values)
+                                age_total_error = weighted_epoch_error(ages, [1.0]*len(ages), metric_values)
                             except Exception:
                                 age_mean = float(np.mean(ages)) if len(ages) else float('nan')
                                 age_total_error = float('nan')
@@ -266,8 +269,8 @@ class UnifiedResultsFormatter:
                             from snid_sage.shared.utils.math_utils import apply_exponential_weighting
                             try:
                                 from snid_sage.shared.utils.math_utils import estimate_weighted_epoch, weighted_epoch_error
-                                age_mean = estimate_weighted_epoch(ages, [1.0]*len(ages), rlap_values)
-                                age_total_error = weighted_epoch_error(ages, [1.0]*len(ages), rlap_values)
+                                age_mean = estimate_weighted_epoch(ages, [1.0]*len(ages), metric_values)
+                                age_total_error = weighted_epoch_error(ages, [1.0]*len(ages), metric_values)
                             except Exception:
                                 age_mean = float(np.mean(ages)) if len(ages) else float('nan')
                                 age_total_error = float('nan')
@@ -369,7 +372,7 @@ class UnifiedResultsFormatter:
             # Primary measurements
             'redshift': result.redshift,
             'redshift_error': result.redshift_error,
-            'rlap': result.rlap,
+            'hlap': getattr(result, 'hlap', 0.0),
             'r_value': getattr(result, 'r', 0),
             'lap_value': getattr(result, 'lap', 0),
             
@@ -418,9 +421,8 @@ class UnifiedResultsFormatter:
             'is_manual_selection': is_manual_selection,  # Store manual selection flag
             'cluster_size': len(cluster_matches) if cluster_matches else 0,
             'cluster_type': winning_cluster.get('type', '') if winning_cluster else '',
-            'cluster_quality': winning_cluster.get('redshift_quality', '') if winning_cluster else '',
-            'cluster_mean_rlap': winning_cluster.get('mean_rlap', 0) if winning_cluster else 0,
-            'cluster_mean_metric': winning_cluster.get('mean_metric', winning_cluster.get('mean_rlap', 0)) if winning_cluster else 0,
+            'cluster_quality': '' if winning_cluster else '',
+            'cluster_mean_metric': winning_cluster.get('mean_metric', 0) if winning_cluster else 0,
             'cluster_score': winning_cluster.get('composite_score', 0) if winning_cluster else 0,
             
             # New quality metrics
@@ -485,7 +487,7 @@ class UnifiedResultsFormatter:
                     pairs = []
                     for m in cluster_matches:
                         metric = float(get_best_metric_value(m))
-                        sigma = m.get('redshift_error', m.get('z_err', m.get('sigma_z', None)))
+                        sigma = m.get('sigma_z', m.get('z_err', None))
                         sigma = float(sigma) if sigma is not None else float('nan')
                         pairs.append((metric, sigma))
                     if pairs:
@@ -503,25 +505,25 @@ class UnifiedResultsFormatter:
                         penalty = min(len(top_metrics) / 5.0, 1.0)
                         penalized = mean_top * penalty
                 if penalized is not None:
-                    if penalized > 10.0:
+                    if penalized > 2.5:
                         q_cat = 'High'
-                        q_desc = f'Excellent match quality (Q: {penalized:.1f})'
-                    elif penalized >= 4.0:
+                        q_desc = f'Excellent match quality (HLAP-CCC: {penalized:.2f})'
+                    elif penalized >= 1.0:
                         q_cat = 'Medium'
-                        q_desc = f'Good match quality (Q: {penalized:.1f})'
-                    elif penalized >= 2.5:
+                        q_desc = f'Good match quality (HLAP-CCC: {penalized:.2f})'
+                    elif penalized >= 0.6:
                         q_cat = 'Low'
-                        q_desc = f'Poor match quality (Q: {penalized:.1f})'
+                        q_desc = f'Poor match quality (HLAP-CCC: {penalized:.2f})'
                     else:
                         q_cat = 'Very Low'
-                        q_desc = f'Very poor match quality (Q: {penalized:.1f})'
+                        q_desc = f'Very poor match quality (HLAP-CCC: {penalized:.2f})'
                     summary['cluster_quality_level'] = q_cat
                     summary['cluster_quality_description'] = q_desc
                     summary['cluster_penalized_score'] = penalized
             except Exception:
                 pass
 
-        # If no clustering, compute a type-level match quality from penalized top-5 RLAP-CCC
+            # If no clustering, compute a type-level match quality from penalized top-5 best metric (HLAP-CCC preferred)
         if not winning_cluster and active_matches:
             try:
                 from snid_sage.shared.utils.math_utils import get_best_metric_value, compute_cluster_weights
@@ -537,7 +539,7 @@ class UnifiedResultsFormatter:
                 pairs = []
                 for m in matches_scope:
                     metric = float(get_best_metric_value(m))
-                    sigma = m.get('redshift_error', m.get('z_err', m.get('sigma_z', None)))
+                    sigma = m.get('sigma_z', m.get('z_err', None))
                     sigma = float(sigma) if sigma is not None else float('nan')
                     pairs.append((metric, sigma))
                 if pairs:
@@ -555,18 +557,18 @@ class UnifiedResultsFormatter:
                     penalty = min(len(top_metrics) / 5.0, 1.0)
                     penalized = mean_top * penalty
                     # Map to quality
-                    if penalized > 10.0:
+                    if penalized > 2.5:
                         q_cat = 'High'
-                        q_desc = f'Excellent match quality (Q: {penalized:.1f})'
-                    elif penalized >= 4.0:
+                        q_desc = f'Excellent match quality (HLAP-CCC: {penalized:.2f})'
+                    elif penalized >= 1.0:
                         q_cat = 'Medium'
-                        q_desc = f'Good match quality (Q: {penalized:.1f})'
-                    elif penalized >= 2.5:
+                        q_desc = f'Good match quality (HLAP-CCC: {penalized:.2f})'
+                    elif penalized >= 0.6:
                         q_cat = 'Low'
-                        q_desc = f'Poor match quality (Q: {penalized:.1f})'
+                        q_desc = f'Poor match quality (HLAP-CCC: {penalized:.2f})'
                     else:
                         q_cat = 'Very Low'
-                        q_desc = f'Very poor match quality (Q: {penalized:.1f})'
+                        q_desc = f'Very poor match quality (HLAP-CCC: {penalized:.2f})'
                     summary['cluster_quality_level'] = q_cat
                     summary['cluster_quality_description'] = q_desc + ' [No clustering]'
                     summary['cluster_penalized_score'] = penalized
@@ -589,7 +591,7 @@ class UnifiedResultsFormatter:
             winning_cluster = self._get_active_cluster()
             if winning_cluster:
                 cluster_matches = winning_cluster.get('matches', [])
-                # Sort by best available metric (RLAP-CCC if available, otherwise RLAP) descending
+                # Sort by best available metric (HLAP-CCC preferred) descending
                 from snid_sage.shared.utils.math_utils import get_best_metric_value
                 matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
         
@@ -608,7 +610,7 @@ class UnifiedResultsFormatter:
             age = template.get('age', 0.0) if template else 0.0
             
             # Get redshift error from correlation analysis
-            redshift_error = match.get('redshift_error', 0)
+            sigma_z = match.get('sigma_z', float('nan'))
             
             # Get all available metric values for display
             from snid_sage.shared.utils.math_utils import get_metric_display_values, get_best_metric_value
@@ -622,8 +624,10 @@ class UnifiedResultsFormatter:
                 'subtype': subtype,
                 'age_days': age,
                 'redshift': match.get('redshift', 0),
-                'redshift_error': redshift_error,
-                'rlap': match.get('rlap', 0),
+                # Keep legacy key for table/report compatibility.
+                'redshift_error': sigma_z,
+                'sigma_z': sigma_z,
+                'hlap': match.get('hlap', 0.0),
                 'correlation': match.get('correlation', 0),
                 'grade': match.get('grade', ''),
                 
@@ -633,12 +637,12 @@ class UnifiedResultsFormatter:
                 'best_metric_value': get_best_metric_value(match)
             }
             
-            # Add RLAP-CCC specific fields if available
-            if 'rlap_ccc' in match:
+            # Add metric-specific fields when available (HLAP-CCC diagnostics)
+            if ('hlap_1mccc' in match) or ('hlap_ccc' in match):
                 formatted_match.update({
-                    'rlap_ccc': match.get('rlap_ccc', 0.0),
-                    'ccc_similarity': match.get('ccc_similarity', None),
-                    'ccc_similarity_capped': match.get('ccc_similarity_capped', None)
+                    'hlap_ccc': match.get('hlap_1mccc', match.get('hlap_ccc', 0.0)),
+                    'ccc_similarity': match.get('ccc_similarity_trimmed', match.get('ccc_similarity', None)),
+                    'ccc_similarity_capped': match.get('ccc_similarity_trimmed_capped', match.get('ccc_similarity_capped', None))
                 })
             
             formatted_matches.append(formatted_match)
@@ -675,8 +679,7 @@ class UnifiedResultsFormatter:
                 {
                     'type': c.get('type', 'Unknown'),
                     'size': c.get('size', 0),
-                    'mean_rlap': c.get('mean_rlap', 0),
-                    'mean_metric': c.get('mean_metric', c.get('mean_rlap', 0))
+                    'mean_metric': c.get('mean_metric', 0)
                 }
                 for c in other_clusters
             ]
@@ -815,9 +818,9 @@ class UnifiedResultsFormatter:
             if not st:
                 continue
             zb = m.get('redshift', None)
-            zerr = m.get('redshift_error', None)
+            zerr = m.get('sigma_z', None)
             ageb = m.get('age_days', None)
-            metric_val = m.get('best_metric_value', m.get('rlap', 0.0)) or 0.0
+            metric_val = m.get('best_metric_value', m.get('primary_metric', 0.0)) or 0.0
             if st not in subtypes:
                 subtypes[st] = {'z_vals': [], 'z_errs': [], 'metrics': [], 'age_vals': []}
             subtypes[st]['z_vals'].append(zb)
@@ -1000,7 +1003,7 @@ class UnifiedResultsFormatter:
             else:
                 cluster_note = ""
 
-            # Determine display metric name from first match (RLAP-CCC if available, else RLAP)
+            # Determine display metric name from first match (HLAP-CCC preferred)
             try:
                 first_metric_name = s['template_matches'][0].get('metric_name', self.metric_name)
             except Exception:
@@ -1036,10 +1039,10 @@ class UnifiedResultsFormatter:
             
             for match in s['template_matches']:
                 age_val = match['age_days'] if match['age_days'] is not None else None
-                redshift_error_val = match.get('redshift_error', 0)
+                redshift_error_val = match.get('sigma_z', float('nan'))
                 
                 # Use best available metric value
-                metric_value = match.get('best_metric_value', match['rlap'])
+                metric_value = match.get('best_metric_value', match.get('primary_metric', 0.0))
                 
                 # Prepare fields with alignment and truncation
                 template_name = (match['template_name'] or '')[:template_w]
@@ -1069,21 +1072,21 @@ class UnifiedResultsFormatter:
         
         # Weak/no-match note for cases with no clustering and very few thresholded matches
         try:
-            # If clustering failed or absent, check number of filtered matches that survive RLAP-CCC threshold
+            # If clustering failed or absent, check number of filtered matches that survive the best-metric threshold
             result = self.result
             failure_reason = getattr(result, 'clustering_failure_reason', '')
             has_clusters = bool(getattr(result, 'clustering_results', None)) and getattr(result, 'clustering_results', {}).get('success', False)
             if not has_clusters:
                 fm = getattr(result, 'filtered_matches', []) or []
-                # Determine if best metric is RLAP-CCC by inspecting fields
-                any_ccc = any(('rlap_ccc' in m) for m in fm)
+                # Determine if best metric is present by inspecting fields
+                any_ccc = any(('hlap_1mccc' in m or 'hlap_ccc' in m) for m in fm)
                 surviving = len(fm)
                 if surviving == 0:
                     lines.append("")
-                    lines.append("No matches above RLAP-CCC threshold. Try Advanced Preprocessing or different parameters.")
+                    lines.append("No matches above best-metric threshold. Try Advanced Preprocessing or different parameters.")
                 elif surviving <= 2:
                     lines.append("")
-                    lines.append("Only weak match(es) above RLAP-CCC threshold. Results may be unreliable.")
+                    lines.append("Only weak match(es) above best-metric threshold. Results may be unreliable.")
         except Exception:
             pass
 
@@ -1120,9 +1123,9 @@ class UnifiedResultsFormatter:
         
         # Get best metric value
         if s['template_matches']:
-            best_metric = s['template_matches'][0].get('best_metric_value', s['rlap'])
+            best_metric = s['template_matches'][0].get('best_metric_value', s['template_matches'][0].get('primary_metric', 0.0))
         else:
-            best_metric = s['rlap']
+            best_metric = s.get('primary_metric', 0.0)
         
         age_str = f" age={float(age_val):.1f}" if _finite(age_val) else ""
         z_txt = f"{float(z_val):.6f}" if _finite(z_val) else "nan"
@@ -1168,7 +1171,7 @@ class UnifiedResultsFormatter:
                     writer.writerow([
                         match['rank'], match['template_name'], match['full_type'],
                         match['subtype'], match['age_days'], match['redshift'], 
-                        match.get('best_metric_value', match['rlap'])
+                        match.get('best_metric_value', match.get('primary_metric', 0.0))
                     ])
     
     def _save_txt(self, filename: str):

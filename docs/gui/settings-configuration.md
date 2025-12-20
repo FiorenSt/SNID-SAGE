@@ -13,7 +13,7 @@ Notes:
 - You can change it here at any time; the Template Manager will use this location immediately.
 
 ### Analysis
-- Redshift/age bounds; thresholds (rlapmin, lapmin, fraction_coverage)
+- Redshift/age bounds; thresholds (hlapmin, lapmin, fraction_coverage)
 - Output limits; emission clipping (emclip, emclip_z, emwidth)
 
 ### Processing

@@ -1000,8 +1000,8 @@ class PySide6AppController(QtCore.QObject):
                 template_filter=analysis_kwargs.get('template_filter', None),
                 peak_window_size=analysis_kwargs.get('peak_window_size', 10),
                 lapmin=analysis_kwargs.get('lapmin', 0.3),
-                rlapmin=float(analysis_kwargs.get('rlapmin', 4.0)),
-                rlap_ccc_threshold=float(analysis_kwargs.get('rlap_ccc_threshold', 1.8)),
+                hlapmin=float(analysis_kwargs.get('hlapmin', 0.1)),
+                hlap_ccc_threshold=float(analysis_kwargs.get('hlap_ccc_threshold', 0.4)),
                 forced_redshift=forced_redshift,  # NEW: Pass forced redshift parameter
                 max_output_templates=analysis_kwargs.get('max_output_templates', 10),
                 verbose=analysis_kwargs.get('verbose', False),
@@ -1031,14 +1031,14 @@ class PySide6AppController(QtCore.QObject):
                             metric_values = []
                             for m in matches:
                                 z = m.get('redshift')
-                                z_err = m.get('redshift_error', 0.0)
+                                z_err = m.get('sigma_z', float('nan'))
                                 if z is not None and np.isfinite(z) and np.isfinite(z_err) and z_err > 0:
                                     redshifts_with_errors.append(float(z))
                                     redshift_errors.append(float(z_err))
                                     try:
                                         metric_values.append(float(get_best_metric_value(m)))
                                     except Exception:
-                                        metric_values.append(float(m.get('rlap', 0.0) or 0.0))
+                                        metric_values.append(float(m.get('hlap', 0.0) or 0.0))
                             if redshifts_with_errors:
                                 z_err = weighted_redshift_error(redshifts_with_errors, redshift_errors, metric_values)
                                 _LOGGER.info(f"[Cluster z_err] {z_err:.6g}")
@@ -1061,14 +1061,14 @@ class PySide6AppController(QtCore.QObject):
                                     tpl = m.get('template', {}) if isinstance(m.get('template'), dict) else {}
                                     if tpl.get('type') == winning_type and tpl.get('subtype') == best_subtype:
                                         z = m.get('redshift')
-                                        z_err = m.get('redshift_error', 0.0)
+                                        z_err = m.get('sigma_z', float('nan'))
                                         if z is not None and np.isfinite(z) and np.isfinite(z_err) and z_err > 0:
                                             z_vals.append(float(z))
                                             z_errs.append(float(z_err))
                                             try:
                                                 metrics.append(float(get_best_metric_value(m)))
                                             except Exception:
-                                                metrics.append(float(m.get('rlap', 0.0) or 0.0))
+                                                metrics.append(float(m.get('hlap', 0.0) or 0.0))
                                 if z_vals:
                                     z_err = weighted_redshift_error(z_vals, z_errs, metrics)
                                     _LOGGER.info(f"[Winning subtype {best_subtype} z_err] {z_err:.6g}")
@@ -1758,15 +1758,17 @@ class PySide6AppController(QtCore.QObject):
             if hasattr(result, 'best_matches') and selected_cluster.get('matches'):
                 cluster_matches = selected_cluster.get('matches', [])
                 
-                # Sort cluster matches by best available metric (RLAP-CCC if available, otherwise RLAP) descending
+                # Sort cluster matches by best available metric (HLAP-CCC preferred) descending
                 try:
                     from snid_sage.shared.utils.math_utils import get_best_metric_value
                     cluster_matches_sorted = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
                 except ImportError:
                     # Fallback sorting if math utils not available
-                    cluster_matches_sorted = sorted(cluster_matches, 
-                                                  key=lambda m: m.get('rlap_ccc', m.get('rlap', 0)), 
-                                                  reverse=True)
+                    cluster_matches_sorted = sorted(
+                        cluster_matches,
+                        key=lambda m: m.get('hlap_1mccc', m.get('hlap_ccc', m.get('hlap', 0.0))),
+                        reverse=True
+                    )
                 
                 # Update best_matches to only contain cluster templates
                 # Prefer the max_output_templates from the current run params; fallback to saved config then 10
@@ -1799,18 +1801,16 @@ class PySide6AppController(QtCore.QObject):
                     result.template_name = template.get('name', 'Unknown')
                     result.consensus_type = template.get('type', 'Unknown')
                     result.redshift = best_cluster_match.get('redshift', 0.0)
-                    result.rlap = best_cluster_match.get('rlap', 0.0)
-                    
-                    # Update RLAP-CCC if available
-                    if 'rlap_ccc' in best_cluster_match:
-                        result.rlap_ccc = best_cluster_match.get('rlap_ccc', 0.0)
+                    # Store top-level match-quality diagnostics for display
+                    result.hlap = best_cluster_match.get('hlap', 0.0)
+                    result.hlap_ccc = best_cluster_match.get('hlap_1mccc', best_cluster_match.get('hlap_ccc', 0.0))
                     
                     _LOGGER.info(f"🎯 Updated result properties: {result.template_name} ({result.consensus_type}) "
-                                f"z={result.redshift:.6f}, RLAP={result.rlap:.2f}")
+                                f"z={result.redshift:.6f}")
             
             _LOGGER.info(f"✅ User selected cluster {cluster_index + 1}: {selected_cluster.get('type')} "
                         f"(Size: {len(selected_cluster.get('matches', []))}, "
-                        f"Quality: {selected_cluster.get('mean_rlap', 0):.2f})")
+                        f"Quality: {selected_cluster.get('mean_metric', 0):.2f})")
             
             # Complete the analysis workflow
             self._complete_analysis_workflow(result)

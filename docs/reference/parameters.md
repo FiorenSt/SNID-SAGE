@@ -8,12 +8,12 @@ Unified reference of configurable parameters across GUI and CLI.
 |---|---|---:|---|---|
 | zmin | float | -0.01 | `--zmin` | Minimum redshift to search |
 | zmax | float | 1.0 | `--zmax` | Maximum redshift to search |
-| rlapmin | float | 4.0 | `--rlapmin` | Minimum RLAP value to accept a match |
+| hlapmin | float | 0.1 | `--hlapmin` | Minimum HLAP value to accept a match (HLAP = height × lap) |
 | lapmin | float | 0.3 | `--lapmin` | Minimum overlap fraction between spectrum and template |
 | age_min | float or null | None | `--age-min` | Minimum template age (days) |
 | age_max | float or null | None | `--age-max` | Maximum template age (days) |
 | max_output_templates | int | 10 | `--max-output-templates` | Maximum templates included in outputs (CLI/UI summaries) |
-| rlap_ccc_threshold | float | 1.8 | `--rlap-ccc-threshold` (batch) | Threshold used when clustering by RLAP-CCC (type-aware) |
+| hlap_ccc_threshold | float | 0.4 | `--hlap-ccc-threshold` (batch) | Threshold used when clustering by HLAP-CCC (HLAP/(1−CCC)) |
 | forced_redshift | float or null | None | `--forced-redshift` | Force analysis at a fixed redshift; skips redshift search |
 | type_filter | list[str] or null | None | `--type-filter` | Allowed supernova types (Ia, Ib, Ic, II, …) |
 | template_filter | list[str] or null | None | `--template-filter` | Only use specified template names |
@@ -86,7 +86,7 @@ Unified reference of configurable parameters across GUI and CLI.
 ```bash
 sage spectrum.dat --output-dir results/ ; \
   sage spectrum.dat --zmin 0.0 --zmax 0.1 ; \
-  sage spectrum.dat --rlapmin 5.0 --lapmin 0.3 ; \
+  sage spectrum.dat --hlapmin 0.2 --lapmin 0.3 ; \
   sage spectrum.dat --age-min -5 --age-max 30 ; \
   sage spectrum.dat --savgol-window 11 --savgol-order 3 ; \
   sage spectrum.dat --aband-remove --skyclip ; \

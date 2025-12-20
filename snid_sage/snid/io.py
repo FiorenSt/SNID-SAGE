@@ -548,7 +548,7 @@ def write_detailed_result(result: Any, filename: str) -> None:
                 f.write(f"# Wavelength range               : {wave.min():.1f} - {wave.max():.1f} Å\n")
         
         # Write processing parameters if available
-        f.write(f"# Minimum rlap                   : {result.min_rlap or 5.0}\n")
+        f.write(f"# Minimum HLAP (hlapmin)         : {getattr(result, 'min_hlap', None) or 0.1}\n")
         if hasattr(result, 'dwlog') and result.dwlog:
             f.write(f"# Log wavelength step            : {result.dwlog:.6f}\n")
         f.write("\n")
@@ -609,7 +609,7 @@ def write_detailed_result(result: Any, filename: str) -> None:
         f.write("\n")
         
         # Ordered template listings - use winning cluster if available, otherwise best matches
-        f.write("### rlap-ordered template listings ###\n")
+        f.write("### best-metric-ordered template listings ###\n")
         
         # Get the winning cluster matches (cluster-aware approach like batch script)
         cluster_matches = []
@@ -639,14 +639,14 @@ def write_detailed_result(result: Any, filename: str) -> None:
             elif hasattr(result, 'best_matches') and result.best_matches:
                 cluster_matches = result.best_matches
         
-        # Sort cluster matches by best available metric (RLAP-CCC if available, otherwise RLAP) descending
+        # Sort cluster matches by best available metric (HLAP-CCC preferred) descending
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
         
         # Add header showing what type of matches we're showing
         match_source = "winning cluster" if using_cluster else "all matches"
-        f.write(f"# Showing templates from {match_source}, sorted by RLAP (highest first)\n")
-        f.write("# no.  template      type        lap   rlap      redshift   red_error      age  age_flag  grade\n")
+        f.write(f"# Showing templates from {match_source}, sorted by best metric (highest first)\n")
+        f.write("# no.  template      type        lap   metric    redshift   red_error      age  age_flag  grade\n")
         
         for i, match in enumerate(cluster_matches, 1):
             template = match['template']
@@ -662,14 +662,15 @@ def write_detailed_result(result: Any, filename: str) -> None:
             age = template.get('age', 0.0)
             age_flag = template.get('age_flag', 0)
             redshift = match['redshift']
-            redshift_err = match.get('redshift_error', 0.0)
+            # Keep column name for compatibility; value is sigma_z.
+            redshift_err = match.get('sigma_z', float('nan'))
             lap = match['lap']
-            rlap = match['rlap']
+            metric_val = float(get_best_metric_value(match))
             
             # Determine grade (good/bad based on security)
             grade = "good"  # Simplified - no longer using classification_secure
             
-            f.write(f"{i:4d}  {name:<12} {t_type:<10} {lap:6.3f} {rlap:6.1f} "
+            f.write(f"{i:4d}  {name:<12} {t_type:<10} {lap:6.3f} {metric_val:6.2f} "
                    f"{redshift:9.5f} {redshift_err:9.5f} {age:7.1f} {age_flag:8d}  {grade}\n")
         
         f.write("\n")
@@ -688,7 +689,8 @@ def write_detailed_result(result: Any, filename: str) -> None:
             result.clustering_results.get('success')):
             best_cluster = result.clustering_results.get('best_cluster', {})
             f.write(f"# Clustering method: {result.clustering_results.get('method', 'unknown')}\n")
-            f.write(f"# Cluster quality: {best_cluster.get('redshift_quality', 'unknown')}\n")
+            # Cluster redshift-quality taxonomy removed; keep placeholder for backward compatibility.
+            f.write("# Cluster quality: \n")
             f.write(f"# Cluster size: {best_cluster.get('size', 0)}\n")
             f.write(f"# Top-5 mean score: {best_cluster.get('top_5_mean', 0):.2f}\n")
         
@@ -702,8 +704,8 @@ def write_detailed_result(result: Any, filename: str) -> None:
             f.write(f"# Good matches: {match_stats.get('good_matches', 0)}\n")
             f.write(f"# Bad matches: {match_stats.get('bad_matches', 0)}\n")
             
-            rlap_stats = match_stats.get('rlap_stats', {})
-            f.write(f"# RLAP range: {rlap_stats.get('min', 0.0):.1f} - {rlap_stats.get('max', 0.0):.1f}\n")
+            metric_stats = match_stats.get('metric_stats', {})
+            f.write(f"# Metric range: {metric_stats.get('min', 0.0):.2f} - {metric_stats.get('max', 0.0):.2f}\n")
         
         f.write("\n")
         f.write("### End of SNID results ###\n")
@@ -868,7 +870,9 @@ def write_template_correlation_data(match: Dict[str, Any], template_index: int,
     template_name = template.get('name', f'template_{template_index}')
     template_type = template.get('type', 'Unknown')
     template_subtype = template.get('subtype', '')
-    rlap_value = match.get('rlap', 0.0)
+    from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
+    metric_value = float(get_best_metric_value(match))
+    metric_name = str(get_best_metric_name(match))
     redshift = match.get('redshift', 0.0)
     
     # Create header with template information (matching Fortran format)
@@ -877,7 +881,7 @@ def write_template_correlation_data(match: Dict[str, Any], template_index: int,
     if template_subtype and template_subtype != 'Unknown' and template_subtype != '':
         header += f" {template_subtype}"
     header += "\n"
-    header += f"# RLAP: {rlap_value:.3f}\n"
+    header += f"# Best metric ({metric_name}): {metric_value:.3f}\n"
     header += f"# Redshift: {redshift:.6f}\n"
     header += f"# Template Index: {template_index}"
     
@@ -927,7 +931,9 @@ def write_template_spectra_data(match: Dict[str, Any], template_index: int,
     template_name = template.get('name', f'template_{template_index}')
     template_type = template.get('type', 'Unknown')
     template_subtype = template.get('subtype', '')
-    rlap_value = match.get('rlap', 0.0)
+    from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
+    metric_value = float(get_best_metric_value(match))
+    metric_name = str(get_best_metric_name(match))
     redshift = match.get('redshift', 0.0)
     
     # Create header with template information (matching Fortran format)
@@ -936,7 +942,7 @@ def write_template_spectra_data(match: Dict[str, Any], template_index: int,
     if template_subtype and template_subtype != 'Unknown' and template_subtype != '':
         header += f" {template_subtype}"
     header += "\n"
-    header += f"# RLAP: {rlap_value:.3f}\n"
+    header += f"# Best metric ({metric_name}): {metric_value:.3f}\n"
     header += f"# Redshift: {redshift:.6f}\n"
     header += f"# Template Index: {template_index}"
     

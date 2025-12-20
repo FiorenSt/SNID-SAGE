@@ -82,7 +82,7 @@ class TemplateMatch:
     template_subtype: Optional[str] = None
     redshift: float = 0.0
     redshift_error: float = 0.0
-    rlap: float = 0.0  # R-value * lap
+    hlap: float = 0.0  # height * lap
     r_value: float = 0.0  # Correlation coefficient
     lap: float = 0.0  # Overlap fraction
     age: Optional[float] = None  # Days from explosion
@@ -157,7 +157,7 @@ class AnalysisParameters:
 
     
     # Correlation parameters  
-    rlapmin: float = 5.0
+    hlapmin: float = 0.1
     lapmin: float = 0.3
     
     # Wavelength range

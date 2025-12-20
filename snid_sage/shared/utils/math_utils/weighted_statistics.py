@@ -1,7 +1,7 @@
 """
 Statistically rigorous weighted calculations for redshift and age estimation in SNID SAGE.
 
-This module implements best-metric weighted estimation methods (preferring RLAP-CCC) for optimal redshift 
+This module implements best-metric weighted estimation methods (preferring HLAP-CCC) for optimal redshift 
 and age estimation with full covariance analysis.
 """
 
@@ -14,15 +14,15 @@ logger = logging.getLogger(__name__)
 
 
 def compute_cluster_weights(
-    rlap_ccc_values: Union[np.ndarray, List[float]],
+    metric_values: Union[np.ndarray, List[float]],
     redshift_errors: Union[np.ndarray, List[float]]
 ) -> np.ndarray:
     """
-    Compute canonical cluster weights: w_i = (rlapccc_i)^2 / sigma_z_i^2.
+    Compute canonical cluster weights: w_i = (metric_i)^2 / sigma_z_i^2.
 
     This is a thin wrapper around calculate_combined_weights for clarity.
     """
-    return calculate_combined_weights(rlap_ccc_values, redshift_errors)
+    return calculate_combined_weights(metric_values, redshift_errors)
 
 
 def _weighted_mean(values: np.ndarray, weights: np.ndarray) -> float:
@@ -72,14 +72,14 @@ def _weighted_sd_unbiased(values: np.ndarray, weights: np.ndarray) -> float:
 def estimate_weighted_redshift(
     redshifts: Union[np.ndarray, List[float]],
     redshift_errors: Union[np.ndarray, List[float]],
-    rlap_ccc_values: Union[np.ndarray, List[float]]
+    metric_values: Union[np.ndarray, List[float]]
 ) -> float:
     """
-    Weighted mean redshift using weights w = (rlapccc)^2 / sigma_z^2.
+    Weighted mean redshift using weights w = (metric)^2 / sigma_z^2.
     """
     z = np.asarray(redshifts, dtype=float)
     sigma = np.asarray(redshift_errors, dtype=float)
-    r = np.asarray(rlap_ccc_values, dtype=float)
+    r = np.asarray(metric_values, dtype=float)
     if not (len(z) == len(sigma) == len(r)):
         logger.error("Mismatched input lengths for estimate_weighted_redshift")
         return float('nan')
@@ -93,15 +93,15 @@ def estimate_weighted_redshift(
 def estimate_weighted_epoch(
     ages: Union[np.ndarray, List[float]],
     redshift_errors: Union[np.ndarray, List[float]],
-    rlap_ccc_values: Union[np.ndarray, List[float]]
+    metric_values: Union[np.ndarray, List[float]]
 ) -> float:
     """
     Weighted mean epoch (age) using the same cluster weights as redshift:
-    w = (rlapccc)^2 / sigma_z^2.
+    w = (metric)^2 / sigma_z^2.
     """
     t = np.asarray(ages, dtype=float)
     sigma = np.asarray(redshift_errors, dtype=float)
-    r = np.asarray(rlap_ccc_values, dtype=float)
+    r = np.asarray(metric_values, dtype=float)
     if not (len(t) == len(sigma) == len(r)):
         logger.error("Mismatched input lengths for estimate_weighted_epoch")
         return float('nan')
@@ -115,16 +115,16 @@ def estimate_weighted_epoch(
 def weighted_redshift_error(
     redshifts: Union[np.ndarray, List[float]],
     redshift_errors: Union[np.ndarray, List[float]],
-    rlap_ccc_values: Union[np.ndarray, List[float]]
+    metric_values: Union[np.ndarray, List[float]]
 ) -> float:
     """
     Uncertainty for redshift reported as unbiased weighted SD within the set.
-    Uses weights w = (rlapccc)^2 / sigma_z^2.
-    Single-member rule: return that member's redshift_error.
+    Uses weights w = (metric)^2 / sigma_z^2.
+    Single-member rule: return that member's sigma_z.
     """
     z = np.asarray(redshifts, dtype=float)
     sigma = np.asarray(redshift_errors, dtype=float)
-    r = np.asarray(rlap_ccc_values, dtype=float)
+    r = np.asarray(metric_values, dtype=float)
     if not (len(z) == len(sigma) == len(r)):
         logger.error("Mismatched input lengths for weighted_redshift_error")
         return float('nan')
@@ -141,16 +141,16 @@ def weighted_redshift_error(
 def weighted_epoch_error(
     ages: Union[np.ndarray, List[float]],
     redshift_errors: Union[np.ndarray, List[float]],
-    rlap_ccc_values: Union[np.ndarray, List[float]]
+    metric_values: Union[np.ndarray, List[float]]
 ) -> float:
     """
     Uncertainty for age reported as unbiased weighted SD within the set.
-    Uses redshift-based weights w = (rlapccc)^2 / sigma_z^2.
+    Uses redshift-based weights w = (metric)^2 / sigma_z^2.
     Single-member rule: return NaN (cannot estimate SD from one point).
     """
     t = np.asarray(ages, dtype=float)
     sigma = np.asarray(redshift_errors, dtype=float)
-    r = np.asarray(rlap_ccc_values, dtype=float)
+    r = np.asarray(metric_values, dtype=float)
     if not (len(t) == len(sigma) == len(r)):
         logger.error("Mismatched input lengths for weighted_epoch_error")
         return float('nan')
@@ -167,7 +167,7 @@ def weighted_epoch_error(
  
 
 def calculate_combined_weights(
-    rlap_ccc_values: Union[np.ndarray, List[float]],
+    metric_values: Union[np.ndarray, List[float]],
     uncertainties: Union[np.ndarray, List[float]]
 ) -> np.ndarray:
     """
@@ -178,8 +178,8 @@ def calculate_combined_weights(
     
     Parameters
     ----------
-    rlap_ccc_values : array-like
-        Best metric quality scores (prefer RLAP-CCC; fallback to RLAP)
+    metric_values : array-like
+        Best metric quality scores (HLAP-CCC preferred; fallback to HLAP)
     uncertainties : array-like
         Individual uncertainty estimates for each template (e.g., redshift errors)
         
@@ -198,14 +198,14 @@ def calculate_combined_weights(
     This gives high-quality templates with low uncertainty the highest influence,
     which is statistically optimal for uncertainty propagation.
     """
-    rlap_ccc_values = np.asarray(rlap_ccc_values, dtype=float)
+    metric_values = np.asarray(metric_values, dtype=float)
     uncertainties = np.asarray(uncertainties, dtype=float)
     
     # Validate inputs
-    if len(rlap_ccc_values) != len(uncertainties):
+    if len(metric_values) != len(uncertainties):
         raise ValueError("Metric values and uncertainties must have same length")
     
-    if len(rlap_ccc_values) == 0:
+    if len(metric_values) == 0:
         return np.array([])
     
     # Handle zero uncertainties (perfect measurements) by using a small floor value
@@ -214,28 +214,28 @@ def calculate_combined_weights(
     uncertainty_floor = min_uncertainty * 0.1
     safe_uncertainties = np.maximum(uncertainties, uncertainty_floor)
     
-    # Calculate combined weights using squared best-metric values (RLAP-CCC preferred)
-    quality_weights = rlap_ccc_values ** 2
+    # Calculate combined weights using squared best-metric values (HLAP-CCC preferred)
+    quality_weights = metric_values ** 2
     precision_weights = 1.0 / (safe_uncertainties ** 2)  # Inverse variance weighting
     combined_weights = quality_weights * precision_weights
     
-    logger.debug(f"Combined weighting: Best-metric [{rlap_ccc_values.min():.2f}, {rlap_ccc_values.max():.2f}], "
+    logger.debug(f"Combined weighting: Best-metric [{metric_values.min():.2f}, {metric_values.max():.2f}], "
                 f"uncertainties [{uncertainties.min():.4f}, {uncertainties.max():.4f}], "
                 f"weights [{combined_weights.min():.2e}, {combined_weights.max():.2e}]")
     
     return combined_weights
 
 
-def apply_exponential_weighting(rlap_ccc_values: Union[np.ndarray, List[float]]) -> np.ndarray:
+def apply_exponential_weighting(metric_values: Union[np.ndarray, List[float]]) -> np.ndarray:
     """
-    Apply squared-metric weighting to RLAP-CCC/RLAP values for template prioritization.
+    Apply squared-metric weighting to HLAP-CCC/HLAP values for template prioritization.
     
     This helper now implements w = (metric)² to match the main pipeline's
     weighting policy when per-template σ is unavailable (quality-only case).
     
     Parameters
     ----------
-    rlap_ccc_values : array-like
+    metric_values : array-like
         Raw best-metric values from template matching
         
     Returns
@@ -247,18 +247,18 @@ def apply_exponential_weighting(rlap_ccc_values: Union[np.ndarray, List[float]])
     -----
     Transformation: w = (metric)²
     """
-    rlap_ccc_values = np.asarray(rlap_ccc_values, dtype=float)
+    metric_values = np.asarray(metric_values, dtype=float)
     
     # Handle empty input
-    if len(rlap_ccc_values) == 0:
+    if len(metric_values) == 0:
         return np.array([])
     
     # Apply squared weighting: w = x^2
-    exponential_weights = rlap_ccc_values ** 2
+    exponential_weights = metric_values ** 2
     
     # Log the transformation for debugging
-    if len(rlap_ccc_values) > 0:
-        logger.debug(f"Squared weighting: Best-metric range [{rlap_ccc_values.min():.2f}, {rlap_ccc_values.max():.2f}] "
+    if len(metric_values) > 0:
+        logger.debug(f"Squared weighting: Best-metric range [{metric_values.min():.2f}, {metric_values.max():.2f}] "
                     f"→ weight range [{exponential_weights.min():.2e}, {exponential_weights.max():.2e}]")
     
     return exponential_weights

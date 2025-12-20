@@ -9,7 +9,7 @@ This guide lists implemented configuration options and how to access them via GU
 
 ## Categories (implemented)
 
-- Analysis: redshift/age bounds, rlapmin, lapmin, wavelength tolerance, output limits
+- Analysis: redshift/age bounds, hlapmin, lapmin, wavelength tolerance, output limits
 - Processing: smoothing, flattening, masks (A-band, skylines), apodization
 - Display: theme, plot style/DPI, grid/markers
 - Templates: paths.templates_dir
@@ -22,7 +22,7 @@ This guide lists implemented configuration options and how to access them via GU
 sage config show
 sage config set paths.user_templates_dir C:\\Users\\<you>\\Documents\\SNID_SAGE\\User_Templates
 sage config set paths.templates_dir C:\\data\\snid_templates
-sage config get analysis.rlapmin; sage config set analysis.rlapmin 5.0
+sage config get analysis.hlapmin; sage config set analysis.hlapmin 0.2
 ```
 
 ## Notes

@@ -290,7 +290,8 @@ def plot_comparison(result: Any, figsize: Tuple[int, int] = (12, 9),
     best_match = matches_to_use[0]
     original_template_data = best_match['template']
     z_template = best_match['redshift']
-    rlap_value = best_match.get('rlap', 0)
+    from snid_sage.shared.utils.math_utils import get_best_metric_value
+    best_metric_value = float(get_best_metric_value(best_match))
     template_name = original_template_data.get('name', 'Unknown')
     template_type = original_template_data.get('type', 'Unknown')
     template_subtype = original_template_data.get('subtype', '')
@@ -478,14 +479,18 @@ def plot_comparison(result: Any, figsize: Tuple[int, int] = (12, 9),
             info_text += f" ± {result.consensus_redshift_error:.4f}"
         info_text += "\n"
     
-    # Use best available metric (RLAP-CCC if available, otherwise RLAP)
+    # Use best available metric (HLAP-CCC preferred)
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
     if hasattr(result, 'best_matches') and result.best_matches:
         best_metric_value = get_best_metric_value(result.best_matches[0])
         metric_name = get_best_metric_name(result.best_matches[0])
         info_text += f"{metric_name}: {best_metric_value:.2f}\n"
     else:
-        info_text += f"RLAP: {result.rlap:.2f}\n"
+        # Fallback: HLAP (height × lap) if match list is unavailable
+        try:
+            info_text += f"HLAP: {float(getattr(result, 'hlap', 0.0)):.2f}\n"
+        except Exception:
+            info_text += "HLAP: N/A\n"
     info_text += f"LAP: {result.lap:.2f}\n\n"
     
     # Template info
@@ -548,7 +553,7 @@ def plot_comparison(result: Any, figsize: Tuple[int, int] = (12, 9),
     
     template_info += f"Age: {template_age:.1f} days\n"
     template_info += f"z = {z_template:.6f}\n"
-    # Use best available metric (RLAP-CCC if available, otherwise RLAP)
+    # Use best available metric (HLAP-CCC preferred)
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
     best_metric_value = get_best_metric_value(best_match)
     metric_name = get_best_metric_name(best_match)
@@ -572,7 +577,7 @@ def plot_type_fractions(result: Any, figsize: Tuple[int, int] = (10, 8),
                        fig: Optional[plt.Figure] = None,
                        theme_manager=None) -> plt.Figure:
     """
-    Plot the type fractions for different RLAP thresholds.
+    Plot the type fractions for different metric thresholds.
     
     This demonstrates how the classification changes as the matching quality threshold
     is varied. Uses the comprehensive statistics from snid_sage.snid.py including GMM filtering
@@ -606,7 +611,7 @@ def plot_type_fractions(result: Any, figsize: Tuple[int, int] = (10, 8),
     # Pie chart for main type fractions
     ax1 = fig.add_subplot(gs[0, 0])
     ax2 = fig.add_subplot(gs[0, 1])
-    ax3 = fig.add_subplot(gs[1, :])  # Bottom row - fraction vs RLAP
+    ax3 = fig.add_subplot(gs[1, :])  # Bottom row - fraction vs metric threshold
     
     # Use filtered_matches if available, otherwise use best_matches
     matches_to_use = []
@@ -681,7 +686,7 @@ def plot_type_fractions(result: Any, figsize: Tuple[int, int] = (10, 8),
             
             ax2.set_xlabel('Type')
             ax2.set_ylabel('Slope')
-            ax2.set_title('Type Slopes (Fraction vs RLAP)')
+            ax2.set_title('Type Slopes (Fraction vs metric threshold)')
             ax2.set_xticks(range(len(slope_labels)))
             ax2.set_xticklabels(slope_labels, rotation=45)
             ax2.grid(True, alpha=0.3)
@@ -758,23 +763,23 @@ def plot_type_fractions(result: Any, figsize: Tuple[int, int] = (10, 8),
             ax2.text(0.5, 0.5, "No subtype data available", ha='center', va='center')
             ax2.axis('off')
     
-    # Plot 3: Type fractions vs RLAP threshold (using GMM-filtered matches)
-    # Use the filtered matches (winning cluster) for this analysis to match Fortran behavior
-    rlap_analysis_matches = []
+    # Plot 3: Type fractions vs best-metric threshold (HLAP-CCC preferred)
+    # Use the filtered matches (winning cluster) for this analysis.
+    metric_analysis_matches = []
     if hasattr(result, 'filtered_matches') and result.filtered_matches:
-        rlap_analysis_matches = result.filtered_matches
+        metric_analysis_matches = result.filtered_matches
         analysis_source = "GMM-filtered (winning cluster)"
     elif hasattr(result, 'best_matches') and result.best_matches:
-        rlap_analysis_matches = result.best_matches
+        metric_analysis_matches = result.best_matches
         analysis_source = "all matches (no GMM filtering)"
     
-    if not rlap_analysis_matches:
-        ax3.text(0.5, 0.5, "No matches for RLAP analysis", ha='center', va='center')
+    if not metric_analysis_matches:
+        ax3.text(0.5, 0.5, "No matches for metric-threshold analysis", ha='center', va='center')
         ax3.axis('off')
     else:
         # Filter out invalid matches
         valid_matches = []
-        for match in rlap_analysis_matches:
+        for match in metric_analysis_matches:
             if not isinstance(match, dict) or 'template' not in match:
                 continue
                 
@@ -782,16 +787,18 @@ def plot_type_fractions(result: Any, figsize: Tuple[int, int] = (10, 8),
             if not isinstance(template, dict):
                 continue
                 
-            if 'type' in template and 'rlap' in match:
+            if 'type' in template:
                 valid_matches.append(match)
         
         if valid_matches:
-            # Find max RLAP value
-            max_rlap = max([m.get('rlap', 0) for m in valid_matches])
-            min_rlap_threshold = getattr(result, 'min_rlap', 5.0)
-            
-            # Create RLAP thresholds
-            rlap_thresholds = np.linspace(min_rlap_threshold, min(max_rlap, 50), 15)
+            # Build metric thresholds from best available metric (HLAP-CCC preferred)
+            from snid_sage.shared.utils.math_utils import get_best_metric_value
+            all_metric_values = [float(get_best_metric_value(m)) for m in valid_matches]
+            max_metric = max(all_metric_values) if all_metric_values else 0.0
+            min_metric = min(all_metric_values) if all_metric_values else 0.0
+            # Choose a reasonable sweep range
+            metric_thresholds = np.linspace(min_metric, max_metric, 15) if max_metric > min_metric else np.array([min_metric])
+            default_threshold = getattr(result, 'hlap_ccc_threshold', None)
             
             # Get all possible types
             all_types = set()
@@ -801,25 +808,24 @@ def plot_type_fractions(result: Any, figsize: Tuple[int, int] = (10, 8),
                 if sn_type:
                     all_types.add(sn_type)
             
-            type_fractions_by_rlap = {t: [] for t in all_types}
+            type_fractions_by_threshold = {t: [] for t in all_types}
             
             # Calculate fractions at each threshold
-            for threshold in rlap_thresholds:
-                qualified_matches = [match for match in valid_matches 
-                                  if match.get('rlap', 0) >= threshold]
+            for threshold in metric_thresholds:
+                qualified_matches = [match for match in valid_matches if get_best_metric_value(match) >= threshold]
                 
                 if qualified_matches:
                     fractions = compute_type_fractions(qualified_matches, weighted=False)
                     
-                    for t in type_fractions_by_rlap:
-                        type_fractions_by_rlap[t].append(fractions.get(t, 0))
+                    for t in type_fractions_by_threshold:
+                        type_fractions_by_threshold[t].append(fractions.get(t, 0))
                 else:
-                    for t in type_fractions_by_rlap:
-                        type_fractions_by_rlap[t].append(0)
+                    for t in type_fractions_by_threshold:
+                        type_fractions_by_threshold[t].append(0)
             
             # Plot for each type
-            for i, t in enumerate(sorted(type_fractions_by_rlap.keys())):
-                if all(f == 0 for f in type_fractions_by_rlap[t]):
+            for i, t in enumerate(sorted(type_fractions_by_threshold.keys())):
+                if all(f == 0 for f in type_fractions_by_threshold[t]):
                     continue
                     
                 try:
@@ -832,13 +838,14 @@ def plot_type_fractions(result: Any, figsize: Tuple[int, int] = (10, 8),
                         from matplotlib import cm
                         color = cm.tab10(i % 10)
                         
-                ax3.plot(rlap_thresholds, type_fractions_by_rlap[t], 
+                ax3.plot(metric_thresholds, type_fractions_by_threshold[t], 
                         marker='o', markersize=5, linestyle='-', linewidth=2, 
                         color=color, label=t)
             
-            # Mark the min_rlap threshold
-            ax3.axvline(min_rlap_threshold, color='red', linestyle='--', 
-                      label=f'Min RLAP = {min_rlap_threshold:.1f}')
+            # Mark the configured HLAP-CCC threshold if available
+            if isinstance(default_threshold, (int, float)):
+                ax3.axvline(float(default_threshold), color='red', linestyle='--', 
+                          label=f'HLAP-CCC threshold = {float(default_threshold):.2f}')
             
             # Add information about the analysis source
             info_text = f"Analysis source: {analysis_source}\n"
@@ -857,13 +864,13 @@ def plot_type_fractions(result: Any, figsize: Tuple[int, int] = (10, 8),
                     transform=ax3.transAxes, va='top', ha='left',
                     bbox=_create_themed_bbox_if_available(theme_manager=theme_manager))
             
-            ax3.set_xlabel('RLAP Threshold')
+            ax3.set_xlabel('Best-metric Threshold (HLAP-CCC preferred)')
             ax3.set_ylabel('Type Fraction')
-            ax3.set_title(f'Type Fractions vs. RLAP Threshold ({analysis_source})')
+            ax3.set_title(f'Type Fractions vs. Best-metric Threshold ({analysis_source})')
             ax3.legend(loc='center left', bbox_to_anchor=(1, 0.5))
             ax3.grid(True, alpha=0.3)
         else:
-            ax3.text(0.5, 0.5, "No valid matches for RLAP analysis", ha='center', va='center')
+            ax3.text(0.5, 0.5, "No valid matches for metric-threshold analysis", ha='center', va='center')
             ax3.axis('off')
     
     plt.tight_layout()
@@ -925,7 +932,8 @@ def plot_correlation_function(result: Any, figsize: Tuple[int, int] = (8, 6),
     template_subtype = best_match['template'].get('subtype', '')
     template_age = best_match['template'].get('age', 0)
     redshift = best_match['redshift']
-    rlap = best_match['rlap']
+    from snid_sage.shared.utils.math_utils import get_best_metric_value
+    best_metric_value = float(get_best_metric_value(best_match))
     
     # Try to show both full and trimmed correlations from best match
     if 'correlation' in best_match:
@@ -1002,7 +1010,7 @@ def plot_correlation_function(result: Any, figsize: Tuple[int, int] = (8, 6),
     if template_age is not None and np.isfinite(template_age):
         template_info += f"Age: {template_age:.1f} days\n"
     template_info += f"z = {redshift:.6f}\n"
-    # Use best available metric (RLAP-CCC if available, otherwise RLAP)
+    # Use best available metric (HLAP-CCC preferred)
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
     best_metric_value = get_best_metric_value(best_match)
     metric_name = get_best_metric_name(best_match)
@@ -1115,15 +1123,15 @@ def plot_redshift_age(result: Any, figsize: Tuple[int, int] = (8, 6),
         fig.tight_layout()
         return fig
     
-    # Determine if clustering succeeded; if so, do not re-apply a strict RLAP filter
+    # Determine if clustering succeeded; if so, do not re-apply a strict metric filter
     clustering_ok = bool(getattr(result, 'clustering_results', None)) and bool(getattr(result, 'clustering_results', {}).get('success', False))
     
-    # Use configured RLAP threshold when clustering is not available; otherwise respect clustering survivors
+    # Use configured HLAP-min threshold when clustering is not available; otherwise respect clustering survivors
     if not clustering_ok:
-        rlapmin = getattr(result, 'min_rlap', getattr(result, 'rlapmin', 5.0))
-        matches = [m for m in matches if m.get('rlap', 0) >= rlapmin]
+        hlapmin = getattr(result, 'min_hlap', getattr(result, 'hlapmin', 0.1))
+        matches = [m for m in matches if m.get('hlap', 0) >= hlapmin]
         if not matches:
-            ax.text(0.5, 0.5, f"No matches above RLAP threshold ({rlapmin})", 
+            ax.text(0.5, 0.5, f"No matches above HLAP threshold ({hlapmin})", 
                    ha='center', va='center', fontsize=PLOT_ERROR_FONTSIZE, 
                    transform=ax.transAxes)
             ax.set_xlim(0, 1)
@@ -1145,10 +1153,9 @@ def plot_redshift_age(result: Any, figsize: Tuple[int, int] = (8, 6),
         sn_subtype = template.get('subtype', 'Unknown') if isinstance(template, dict) else 'Unknown'
         if not sn_subtype or sn_subtype.strip() == '':
             sn_subtype = 'Unknown'
-        # Use RLAP-CCC for point size if available; fallback to RLAP
-        rlap_value = float(match.get('rlap', 0))
-        rlap_ccc_value = match.get('rlap_ccc', None)
-        size_metric = float(rlap_ccc_value) if rlap_ccc_value is not None else rlap_value
+        # Use best available metric for point size (HLAP-CCC preferred)
+        from snid_sage.shared.utils.math_utils import get_best_metric_value
+        size_metric = float(get_best_metric_value(match))
         data.append({
             'z': float(z),
             'age': float(age),
@@ -1176,7 +1183,7 @@ def plot_redshift_age(result: Any, figsize: Tuple[int, int] = (8, 6),
     sorted_subtypes = sorted(subtype_data.keys())
     subtype_color_map = {subtype: custom_palette[i % len(custom_palette)] for i, subtype in enumerate(sorted_subtypes)}
 
-    # Plot each subtype with RLAP-cos-scaled sizes (fallback RLAP) and count in legend (GUI-style)
+    # Plot each subtype with metric-scaled sizes and count in legend (GUI-style)
     for subtype, points in sorted(subtype_data.items()):
         redshifts = [p['z'] for p in points]
         ages = [p['age'] for p in points]
@@ -1356,10 +1363,11 @@ def plot_flux_comparison(match: Dict[str, Any], result: Any,
     template_subtype = template.get('subtype', '')
     template_age = template.get('age', 0)
     z_template = match.get('redshift', 0)
-    # Prefer RLAP-cos like GUI overlay info
-    rlap_ccc_value = match.get('rlap_ccc', None)
-    rlap_value = match.get('rlap', 0)
-    redshift_error = match.get('redshift_error', 0)
+    # Prefer metric like GUI overlay info
+    from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
+    metric_name = get_best_metric_name(match)
+    metric_value = float(get_best_metric_value(match))
+    redshift_error = match.get('sigma_z', float('nan'))
     
     # Plot the processed input spectrum (what SNID actually worked with)
     input_wave = None
@@ -1528,7 +1536,7 @@ def plot_flux_comparison(match: Dict[str, Any], result: Any,
         template_info_lines.append(f"z = {z_template:.6f} ±{redshift_error:.6f}")
     else:
         template_info_lines.append(f"z = {z_template:.6f}")
-    # Use best available metric (RLAP-CCC if available, otherwise RLAP)
+    # Use best available metric (HLAP-CCC preferred)
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
     best_metric_value = get_best_metric_value(match)
     metric_name = get_best_metric_name(match)
@@ -1639,9 +1647,10 @@ def plot_flat_comparison(match: Dict[str, Any], result: Any,
     template_subtype = template.get('subtype', '')
     template_age = template.get('age', 0)
     z_template = match.get('redshift', 0)
-    rlap_ccc_value = match.get('rlap_ccc', None)
-    rlap_value = match.get('rlap', 0)
-    redshift_error = match.get('redshift_error', 0)
+    from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
+    metric_name = get_best_metric_name(match)
+    metric_value = float(get_best_metric_value(match))
+    redshift_error = match.get('sigma_z', float('nan'))
     
     # Plot flattened input spectrum (using the spectrum just before retransformation to flux)
     input_wave = None
@@ -1766,7 +1775,7 @@ def plot_flat_comparison(match: Dict[str, Any], result: Any,
         template_info_lines.append(f"z = {z_template:.6f} ±{redshift_error:.6f}")
     else:
         template_info_lines.append(f"z = {z_template:.6f}")
-    # Use best available metric (RLAP-CCC if available, otherwise RLAP)
+    # Use best available metric (HLAP-CCC preferred)
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
     best_metric_value = get_best_metric_value(match)
     metric_name = get_best_metric_name(match)
@@ -1870,7 +1879,8 @@ def plot_correlation_view(match: Dict[str, Any], result: Any,
     template_subtype = template.get('subtype', '')
     template_age = template.get('age', 0)
     z_template = match.get('redshift', 0)
-    rlap_value = match.get('rlap', 0)
+    from snid_sage.shared.utils.math_utils import get_best_metric_value
+    metric_value = float(get_best_metric_value(match))
     
     # Use correlation from the match dictionary if available, otherwise fallback to result.correlation
     if 'correlation' in match and isinstance(match['correlation'], dict):
@@ -1947,7 +1957,7 @@ def plot_correlation_view(match: Dict[str, Any], result: Any,
     if template_age is not None and np.isfinite(template_age):
         template_info += f"Age: {template_age:.1f} days\n"
     template_info += f"z = {z_template:.6f}\n"
-    # Use best available metric (RLAP-CCC if available, otherwise RLAP)
+    # Use best available metric (HLAP-CCC preferred)
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
     best_metric_value = get_best_metric_value(match)
     metric_name = get_best_metric_name(match)
@@ -2151,7 +2161,7 @@ def plot_cluster_subtype_proportions(result: Any, selected_cluster: Dict[str, An
     ax1 = fig.add_subplot(gs[0, 0])
     # Subtype statistics table
     ax2 = fig.add_subplot(gs[0, 1])
-    # Subtype proportions vs RLAP threshold (bottom row, spanning both columns)
+    # Subtype proportions vs best-metric threshold (bottom row, spanning both columns)
     ax3 = fig.add_subplot(gs[1, :])
     
     # Determine which matches to use - prioritize cluster matches
@@ -2182,7 +2192,7 @@ def plot_cluster_subtype_proportions(result: Any, selected_cluster: Dict[str, An
     
     # Calculate subtype proportions within the cluster
     subtype_counts = defaultdict(int)
-    subtype_rlaps = defaultdict(list)
+    subtype_metric_values = defaultdict(list)
     subtype_redshifts = defaultdict(list)
     subtype_ages = defaultdict(list)
     subtype_color_map = {}  # Initialize color mapping for consistency
@@ -2194,7 +2204,11 @@ def plot_cluster_subtype_proportions(result: Any, selected_cluster: Dict[str, An
             subtype = 'Unknown'
         
         subtype_counts[subtype] += 1
-        subtype_rlaps[subtype].append(match.get('rlap', 0))
+        try:
+            from snid_sage.shared.utils.math_utils import get_best_metric_value
+            subtype_metric_values[subtype].append(float(get_best_metric_value(match)))
+        except Exception:
+            subtype_metric_values[subtype].append(float(match.get('hlap', 0.0) or 0.0))
         subtype_redshifts[subtype].append(match.get('redshift', 0))
         
         age = template.get('age', 0)
@@ -2259,27 +2273,27 @@ def plot_cluster_subtype_proportions(result: Any, selected_cluster: Dict[str, An
     ax2.axis('off')
     if subtype_counts:
         table_data = []
-        headers = ['Subtype', 'Count', '%', 'Avg RLAP-cos', 'Weighted z', 'Weighted age']
+        headers = ['Subtype', 'Count', '%', 'Avg metric', 'Weighted z', 'Weighted age']
         
         total_matches = len(cluster_matches)
         
         for subtype, count in sorted_subtypes:
             percentage = (count / total_matches) * 100
             
-            # Calculate average RLAP-cos for this subtype
+            # Calculate average metric for this subtype
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             subtype_metric_values = [get_best_metric_value(m) for m in cluster_matches 
                                          if m.get('template', {}).get('subtype', 'Unknown') == subtype]
             avg_metric = np.mean(subtype_metric_values) if subtype_metric_values else 0
             
-            # Use RLAP-cos weighted redshift for subtypes if enough data
+            # Use metric-weighted redshift for subtypes if enough data
             if len(subtype_redshifts[subtype]) > 1:
                 from snid_sage.shared.utils.math_utils import calculate_hybrid_weighted_redshift, get_best_metric_value
-                # Get RLAP-cos weights for this subtype
+                # Get metric weights for this subtype
                 subtype_weights = [get_best_metric_value(m) for m in cluster_matches 
                                  if m.get('template', {}).get('subtype', 'Unknown') == subtype][:len(subtype_redshifts[subtype])]
                 # Convert weights to redshift errors for hybrid calculation
-                # Use a small default error for RLAP-based weights
+                # Use a small default error for weight-based calculation
                 redshift_errors = np.full_like(subtype_redshifts[subtype], 0.01)
                 avg_z, _, _ = calculate_hybrid_weighted_redshift(
                     subtype_redshifts[subtype], redshift_errors, include_cluster_scatter=False
@@ -2288,13 +2302,18 @@ def plot_cluster_subtype_proportions(result: Any, selected_cluster: Dict[str, An
                 avg_z = subtype_redshifts[subtype][0] if subtype_redshifts[subtype] else 0
             
             if len(subtype_ages[subtype]) > 1:
-                from snid_sage.shared.utils.math_utils import calculate_rlap_weighted_age, get_best_metric_value
-                # Use RLAP-cos if available, otherwise RLAP
-                subtype_rlaps_list = [get_best_metric_value(m) for m in cluster_matches 
+                from snid_sage.shared.utils.math_utils import get_best_metric_value
+                subtype_weights = [get_best_metric_value(m) for m in cluster_matches 
                                      if m.get('template', {}).get('subtype', 'Unknown') == subtype][:len(subtype_ages[subtype])]
-                avg_age, _, _, _ = calculate_rlap_weighted_age(
-                    subtype_ages[subtype], subtype_rlaps_list, include_cluster_scatter=False
-                )
+                try:
+                    w = np.asarray(subtype_weights, dtype=float)
+                    a = np.asarray(subtype_ages[subtype], dtype=float)
+                    if np.sum(w) > 0 and len(w) == len(a):
+                        avg_age = float(np.average(a, weights=w))
+                    else:
+                        avg_age = float(np.mean(a))
+                except Exception:
+                    avg_age = subtype_ages[subtype][0] if subtype_ages[subtype] else 0
             else:
                 avg_age = subtype_ages[subtype][0] if subtype_ages[subtype] else 0
             
@@ -2324,18 +2343,18 @@ def plot_cluster_subtype_proportions(result: Any, selected_cluster: Dict[str, An
     else:
         ax2.text(0.5, 0.5, "No subtype statistics available", ha='center', va='center', fontsize=PLOT_ERROR_FONTSIZE)
     
-    # Plot 3: Subtype proportions vs RLAP-cos threshold
+    # Plot 3: Subtype proportions vs best-metric threshold
     if cluster_matches and len(set(subtype_counts.keys())) > 1:
-        # Find RLAP-cos range
+        # Find metric range
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         all_metric_values = [get_best_metric_value(m) for m in cluster_matches]
         max_metric = max(all_metric_values)
-        min_metric = min(5.0, min(all_metric_values))  # Start from 5.0 or lower if needed
+        min_metric = min(all_metric_values) if all_metric_values else 0.0
         
-        # Create RLAP-cos thresholds
-        metric_thresholds = np.linspace(min_metric, min(max_metric, 30), 12)
+        # Create metric thresholds
+        metric_thresholds = np.linspace(min_metric, max_metric, 12) if max_metric > min_metric else np.array([min_metric])
         
-        subtype_proportions_by_rlap = {subtype: [] for subtype in subtype_counts.keys()}
+        subtype_proportions_by_threshold = {subtype: [] for subtype in subtype_counts.keys()}
         
         # Calculate proportions at each threshold
         for threshold in metric_thresholds:
@@ -2352,29 +2371,29 @@ def plot_cluster_subtype_proportions(result: Any, selected_cluster: Dict[str, An
                     threshold_subtype_counts[subtype] += 1
                 
                 total_qualified = len(qualified_matches)
-                for subtype in subtype_proportions_by_rlap:
+                for subtype in subtype_proportions_by_threshold:
                     proportion = threshold_subtype_counts[subtype] / total_qualified if total_qualified > 0 else 0
-                    subtype_proportions_by_rlap[subtype].append(proportion)
+                    subtype_proportions_by_threshold[subtype].append(proportion)
             else:
-                for subtype in subtype_proportions_by_rlap:
-                    subtype_proportions_by_rlap[subtype].append(0)
+                for subtype in subtype_proportions_by_threshold:
+                    subtype_proportions_by_threshold[subtype].append(0)
         
         # Plot lines for each subtype using consistent colors from pie chart
-        for subtype, proportions in subtype_proportions_by_rlap.items():
+        for subtype, proportions in subtype_proportions_by_threshold.items():
             if any(p > 0 for p in proportions):  # Only plot if subtype has non-zero proportions
                 # Use the same color mapping as the pie chart for consistency
                 color = subtype_color_map.get(subtype, 'gray')
                 ax3.plot(metric_thresholds, proportions, 'o-', label=subtype, 
                         color=color, linewidth=2, markersize=6)
         
-        ax3.set_xlabel('RLAP-cos Threshold', fontsize=PLOT_AXIS_LABEL_FONTSIZE)
+        ax3.set_xlabel('Best-metric Threshold', fontsize=PLOT_AXIS_LABEL_FONTSIZE)
         ax3.set_ylabel('Subtype Proportion', fontsize=PLOT_AXIS_LABEL_FONTSIZE)
         ax3.grid(True, alpha=0.3)
         ax3.legend(loc='center right', frameon=True, fontsize=PLOT_LEGEND_FONTSIZE)
         # Set y-axis limits to include a bit below 0 and above 1 so lines don't get cut
         ax3.set_ylim(-0.05, 1.05)
     else:
-        ax3.text(0.5, 0.5, "Insufficient subtype diversity for RLAP analysis\n(Need multiple subtypes)", 
+        ax3.text(0.5, 0.5, "Insufficient subtype diversity for metric analysis\n(Need multiple subtypes)", 
                 ha='center', va='center', fontsize=PLOT_ERROR_FONTSIZE)
         ax3.set_xlim(0, 1)
         ax3.set_ylim(0, 1)
@@ -2394,7 +2413,8 @@ def plot_cluster_subtype_proportions(result: Any, selected_cluster: Dict[str, An
     
     # Explicitly set font sizes for the subtype plot (ax3) to override theme defaults
     if cluster_matches and len(set(subtype_counts.keys())) > 1:
-        ax3.set_xlabel('RLAP-cos Threshold', fontsize=PLOT_AXIS_LABEL_FONTSIZE)
+        ax3.set_xlabel('Metric Threshold', fontsize=PLOT_AXIS_LABEL_FONTSIZE)
+        ax3.set_xlabel('Metric Threshold', fontsize=PLOT_AXIS_LABEL_FONTSIZE)
         ax3.set_ylabel('Subtype Proportion', fontsize=PLOT_AXIS_LABEL_FONTSIZE)
         ax3.tick_params(axis='both', labelsize=PLOT_TICK_FONTSIZE)  # Set tick label size
     
@@ -2412,7 +2432,7 @@ def compute_cluster_subtype_proportions(cluster_matches: List[Dict[str, Any]],
     
     Parameters:
         cluster_matches: List of template matches from a specific cluster
-        weighted: Whether to weight by RLAP values
+        weighted: Whether to weight by metric values
         
     Returns:
         Dictionary mapping subtype names to their proportions
@@ -2428,7 +2448,7 @@ def compute_cluster_subtype_proportions(cluster_matches: List[Dict[str, Any]],
         if not subtype or subtype.strip() == '':
             subtype = 'Unknown'
         
-        # Use RLAP-cos if available, otherwise RLAP
+        # Use best available metric (HLAP-CCC preferred)
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         value = get_best_metric_value(match) if weighted else 1.0
         subtype_values[subtype] += value

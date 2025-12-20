@@ -7,7 +7,6 @@ over template-by-template processing.
 """
 
 import numpy as np
-import warnings
 
 # Global scaling for redshift uncertainties; fixed to 1.0 (no configurability).
 Z_K = 1.0
@@ -16,6 +15,20 @@ from scipy.signal import find_peaks, peak_prominences
 import logging
 
 _LOG = logging.getLogger(__name__)
+
+_WIDTH_FWHM_FALLBACK_WARN_COUNT = 0
+_WIDTH_FWHM_FALLBACK_WARN_MAX = 10
+
+
+def _warn_width_fwhm_fallback(message: str) -> None:
+    global _WIDTH_FWHM_FALLBACK_WARN_COUNT
+    try:
+        if _WIDTH_FWHM_FALLBACK_WARN_COUNT < _WIDTH_FWHM_FALLBACK_WARN_MAX:
+            _LOG.warning(message)
+        elif _WIDTH_FWHM_FALLBACK_WARN_COUNT == _WIDTH_FWHM_FALLBACK_WARN_MAX:
+            _LOG.warning("Half-height FWHM width fallback used frequently; suppressing further warnings.")
+    finally:
+        _WIDTH_FWHM_FALLBACK_WARN_COUNT += 1
 
 
 class VectorizedPeakFinder:
@@ -127,7 +140,7 @@ class VectorizedPeakFinder:
                            left_edge: int,
                            right_edge: int,
                            lapmin: float,
-                           rlapmin: float,
+                           hlapmin: float,
                            zmin: float,
                            zmax: float,
                            peak_window_size: int) -> List[Dict[str, Any]]:
@@ -148,8 +161,8 @@ class VectorizedPeakFinder:
             Continuum array
         left_edge, right_edge : int
             Spectrum edges
-        lapmin, rlapmin : float
-            Minimum lap and rlap thresholds
+        lapmin, hlapmin : float
+            Minimum lap and HLAP thresholds
         zmin, zmax : float
             Redshift range
         peak_window_size : int
@@ -160,7 +173,7 @@ class VectorizedPeakFinder:
         List[Dict[str, Any]]
             Processed matches
         """
-        from .fft_tools import shiftit, overlap, calculate_rms, aspart
+        from .fft_tools import shiftit, overlap, calculate_rms
         from .preprocessing import apodize, pad_to_NW
         
         matches = []
@@ -260,7 +273,7 @@ class VectorizedPeakFinder:
             for peak_info in peak_group:
                 match = self._process_single_peak(
                     peak_info, tapered_flux, log_wave, cont,
-                    left_edge, right_edge, rlapmin, zmin, zmax, peak_window_size
+                    left_edge, right_edge, hlapmin, zmin, zmax, peak_window_size
                 )
                 if match:
                     matches.append(match)
@@ -273,7 +286,7 @@ class VectorizedPeakFinder:
                             cont: np.ndarray,
                             left_edge: int,
                             right_edge: int,
-                            rlapmin: float,
+                            hlapmin: float,
                             zmin: float,
                             zmax: float,
                             peak_window_size: int) -> Optional[Dict[str, Any]]:
@@ -283,7 +296,7 @@ class VectorizedPeakFinder:
         This method handles the detailed peak processing that's difficult to vectorize
         due to the variable shifting and trimming operations.
         """
-        from .fft_tools import shiftit, overlap, calculate_rms, aspart, apply_filter as bandpass
+        from .fft_tools import shiftit, overlap, calculate_rms, apply_filter as bandpass
         from .preprocessing import apodize, pad_to_NW
         
         try:
@@ -390,43 +403,43 @@ class VectorizedPeakFinder:
             if z_est < zmin or z_est > zmax:
                 return None
             
-            # Width calculation from parabola fit
-            if a_p < 0:  # Check if it's a maximum
-                sqrt_arg = -hgt_p / (2 * a_p)
-                if sqrt_arg >= 0:
-                    width = np.sqrt(sqrt_arg)  # Gaussian σ in pixel units
-                    fwhm_pix = 2.355 * width   # Convert σ → FWHM
-                    # Include Jacobian dz/dlag = (1+z) * DWLOG_grid
-                    z_width = fwhm_pix * self.DWLOG_grid * (1.0 + z_est)
+            # Width: half-height FWHM of the phase-2 correlation peak (Δz units).
+            z_width = 0.0
+            used_fallback = False
+            try:
+                from .peak_width_utils import halfheight_fwhm_bins_from_corr, width_dz_from_fwhm_bins
+
+                fwhm_bins, _ = halfheight_fwhm_bins_from_corr(
+                    Rz_peak,
+                    peak_idx=int(local_peak_idx),
+                    window_radius_bins=200,
+                    baseline=0.0,
+                )
+                z_width_tmp = width_dz_from_fwhm_bins(fwhm_bins, dwlog=float(self.DWLOG_grid), z=float(z_est))
+                if np.isfinite(z_width_tmp) and z_width_tmp > 0.0:
+                    z_width = float(z_width_tmp)
                 else:
-                    width = 0.0
-                    z_width = 0.0
-            else:
-                width = 0.0
+                    used_fallback = True
+            except Exception:
+                used_fallback = True
                 z_width = 0.0
+
+            if used_fallback and np.isfinite(hgt_p) and hgt_p > 0.0:
+                fwhm_bins_fallback = 2.0 * 2.35
+                z_width = float(fwhm_bins_fallback * float(self.DWLOG_grid) * (1.0 + float(z_est)))
+                _warn_width_fwhm_fallback(
+                    f"Half-height FWHM width failed; using fallback width for template={template_name} "
+                    f"(z≈{float(z_est):.6f})"
+                )
             
-            # Calculate R value and final rlap (Tonry-Davis R with correct antisymmetric RMS normalisation)
-            arms_raw, _ = aspart(cross_power_peak, self.k1, self.k2, self.k3, self.k4, peak_lag)
-            arms_norm = arms_raw / (self.NW_grid * drms_peak * trms_peak)
+            # Arms / antisymmetric-noise machinery is intentionally disabled in SNID-SAGE:
+            # it is not used by the HLAP/HLAP-CCC pipeline and is computationally expensive.
+            r_value = 0.0
             
-            if arms_norm > 0:
-                # Tonry antisymmetric RMS metric: use sqrt(2) in the denominator rather than 2
-                r_value = hgt_p / (np.sqrt(2.0) * arms_norm)
-            else:
-                r_value = 0.0
-            # Apply optional profile-aware scaling to R
-            r_value *= self.r_scale
-            
-            rlap = r_value * lpeak
-            
-            if rlap < rlapmin:
+            # HLAP gate (HLAP = phase-2 peak height * lap).
+            hlap = float(hgt_p) * float(lap) if (np.isfinite(hgt_p) and np.isfinite(lap)) else 0.0
+            if hlap < hlapmin:
                 return None
-            
-            # Calculate formal redshift error with global scaling Z_K
-            if r_value > 0 and lap > 0:
-                formal_z_error = Z_K * z_width / (1.0 + r_value)
-            else:
-                formal_z_error = Z_K * z_width if z_width > 0 else 0.0
             
             # Prepare spectra data for plotting
             plot_wave = log_wave[left_edge:right_edge+1]
@@ -436,10 +449,12 @@ class VectorizedPeakFinder:
             # Create match object
             match = {
                 'template': template_meta,
-                'rlap': rlap,
+                'hlap': hlap,
                 'lag': final_lag,
                 'redshift': z_est,
-                'redshift_error': formal_z_error,
+                # Per-match uncertainty is computed later from overlap residuals:
+                # sigma_z = width * residual_noise_std (NaN if unavailable).
+                'sigma_z': float('nan'),
                 'r': r_value,
                 'width': z_width,
                 'height': hgt_p,

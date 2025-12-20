@@ -79,7 +79,7 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
             self.current_step = 1
             self.total_steps = 2
             
-            # Use cluster redshift as the host redshift (RLAP-cos weighted winner)
+            # Use cluster redshift as the host redshift (metric-weighted winner)
             self.host_redshift = cluster_median_redshift if cluster_median_redshift > 0 else galaxy_redshift
             self.velocity_shift = 0.0  # km/s ejecta velocity
             

@@ -17,9 +17,13 @@ from .weighted_statistics import (
 
 from .similarity_metrics import (
     concordance_correlation_coefficient,
-    compute_rlap_ccc_metric,
-    compute_locality_metric,
+    concordance_correlation_coefficient_trimmed,
+    compute_phase2_overlap_diagnostics,
+    compute_hlap_ccc_metric,
+    compute_sigma_z_metrics,
+    residual_noise_clipped_std,
     get_best_metric_value,
+    get_hlap_value,
     get_best_metric_name,
     get_metric_name_for_match,
     get_metric_display_values
@@ -36,9 +40,13 @@ __all__ = [
     'weighted_epoch_error',
     # Similarity metrics
     'concordance_correlation_coefficient',
-    'compute_rlap_ccc_metric',
-    'compute_locality_metric',
+    'concordance_correlation_coefficient_trimmed',
+    'compute_phase2_overlap_diagnostics',
+    'compute_hlap_ccc_metric',
+    'compute_sigma_z_metrics',
+    'residual_noise_clipped_std',
     'get_best_metric_value',
+    'get_hlap_value',
     'get_best_metric_name',
     'get_metric_name_for_match',
     'get_metric_display_values'

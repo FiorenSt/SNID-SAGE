@@ -8,7 +8,7 @@ Displays template ages vs redshift with different SN types in different colors.
 Features:
 - Interactive matplotlib plot with type-based coloring
 - Cluster-aware data selection (user-selected > winning > best matches)
-- RLAP threshold filtering
+- HLAP/metric threshold filtering
 - Detailed statistics and export functionality
 - Modern Qt styling
 """
@@ -58,7 +58,7 @@ class PySide6RedshiftAgeDialog(QtWidgets.QDialog):
     This dialog provides:
     - Interactive matplotlib plot with type-based coloring  
     - Cluster-aware data selection prioritizing user selection
-    - RLAP threshold filtering for quality control
+    - Metric threshold filtering for quality control
     - Detailed statistics and export functionality
     """
     
@@ -282,11 +282,11 @@ class PySide6RedshiftAgeDialog(QtWidgets.QDialog):
             self.all_matches = matches
             self.match_source = match_source
             
-            # Apply RLAP threshold filtering only if clustering did not succeed (align with CLI)
+            # Apply HLAP-min threshold filtering only if clustering did not succeed (align with CLI)
             clustering_ok = bool(getattr(self.analysis_results, 'clustering_results', None)) and bool(getattr(self.analysis_results, 'clustering_results', {}).get('success', False))
             if not clustering_ok:
-                rlapmin = getattr(self.analysis_results, 'min_rlap', getattr(self.analysis_results, 'rlapmin', 5.0))
-                filtered_matches = [m for m in matches if m.get('rlap', 0) >= rlapmin]
+                hlapmin = getattr(self.analysis_results, 'min_hlap', getattr(self.analysis_results, 'hlapmin', 0.1))
+                filtered_matches = [m for m in matches if m.get('hlap', 0) >= hlapmin]
             else:
                 filtered_matches = matches
             
@@ -303,7 +303,8 @@ class PySide6RedshiftAgeDialog(QtWidgets.QDialog):
                 template = match.get('template', {})
                 sn_subtype = template.get('subtype', '') if isinstance(template, dict) else ''
                 name = template.get('name', f'Template {i}') if isinstance(template, dict) else f'Template {i}'
-                rlap = match.get('rlap', 0)
+                from snid_sage.shared.utils.math_utils import get_best_metric_value
+                metric = float(get_best_metric_value(match))
                 
                 # Filter out invalid data
                 if z is None or age is None:
@@ -316,7 +317,7 @@ class PySide6RedshiftAgeDialog(QtWidgets.QDialog):
                     'type': sn_type,
                     'subtype': sn_subtype,
                     'name': name,
-                    'rlap': float(rlap),
+                    'metric': float(metric),
                     'color': self.type_colors.get(sn_type, self.type_colors['Unknown'])
                 }
                 
@@ -359,7 +360,7 @@ Please run a successful SNID analysis first.
 
 No valid data points found for plotting.
 This may be due to:
-• Insufficient template matches above RLAP threshold
+• Insufficient template matches above HLAP threshold
 • Missing redshift or age information in templates
 • Data format issues
 
@@ -369,7 +370,7 @@ Please check your analysis results and try again.
             return
         
         # Build summary text
-        rlapmin = getattr(self.analysis_results, 'rlapmin', 5.0)
+        hlapmin = getattr(self.analysis_results, 'hlapmin', 0.1)
         total_matches = len(self.all_matches)
         valid_points = len(self.plot_data)
         
@@ -384,7 +385,7 @@ Please check your analysis results and try again.
             f"📊 DATA SOURCE: {self.match_source}",
             f"📝 TOTAL MATCHES: {total_matches}",
             f"🎯 VALID DATA POINTS: {valid_points}",
-            f"📏 RLAP THRESHOLD: {rlapmin}",
+            f"📏 HLAP THRESHOLD: {hlapmin}",
             "",
             "📊 DISTRIBUTION STATISTICS:",
             f"   Redshift Range: {min(redshifts):.4f} - {max(redshifts):.4f}",
@@ -604,7 +605,7 @@ Please check your analysis results and try again.
                     # Write header
                     writer.writerow([
                         'Template_Name', 'Type', 'Subtype', 'Redshift', 
-                        'Age_days', 'RLAP'
+                        'Age_days', 'Metric'
                     ])
                     
                     # Write data
@@ -615,7 +616,7 @@ Please check your analysis results and try again.
                             point['subtype'],
                             point['redshift'],
                             point['age'],
-                            point['rlap']
+                            point['metric']
                         ])
                 
                 QtWidgets.QMessageBox.information(

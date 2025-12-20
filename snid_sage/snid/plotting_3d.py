@@ -3,7 +3,7 @@
 ================================================
 
 This module provides advanced visualization capabilities for the improved
-GMM clustering approach, including 3D plots showing redshift vs type vs RLAP-CCC/RLAP.
+GMM clustering approach, including 3D plots showing redshift vs type vs best metric (HLAP-CCC/HLAP).
 """
 
 import numpy as np
@@ -41,7 +41,7 @@ def plot_3d_type_clustering(
     theme_manager=None
 ) -> plt.Figure:
     """
-    Create a 3D visualization of redshift vs type vs RLAP-CCC/RLAP with clustering results.
+    Create a 3D visualization of redshift vs type vs best metric (HLAP-CCC/HLAP) with clustering results.
     
     Parameters:
     -----------
@@ -82,7 +82,7 @@ def plot_3d_type_clustering(
     ax.set_facecolor('white')
     
     # Determine which metric is being used
-    metric_name = clustering_results.get('metric_used', 'RLAP-CCC')
+    metric_name = clustering_results.get('metric_used', 'HLAP-CCC')
     
     # Get unique types and create consistent color map
     unique_types = list(viz_data['type_mapping'].keys())
@@ -99,7 +99,7 @@ def plot_3d_type_clustering(
         # Use best available metric values
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         type_matches = [m for m in viz_data['matches'] if m.get('template', {}).get('type', 'Unknown') == type_name]
-        type_rlaps = np.array([get_best_metric_value(m) for m in type_matches])
+        type_metric_values = np.array([get_best_metric_value(m) for m in type_matches])
         
         if len(type_redshifts) == 0:
             continue
@@ -113,17 +113,17 @@ def plot_3d_type_clustering(
             
             # Plot best cluster points
             if np.any(best_mask):
-                ax.scatter(type_redshifts[best_mask], type_indices[best_mask], type_rlaps[best_mask],
+                ax.scatter(type_redshifts[best_mask], type_indices[best_mask], type_metric_values[best_mask],
                           c=[color], s=60, alpha=0.9, edgecolors='black', linewidth=1.5,
                           label=f'{type_name} (Best)')
             
             # Plot other points
             if np.any(other_mask):
-                ax.scatter(type_redshifts[other_mask], type_indices[other_mask], type_rlaps[other_mask],
+                ax.scatter(type_redshifts[other_mask], type_indices[other_mask], type_metric_values[other_mask],
                           c=[color], s=40, alpha=0.6, edgecolors='gray', linewidth=0.5)
         else:
             # Plot all points with same style
-            ax.scatter(type_redshifts, type_indices, type_rlaps,
+            ax.scatter(type_redshifts, type_indices, type_metric_values,
                       c=[color], s=50, alpha=0.7, edgecolors='black', linewidth=0.5,
                       label=type_name)
     
@@ -193,7 +193,7 @@ def _plot_current_approach(ax, current_results):
     matches = current_results.best_matches
     redshifts = [m['redshift'] for m in matches]
     from snid_sage.shared.utils.math_utils import get_best_metric_value
-    rlaps = [get_best_metric_value(m) for m in matches]
+    metric_values = [get_best_metric_value(m) for m in matches]
     types = [m['template'].get('type', 'Unknown') for m in matches]
     
     # Color by type but show single clustering
@@ -201,11 +201,11 @@ def _plot_current_approach(ax, current_results):
     colors = plt.cm.tab10(np.linspace(0, 1, len(unique_types)))
     type_colors = {t: colors[i] for i, t in enumerate(unique_types)}
     
-    for i, (z, r, t) in enumerate(zip(redshifts, rlaps, types)):
-        ax.scatter(z, r, c=[type_colors[t]], s=50, alpha=0.7, label=t if t not in ax.get_legend_handles_labels()[1] else "")
+    for i, (z, mv, t) in enumerate(zip(redshifts, metric_values, types)):
+        ax.scatter(z, mv, c=[type_colors[t]], s=50, alpha=0.7, label=t if t not in ax.get_legend_handles_labels()[1] else "")
     
     # Determine metric name for Y-axis label
-    metric_name = 'RLAP'  # Default fallback
+    metric_name = 'HLAP'  # Default fallback
     if matches and matches[0]:
         from snid_sage.shared.utils.math_utils import get_metric_name_for_match
         metric_name = get_metric_name_for_match(matches[0])
@@ -230,7 +230,7 @@ def _plot_improved_approach(ax, improved_results):
     for candidate in all_candidates:
         matches = candidate['matches']
         redshifts = [m['redshift'] for m in matches]
-        # Use the new metric system instead of direct RLAP access
+        # Use the new metric system instead of direct legacy access
         from snid_sage.shared.utils.math_utils import get_best_metric_value, get_metric_name_for_match
         metric_values = [get_best_metric_value(m) for m in matches]
         
@@ -246,7 +246,7 @@ def _plot_improved_approach(ax, improved_results):
                   label=label if label not in ax.get_legend_handles_labels()[1] else "")
     
     # Determine metric name for Y-axis label
-    metric_name = 'RLAP'  # Default fallback
+    metric_name = 'HLAP'  # Default fallback
     if all_candidates and all_candidates[0].get('matches'):
         metric_name = get_metric_name_for_match(all_candidates[0]['matches'][0])
     
@@ -286,7 +286,7 @@ def plot_cluster_statistics_summary(
         return fig
     
     # Determine which metric is being used
-    metric_name = clustering_results.get('metric_used', 'RLAP-CCC')
+    metric_name = clustering_results.get('metric_used', 'HLAP-CCC')
     
     # Create subplots
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=figsize)
@@ -372,14 +372,14 @@ def plot_cluster_statistics_summary(
     
     return fig
 
-def plot_2d_redshift_vs_rlap(
+def plot_2d_redshift_vs_metric(
     clustering_results: Dict[str, Any],
     selected_cluster: Optional[Dict[str, Any]] = None,
     figsize: Tuple[int, int] = (10, 6),
     save_path: Optional[str] = None,
     theme_manager=None
 ) -> plt.Figure:
-    """Create a 2D plot of redshift vs metric with cluster highlighting."""
+    """Create a 2D plot of redshift vs best metric with cluster highlighting."""
     
     if not clustering_results.get('success'):
         fig = plt.figure(figsize=figsize)
@@ -390,7 +390,7 @@ def plot_2d_redshift_vs_rlap(
         return fig
     
     # Determine which metric is being used
-    metric_name = clustering_results.get('metric_used', 'RLAP-CCC')
+    metric_name = clustering_results.get('metric_used', 'HLAP-CCC')
     
     fig, ax = plt.subplots(figsize=figsize)
     
@@ -450,7 +450,7 @@ def plot_simple_scatter(
         return fig
     
     # Determine which metric is being used
-    metric_name = clustering_results.get('metric_used', 'RLAP-CCC')
+    metric_name = clustering_results.get('metric_used', 'HLAP-CCC')
     
     all_candidates = clustering_results.get('all_candidates', [])
     if not all_candidates:

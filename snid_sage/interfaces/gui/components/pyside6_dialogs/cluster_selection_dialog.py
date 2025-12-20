@@ -156,12 +156,12 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
     def _sort_candidates(self):
         """Sort candidates by score"""
         def _get_candidate_score(c):
-            # Preferred metric hierarchy: penalised_score → composite_score → mean_metric (RLAP-CCC/RLAP)
+            # Preferred metric hierarchy: penalised_score → composite_score → mean_metric
             return (
                 c.get('penalized_score') or
                 c.get('penalised_score') or  # British spelling safeguard
                 c.get('composite_score') or
-                c.get('mean_rlap') or 0.0
+                c.get('mean_metric') or 0.0
             )
 
         try:
@@ -511,7 +511,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
                 candidate.get('penalized_score') or
                 candidate.get('penalised_score') or
                 candidate.get('composite_score') or
-                candidate.get('mean_rlap') or 0.0
+                candidate.get('mean_metric') or 0.0
             )
             
             # Mark if this is the automatic best cluster
@@ -547,8 +547,8 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self._unique_types = sorted(list(set(c.get('type', 'Unknown') for c in self.all_candidates)))
         self._type_to_index = {sn_type: i for i, sn_type in enumerate(self._unique_types)}
         
-        # Determine metric name (RLAP-CCC or RLAP)
-        metric_name_global = 'RLAP'
+        # Determine metric name (HLAP-CCC or HLAP)
+        metric_name_global = 'HLAP-CCC'
         if MATH_UTILS_AVAILABLE:
             for cand in self.all_candidates:
                 if cand.get('matches'):
@@ -601,7 +601,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self.ax.set_xlabel('Redshift (z)', color='#000000', fontsize=15, labelpad=15)
         # Use a shorter Y label ("Type") to match the GMM clustering dialog
         self.ax.set_ylabel('Type', color='#000000', fontsize=15, labelpad=15)
-        # Z label uses the global metric name (e.g., "RLAP-CCC")
+        # Z label uses the global metric name (e.g., "HLAP-CCC")
         self.ax.set_zlabel(metric_name_global, color='#000000', fontsize=15, labelpad=15)
         if self._unique_types is not None:
             self.ax.set_yticks(range(len(self._unique_types)))
@@ -662,7 +662,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         Return lists of redshifts and metric values for the given cluster candidate.
         
         Uses get_best_metric_value when math utils are available; otherwise falls back
-        to rlap/rlap_ccc fields. Provides sensible defaults when matches or metrics
+        to hlap/hlap_ccc fields. Provides sensible defaults when matches or metrics
         are missing so that plotting and highlighting can still work.
         """
         matches = candidate.get('matches', []) or []
@@ -671,9 +671,9 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
                 # Fallback to aggregate stats on the candidate
                 redshift = candidate.get('mean_redshift', 0.0)
                 if MATH_UTILS_AVAILABLE:
-                    metric_val = candidate.get('mean_metric', candidate.get('mean_rlap', 0.0))
+                    metric_val = candidate.get('mean_metric', 0.0)
                 else:
-                    metric_val = candidate.get('mean_rlap', 0.0)
+                    metric_val = candidate.get('mean_metric', 0.0)
                 return [float(redshift)], [float(metric_val)]
             
             # Extract per-match redshifts and metrics
@@ -690,9 +690,9 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
                     try:
                         metric_val = float(get_best_metric_value(m))
                     except Exception:
-                        metric_val = float(m.get('rlap_ccc', m.get('rlap', 0.0)))
+                        metric_val = float(m.get('hlap_1mccc', m.get('hlap_ccc', m.get('hlap', 0.0))))
                 else:
-                    metric_val = float(m.get('rlap_ccc', m.get('rlap', 0.0)))
+                    metric_val = float(m.get('hlap_1mccc', m.get('hlap_ccc', m.get('hlap', 0.0))))
                 metrics.append(metric_val)
             
             return redshifts, metrics
@@ -803,7 +803,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
                             key=get_best_metric_value, reverse=True)[:2]
         else:
             matches = sorted(self.selected_cluster.get('matches', []), 
-                            key=lambda m: m.get('rlap', 0), reverse=True)[:2]
+                            key=lambda m: m.get('hlap_1mccc', m.get('hlap_ccc', m.get('hlap', 0.0))), reverse=True)[:2]
         
         # Get input spectrum data
         input_wave = input_flux = None
