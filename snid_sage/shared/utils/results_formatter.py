@@ -1110,27 +1110,64 @@ class UnifiedResultsFormatter:
                 return isinstance(x, (int, float)) and np.isfinite(float(x))
             except Exception:
                 return False
+
+        def _fmt_pm(val, err, *, val_fmt: str, err_fmt: str) -> str:
+            if not _finite(val):
+                return "nan"
+            v = float(val)
+            out = val_fmt.format(v)
+            if _finite(err) and float(err) > 0:
+                out += f"±{err_fmt.format(float(err))}"
+            return out
         
         z_val = s.get('subtype_redshift', None)
+        z_err = s.get('subtype_redshift_err', None)
         if not _finite(z_val):
             z_val = s.get('enhanced_redshift', s.get('redshift', None))
+            z_err = s.get('enhanced_redshift_err', s.get('redshift_error', None))
         
         age_val = s.get('subtype_age', None)
+        age_err = s.get('subtype_age_err', None)
         if not _finite(age_val):
             age_val = s.get('enhanced_age', None)
+            age_err = s.get('enhanced_age_err', None)
         
-        z_marker = "🎯" if s.get('has_clustering') else ""
-        
-        # Get best metric value
-        if s['template_matches']:
-            best_metric = s['template_matches'][0].get('best_metric_value', s['template_matches'][0].get('primary_metric', 0.0))
-        else:
-            best_metric = s.get('primary_metric', 0.0)
-        
-        age_str = f" age={float(age_val):.1f}" if _finite(age_val) else ""
-        z_txt = f"{float(z_val):.6f}" if _finite(z_val) else "nan"
-        
-        return f"{self.spectrum_name}: {type_display} z={z_txt}{age_str} {self.metric_name}={best_metric:.1f} {z_marker}"
+        # Q_cluster and confidence/quality fields
+        q_cluster = s.get('cluster_penalized_score', None)
+        q_txt = f"{float(q_cluster):.1f}" if _finite(q_cluster) else "nan"
+
+        match_qual = (s.get('cluster_quality_level', '') or 'N/A') if s.get('has_clustering') else 'N/A'
+        type_conf = (s.get('cluster_confidence_level', '') or 'N/A') if s.get('has_clustering') else 'N/A'
+        type_conf = str(type_conf).title() if type_conf else 'N/A'
+
+        # Derive a coarse subtype confidence label from margin-over-second when available.
+        # (Margin is expected to be a percent-like quantity; if absent, fall back to N/A.)
+        subtype_conf = 'N/A'
+        try:
+            m = s.get('subtype_margin_over_second', None)
+            if _finite(m):
+                pct = float(m)
+                if pct >= 100.0:
+                    subtype_conf = 'High'
+                elif pct >= 30.0:
+                    subtype_conf = 'Medium'
+                elif pct >= 10.0:
+                    subtype_conf = 'Low'
+                else:
+                    subtype_conf = 'Very Low'
+        except Exception:
+            subtype_conf = 'N/A'
+
+        z_txt = _fmt_pm(z_val, z_err, val_fmt="{:.6f}", err_fmt="{:.6f}")
+        age_txt = _fmt_pm(age_val, age_err, val_fmt="{:.1f}", err_fmt="{:.1f}") if _finite(age_val) else "nan"
+        age_part = f" age={age_txt}" if _finite(age_val) else ""
+
+        return (
+            f"{self.spectrum_name}: {type_display} "
+            f"z={z_txt}{age_part} "
+            f"Q_cluster={q_txt} "
+            f"MatchQual={match_qual} TypeConf={type_conf} SubtypeConf={subtype_conf}"
+        )
     
     def save_to_file(self, filename: str, format_type: str = 'txt'):
         """Save results to file in specified format"""

@@ -38,6 +38,86 @@ from snid_sage.shared.utils.logging import set_verbosity as set_global_verbosity
 from snid_sage.shared.utils.logging import VerbosityLevel
 from snid_sage.shared.utils.cli_parsing import parse_wavelength_mask_args
 
+# ---------------------------------------------------------------------------
+# CLI formatting helpers (used to keep sequential and --workers output identical)
+# ---------------------------------------------------------------------------
+
+def _is_finite_number(x: object) -> bool:
+    try:
+        return isinstance(x, (int, float)) and np.isfinite(float(x))
+    except Exception:
+        return False
+
+
+def _fmt_val_pm(val: object, err: object, *, val_fmt: str, err_fmt: str) -> str:
+    """Format value with optional ±error. If error is not finite/positive, omit it."""
+    if not _is_finite_number(val):
+        return "nan"
+    v = float(val)
+    s = val_fmt.format(v)
+    if _is_finite_number(err) and float(err) > 0:
+        s += f"±{err_fmt.format(float(err))}"
+    return s
+
+
+def _format_winning_cli_fields(summary: dict) -> dict:
+    """
+    Extract the 'winning-subtype in winning cluster' fields for CLI one-liners.
+
+    Returns a dict with:
+      - type_display
+      - z_text, age_text (already including label prefixes)
+      - q_cluster_text (e.g. "Q_cluster=5.5" or "Q_cluster=nan")
+      - flags_str (MatchQual/TypeConf/SubtypeConf)
+    """
+    consensus_type = summary.get('consensus_type', 'Unknown')
+    consensus_subtype = summary.get('consensus_subtype', '')
+    type_display = f"{consensus_type} {consensus_subtype}".strip()
+
+    # Winning-subtype z/age first; then cluster-weighted; then best-match fields.
+    z_val = summary.get('winning_subtype_redshift', None)
+    if not _is_finite_number(z_val):
+        z_val = summary.get('cluster_redshift_weighted', summary.get('redshift', None))
+    z_err = summary.get('winning_subtype_redshift_err', None)
+    if not _is_finite_number(z_err):
+        z_err = summary.get('cluster_redshift_err_weighted', summary.get('redshift_error', None))
+
+    age_val = summary.get('winning_subtype_age', None)
+    if not _is_finite_number(age_val):
+        age_val = summary.get('cluster_age_weighted', summary.get('age', None))
+    age_err = summary.get('winning_subtype_age_err', None)
+    if not _is_finite_number(age_err):
+        age_err = summary.get('cluster_age_err_weighted', summary.get('age_err', None))
+
+    # Penalized cluster score for the winning subtype when available; fallback to cluster.
+    q_cluster = summary.get('winning_subtype_penalized_score', None)
+    if not _is_finite_number(q_cluster):
+        q_cluster = summary.get('cluster_penalized_score', None)
+
+    # Human-readable confidence/quality flags
+    if summary.get('has_clustering'):
+        match_quality = (summary.get('cluster_quality_category', '') or 'N/A')
+        type_conf = summary.get('cluster_confidence_level', '') or 'N/A'
+    else:
+        match_quality = 'N/A'
+        type_conf = 'N/A'
+    type_conf = str(type_conf).title() if type_conf else 'N/A'
+
+    subtype_conf = summary.get('subtype_confidence_level', None)
+    subtype_conf = str(subtype_conf).title() if subtype_conf else 'N/A'
+    flags_str = f" MatchQual={match_quality} TypeConf={type_conf} SubtypeConf={subtype_conf}"
+
+    z_txt = _fmt_val_pm(z_val, z_err, val_fmt="{:.6f}", err_fmt="{:.6f}")
+    age_txt = _fmt_val_pm(age_val, age_err, val_fmt="{:.1f}", err_fmt="{:.1f}") if _is_finite_number(age_val) else "nan"
+
+    return {
+        "type_display": type_display,
+        "z_text": f"z={z_txt}",
+        "age_text": (f" age={age_txt}" if _is_finite_number(age_val) else ""),
+        "q_cluster_text": f"Q_cluster={float(q_cluster):.1f}" if _is_finite_number(q_cluster) else "Q_cluster=nan",
+        "flags_str": flags_str,
+    }
+
 # Import and apply centralized font configuration for consistent plotting
 try:
     from snid_sage.shared.utils.plotting.font_sizes import apply_font_config
@@ -2346,23 +2426,9 @@ def main(args: argparse.Namespace) -> int:
                                 consensus_type = summary.get('consensus_type', 'Unknown')
                                 consensus_subtype = summary.get('consensus_subtype', '')
                                 # Preferred z/age from winning subtype; fallback to cluster-weighted; then best-match
-                                z_value = summary.get('winning_subtype_redshift', None)
-                                if not (isinstance(z_value, (int, float)) and np.isfinite(z_value)):
-                                    z_value = summary.get('cluster_redshift_weighted', summary.get('redshift', 0.0))
-                                age_value = summary.get('winning_subtype_age', None)
-                                if not (isinstance(age_value, (int, float)) and np.isfinite(age_value)):
-                                    age_value = summary.get('cluster_age_weighted', summary.get('age', None))
-                                # Penalized top-5 Q_cluster (winning subtype); fallback to best metric
-                                metric_value = summary.get('winning_subtype_penalized_score', None)
-                                if not (isinstance(metric_value, (int, float)) and np.isfinite(metric_value)):
-                                    try:
-                                        from snid_sage.shared.utils.math_utils import get_best_metric_value
-                                        metric_value = get_best_metric_value(summary)
-                                    except Exception:
-                                        metric_value = summary.get('hlap_ccc', 0.0)
-                                type_display = f"{consensus_type} {consensus_subtype}".strip()
+                                fields = _format_winning_cli_fields(summary)
+                                type_display = fields["type_display"]
                                 try:
-                                    age_str = f" age={float(age_value):.1f}" if isinstance(age_value, (int, float)) and np.isfinite(age_value) else ""
                                     # Match quality and type confidence flags
                                     if summary.get('has_clustering'):
                                         match_quality = (summary.get('cluster_quality_category', '') or 'N/A')
@@ -2374,7 +2440,11 @@ def main(args: argparse.Namespace) -> int:
                                     subtype_conf = summary.get('subtype_confidence_level', None)
                                     subtype_conf = str(subtype_conf).title() if subtype_conf else 'N/A'
                                     flags_str = f" MatchQual={match_quality} TypeConf={type_conf} SubtypeConf={subtype_conf}"
-                                    print(f"[{processed}/{len(items)}] {name}: {type_display} z={float(z_value):.6f}{age_str} Q_cluster={float(metric_value):.1f}{flags_str}")
+                                    print(
+                                        f"[{processed}/{len(items)}] {name}: {type_display} "
+                                        f"{fields['z_text']}{fields['age_text']} "
+                                        f"{fields['q_cluster_text']}{flags_str}"
+                                    )
                                 except Exception:
                                     print(f"[{processed}/{len(items)}] {name}: {type_display}")
                             else:
@@ -2429,18 +2499,25 @@ def main(args: argparse.Namespace) -> int:
                         else:
                             redshift = summary.get('redshift', 0)
                             z_marker = ""
-                        # Penalized top-5 cluster Q; fallback to best metric
-                        from snid_sage.shared.utils.math_utils import get_best_metric_value
-                        best_metric_value = summary.get('winning_subtype_penalized_score', None)
-                        if not (isinstance(best_metric_value, (int, float)) and np.isfinite(best_metric_value)):
-                            best_metric_value = get_best_metric_value(summary)
+                        # Report BOTH best metric (HLAP-CCC preferred) and Q_cluster (penalized top-5).
+                        from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
+                        best_metric_value = float(get_best_metric_value(summary))
+                        best_metric_name = str(get_best_metric_name(summary))
+                        q_cluster = summary.get('winning_subtype_penalized_score', None)
+                        if not (isinstance(q_cluster, (int, float)) and np.isfinite(q_cluster)):
+                            q_cluster = summary.get('cluster_penalized_score', None)
                         type_display = f"{consensus_type} {consensus_subtype}".strip()
+                        best_template = str(summary.get('best_template', 'Unknown'))
+                        best_template_short = best_template[:18]
                         if brief_mode:
-                            metric_str = f"Q_cluster={best_metric_value:.1f}"
+                            # One-liner should reflect the winning-subtype summary, not best-match metric.
+                            fields = _format_winning_cli_fields(summary)
+                            metric_str = fields["q_cluster_text"]
                             # Preferred subtype z/age
                             z_value = summary.get('winning_subtype_redshift', redshift)
                             age_value = summary.get('winning_subtype_age', summary.get('age', None))
-                            age_str = f" age={float(age_value):.1f}" if isinstance(age_value, (int, float)) and np.isfinite(age_value) else ""
+                            # Include z/age with errors (formatted in helper)
+                            z_age_txt = f"{fields['z_text']}{fields['age_text']}"
                             # Match quality and type confidence flags
                             if summary.get('has_clustering'):
                                 match_quality = (summary.get('cluster_quality_category', '') or 'N/A')
@@ -2452,7 +2529,7 @@ def main(args: argparse.Namespace) -> int:
                             subtype_conf = summary.get('subtype_confidence_level', None)
                             subtype_conf = str(subtype_conf).title() if subtype_conf else 'N/A'
                             flags_str = f" MatchQual={match_quality} TypeConf={type_conf} SubtypeConf={subtype_conf}"
-                            print(f"[{i}/{len(input_files)}] {name}: {type_display} z={float(z_value):.6f}{age_str} {metric_str}{flags_str}")
+                            print(f"[{i}/{len(input_files)}] {name}: {type_display} {z_age_txt} {metric_str}{flags_str}")
                         else:
                             z_value = summary.get('winning_subtype_redshift', redshift)
                             age_value = summary.get('winning_subtype_age', summary.get('age', None))
@@ -2468,7 +2545,12 @@ def main(args: argparse.Namespace) -> int:
                             subtype_conf = summary.get('subtype_confidence_level', None)
                             subtype_conf = str(subtype_conf).title() if subtype_conf else 'N/A'
                             flags_str = f" MatchQual={match_quality} TypeConf={type_conf} SubtypeConf={subtype_conf}"
-                            print(f"      {name}: {type_display} z={float(z_value):.6f}{age_str} Q_cluster={best_metric_value:.1f}{flags_str} {z_marker}")
+                            fields = _format_winning_cli_fields(summary)
+                            print(
+                                f"      {name}: {type_display} "
+                                f"{fields['z_text']}{fields['age_text']} {fields['q_cluster_text']}"
+                                f"{flags_str} {z_marker}"
+                            )
         else:
             # Sequential fallback (current behavior)
             if not is_quiet and not brief_mode:
@@ -2535,12 +2617,31 @@ def main(args: argparse.Namespace) -> int:
                         best_metric_name = get_best_metric_name(summary)
                         type_display = f"{consensus_type} {consensus_subtype}".strip()
                         if brief_mode:
-                            best_template = str(summary.get('best_template', 'Unknown'))
-                            best_template_short = best_template[:18]
-                            metric_str = f"{best_metric_name}={best_metric_value:.1f}"
-                            z_value = redshift
+                            # Align sequential one-liner with the parallel-mode one-liner:
+                            # prefer winning-subtype redshift/age when available, then cluster-weighted, then best-match.
+                            fields = _format_winning_cli_fields(summary)
+                            metric_str = fields["q_cluster_text"]
                             weak_note = " (weak)" if summary.get('weak_match') else ""
-                            print(f"[{i}/{len(input_files)}] {name}: {type_display}{weak_note} z={float(z_value):.6f} {metric_str} tpl={best_template_short}")
+
+                            # Match quality and confidence flags (same rules as parallel branch)
+                            try:
+                                if summary.get('has_clustering'):
+                                    match_quality = (summary.get('cluster_quality_category', '') or 'N/A')
+                                    type_conf = summary.get('cluster_confidence_level', '') or 'N/A'
+                                else:
+                                    match_quality = 'N/A'
+                                    type_conf = 'N/A'
+                                type_conf = str(type_conf).title() if type_conf else 'N/A'
+                                subtype_conf = summary.get('subtype_confidence_level', None)
+                                subtype_conf = str(subtype_conf).title() if subtype_conf else 'N/A'
+                                flags_str = f" MatchQual={match_quality} TypeConf={type_conf} SubtypeConf={subtype_conf}"
+                            except Exception:
+                                flags_str = ""
+
+                            print(
+                                f"[{i}/{len(input_files)}] {name}: {type_display}{weak_note} "
+                                f"{fields['z_text']}{fields['age_text']} {metric_str}{flags_str}"
+                            )
                         else:
                             weak_note = " (weak)" if summary.get('weak_match') else ""
                             print(f"      {name}: {type_display}{weak_note} z={float(redshift):.6f} {best_metric_name}={best_metric_value:.1f} {z_marker}")
