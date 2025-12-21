@@ -978,7 +978,6 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                 zmin=0.0,
                 zmax=1.0,
                 # Relaxed correlation parameters for galaxies
-                hlapmin=0.01,  # HLAP-min for galaxy detection
                 lapmin=0.2,    # Lower overlap requirement for galaxies
                 peak_window_size=20,  # Larger window for broader galaxy features
                 # Output control: respect configured max_output_templates when available

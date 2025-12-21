@@ -212,13 +212,6 @@ Examples:
         help="Maximum redshift to consider (default: 1.0 for optical, 2.5 for ONIR)"
     )
     analysis_group.add_argument(
-        "--hlapmin",
-        dest="hlapmin",
-        type=float,
-        default=0.1,
-        help="Minimum HLAP value required (HLAP = height * lap)"
-    )
-    analysis_group.add_argument(
         "--lapmin", 
         type=float, 
         default=0.3, 
@@ -228,7 +221,7 @@ Examples:
         "--hlap-ccc-threshold",
         dest="hlap_ccc_threshold",
         type=float,
-        default=0.4,
+        default=0.45,
         help="Minimum HLAP-CCC value required for clustering (HLAP-CCC: HLAP/(1−CCC))"
     )
     # Analysis options completed
@@ -379,6 +372,20 @@ Examples:
         type=int, 
         default=10, 
         help="Peak detection window size"
+    )
+    advanced_group.add_argument(
+        "--phase1-peak-min-height",
+        dest="phase1_peak_min_height",
+        type=float,
+        default=0.3,
+        help="Phase-1 peak finding: minimum normalized correlation peak height (default: 0.3)"
+    )
+    advanced_group.add_argument(
+        "--phase1-peak-min-distance",
+        dest="phase1_peak_min_distance",
+        type=int,
+        default=3,
+        help="Phase-1 peak finding: minimum distance between peaks in bins (default: 3)"
     )
     advanced_group.add_argument(
         "--max-output-templates", 
@@ -859,7 +866,6 @@ def main(args: argparse.Namespace) -> int:
             logger.info(f"Starting SNID-SAGE analysis for: {args.spectrum_path}")
             logger.info(f"Templates directory: {args.templates_dir}")
             logger.info(f"Redshift range: {args.zmin} to {args.zmax}")
-            logger.info(f"HLAP-min threshold: {args.hlapmin}")
         
         # Run preprocessing and analysis
         spectrum_name = _extract_spectrum_name(args.spectrum_path)
@@ -1002,9 +1008,10 @@ def main(args: argparse.Namespace) -> int:
                 template_filter=args.template_filter,
             exclude_templates=getattr(args, 'exclude_templates', None),
             peak_window_size=args.peak_window_size,
+            phase1_peak_min_height=getattr(args, "phase1_peak_min_height", 0.3),
+            phase1_peak_min_distance=getattr(args, "phase1_peak_min_distance", 3),
             lapmin=args.lapmin,
-                hlapmin=args.hlapmin,
-                hlap_ccc_threshold=getattr(args, 'hlap_ccc_threshold', 0.4),
+                hlap_ccc_threshold=getattr(args, 'hlap_ccc_threshold', 0.45),
 
             forced_redshift=args.forced_redshift,
             max_output_templates=args.max_output_templates,

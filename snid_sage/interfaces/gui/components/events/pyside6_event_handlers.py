@@ -132,7 +132,7 @@ class PySide6EventHandlers(QtCore.QObject):
             if hasattr(self.main_window, '_start_space_debris_game'):
                 self.main_window._start_space_debris_game()
             elif hasattr(self.main_window, 'start_games'):
-                # Fallback to legacy start which may show a menu
+                # Fallback to start which may show a menu
                 self.main_window.start_games()
             else:
                 QtWidgets.QMessageBox.information(

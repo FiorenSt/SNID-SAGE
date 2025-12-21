@@ -111,14 +111,6 @@ class ConfigurationManager:
                     min_value=0.0, max_value=15000.0,
                     error_message="Maximum age must be between 0 and 15000 days"
                 ),
-                'correlation_min': ConfigValidationRule(
-                    min_value=0.0, max_value=50.0,
-                    error_message="Minimum correlation must be between 0.0 and 50.0"
-                ),
-                'fraction_coverage': ConfigValidationRule(
-                    min_value=0.1, max_value=1.0,
-                    error_message="Fraction coverage must be between 0.1 and 1.0"
-                ),
                 'max_output_templates': ConfigValidationRule(
                     min_value=1, max_value=1000,
                     error_message="Max output templates must be between 1 and 1000"
@@ -126,11 +118,6 @@ class ConfigurationManager:
                 'wavelength_tolerance': ConfigValidationRule(
                     min_value=1.0, max_value=100.0,
                     error_message="Wavelength tolerance must be between 1.0 and 100.0 Å"
-                ),
-                # SNID-specific analysis parameters
-                'hlapmin': ConfigValidationRule(
-                    min_value=0.0, max_value=100.0,
-                    error_message="hlapmin must be between 0.0 and 100.0"
                 ),
                 'lapmin': ConfigValidationRule(
                     min_value=0.0, max_value=1.0,
@@ -268,14 +255,11 @@ class ConfigurationManager:
                 'redshift_max': 2.0,
                 'age_min': None,
                 'age_max': None,
-                'correlation_min': 3.0,
-                'fraction_coverage': 0.7,
                 'max_output_templates': 10,
                 'wavelength_tolerance': 10.0,
-                # SNID-specific parameters
-                'hlapmin': 0.1,
+                # Analysis gating parameters
                 'lapmin': 0.3,
-                'hlap_ccc_threshold': 0.4,  # Best-metric threshold for clustering (HLAP-CCC)
+                'hlap_ccc_threshold': 0.45,  # Best-metric threshold for clustering (HLAP-CCC)
 
                 'wmin': None,  # Optional wavelength limits
                 'wmax': None,
@@ -454,69 +438,7 @@ class ConfigurationManager:
             warnings=warnings
         )
 
-    def _migrate_legacy_cli_config(self, legacy: Dict[str, Any]) -> Dict[str, Any]:
-        """Migrate legacy CLI config schema to the unified schema.
-
-        Legacy keys examples:
-          templates.default_dir -> paths.templates_dir
-          output.default_dir -> paths.output_dir
-          analysis.zmin -> analysis.redshift_min
-          analysis.zmax -> analysis.redshift_max
-          analysis.hlapmin -> analysis.hlapmin (same)
-          analysis.lapmin -> analysis.lapmin (same)
-          preprocessing.* -> processing.* (map selected keys)
-        """
-        migrated: Dict[str, Any] = {}
-
-        # Start from defaults to ensure completeness
-        migrated = self.get_default_config()
-
-        # Templates/output dirs
-        try:
-            templates = legacy.get('templates', {})
-            if 'default_dir' in templates:
-                migrated['paths']['templates_dir'] = templates['default_dir']
-        except Exception:
-            pass
-        try:
-            output = legacy.get('output', {})
-            if 'default_dir' in output:
-                migrated['paths']['output_dir'] = output['default_dir']
-            if 'save_plots' in output:
-                migrated['output']['save_plots'] = bool(output['save_plots'])
-            if 'max_output_templates' in output:
-                migrated['analysis']['max_output_templates'] = int(output['max_output_templates'])
-        except Exception:
-            pass
-
-        # Analysis mapping
-        try:
-            la = legacy.get('analysis', {})
-            if 'zmin' in la:
-                migrated['analysis']['redshift_min'] = la['zmin']
-            if 'zmax' in la:
-                migrated['analysis']['redshift_max'] = la['zmax']
-            if 'hlapmin' in la:
-                migrated['analysis']['hlapmin'] = la['hlapmin']
-            if 'lapmin' in la:
-                migrated['analysis']['lapmin'] = la['lapmin']
-        except Exception:
-            pass
-
-        # Preprocessing -> processing
-        try:
-            lp = legacy.get('preprocessing', {})
-            if 'apodize_percent' in lp:
-                migrated['processing']['apodize_percent'] = lp['apodize_percent']
-            if 'aband_remove' in lp:
-                migrated['processing']['median_fwmed'] = migrated['processing'].get('median_fwmed', 0.0)  # no direct map
-                migrated['processing']['aband_remove'] = lp['aband_remove']
-            if 'skyclip' in lp:
-                migrated['processing']['skyclip'] = lp['skyclip']
-        except Exception:
-            pass
-
-        return migrated
+    # Removed: config-schema migration helpers and other backwards-compat cruft.
     
     def _deep_merge_configs(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
         """Deep merge two configuration dictionaries"""

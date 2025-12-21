@@ -157,7 +157,6 @@ class AnalysisParameters:
 
     
     # Correlation parameters  
-    hlapmin: float = 0.1
     lapmin: float = 0.3
     
     # Wavelength range

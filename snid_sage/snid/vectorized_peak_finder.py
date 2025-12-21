@@ -39,9 +39,21 @@ class VectorizedPeakFinder:
     operations for significant performance improvements.
     """
     
-    def __init__(self, NW_grid: int, DWLOG_grid: float, 
-                 lz1: int, lz2: int, k1: int, k2: int, k3: int, k4: int,
-                 r_scale: float = 1.0):
+    def __init__(
+        self,
+        NW_grid: int,
+        DWLOG_grid: float,
+        lz1: int,
+        lz2: int,
+        k1: int,
+        k2: int,
+        k3: int,
+        k4: int,
+        r_scale: float = 1.0,
+        *,
+        phase1_peak_min_distance: int = 3,
+        phase1_peak_min_height: float = 0.3,
+    ):
         """
         Initialize vectorized peak finder.
         
@@ -67,6 +79,17 @@ class VectorizedPeakFinder:
             self.r_scale = float(r_scale)
         except Exception:
             self.r_scale = 1.0
+
+        # Phase-1 peak detection knobs (previously hard-coded).
+        # Note: these apply to the *normalized* phase-1 correlation (Rz) passed to find_peaks.
+        try:
+            self.phase1_peak_min_distance = int(phase1_peak_min_distance)
+        except Exception:
+            self.phase1_peak_min_distance = 3
+        try:
+            self.phase1_peak_min_height = float(phase1_peak_min_height)
+        except Exception:
+            self.phase1_peak_min_height = 0.3
         
     def find_peaks_batch(self, correlation_matrix: np.ndarray, 
                         template_names: List[str],
@@ -114,8 +137,8 @@ class VectorizedPeakFinder:
             # Find peaks in this correlation function
             peaks_indices, properties = find_peaks(
                 correlation, 
-                distance=3, 
-                height=0.3
+                distance=self.phase1_peak_min_distance,
+                height=self.phase1_peak_min_height,
             )
             
             # Filter peaks to allowed redshift range
@@ -140,7 +163,6 @@ class VectorizedPeakFinder:
                            left_edge: int,
                            right_edge: int,
                            lapmin: float,
-                           hlapmin: float,
                            zmin: float,
                            zmax: float,
                            peak_window_size: int) -> List[Dict[str, Any]]:
@@ -161,8 +183,8 @@ class VectorizedPeakFinder:
             Continuum array
         left_edge, right_edge : int
             Spectrum edges
-        lapmin, hlapmin : float
-            Minimum lap and HLAP thresholds
+        lapmin : float
+            Minimum overlap fraction threshold
         zmin, zmax : float
             Redshift range
         peak_window_size : int
@@ -216,7 +238,7 @@ class VectorizedPeakFinder:
             for peak_idx in selected_peaks:
                 # Derive refined lag at this correlation peak (bins relative to zero-lag center)
                 # Use a local quadratic fit around the peak on the normalized correlation, 
-                # mirroring the legacy approach for initial centering.
+                # mirroring the standard approach for initial centering.
                 try:
                     fit_indices = (np.arange(int(peak_idx) - 2, int(peak_idx) + 3) % self.NW_grid).astype(int)
                     y_fit0 = correlation[fit_indices]
@@ -273,7 +295,7 @@ class VectorizedPeakFinder:
             for peak_info in peak_group:
                 match = self._process_single_peak(
                     peak_info, tapered_flux, log_wave, cont,
-                    left_edge, right_edge, hlapmin, zmin, zmax, peak_window_size
+                    left_edge, right_edge, zmin, zmax, peak_window_size
                 )
                 if match:
                     matches.append(match)
@@ -286,7 +308,6 @@ class VectorizedPeakFinder:
                             cont: np.ndarray,
                             left_edge: int,
                             right_edge: int,
-                            hlapmin: float,
                             zmin: float,
                             zmax: float,
                             peak_window_size: int) -> Optional[Dict[str, Any]]:
@@ -436,10 +457,8 @@ class VectorizedPeakFinder:
             # it is not used by the HLAP/HLAP-CCC pipeline and is computationally expensive.
             r_value = 0.0
             
-            # HLAP gate (HLAP = phase-2 peak height * lap).
+            # HLAP is computed for downstream scoring (HLAP-CCC) and reporting.
             hlap = float(hgt_p) * float(lap) if (np.isfinite(hgt_p) and np.isfinite(lap)) else 0.0
-            if hlap < hlapmin:
-                return None
             
             # Prepare spectra data for plotting
             plot_wave = log_wave[left_edge:right_edge+1]

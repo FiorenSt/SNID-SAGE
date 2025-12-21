@@ -640,7 +640,7 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
             
     def _save_template(self, template_info: Dict[str, Any], spectrum_data: Dict[str, np.ndarray]) -> bool:
         """Deprecated: LNW saving removed. Use TemplateService instead."""
-        _LOGGER.error("_save_template legacy path invoked; this method is deprecated in HDF5-only mode.")
+        _LOGGER.error("_save_template fallback path invoked; this method is not supported in HDF5-only mode.")
         return False
             
     def _clear_form(self):

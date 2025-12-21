@@ -394,11 +394,15 @@ class PySide6AnalysisPlotter:
             elif hasattr(result, 'best_matches') and result.best_matches:
                 matches = result.best_matches
             
-            # Apply HLAP-min threshold filtering only if clustering did not succeed (match CLI behavior)
+            # Apply best-metric threshold filtering only if clustering did not succeed
             clustering_ok = bool(getattr(result, 'clustering_results', None)) and bool(getattr(result, 'clustering_results', {}).get('success', False))
             if not clustering_ok:
-                hlapmin = getattr(result, 'min_hlap', getattr(result, 'hlapmin', 0.1))
-                filtered_matches = [m for m in matches if m.get('hlap', 0) >= hlapmin]
+                try:
+                    from snid_sage.shared.utils.math_utils import get_best_metric_value
+                    threshold = float(getattr(result, 'hlap_ccc_threshold', 0.45))
+                    filtered_matches = [m for m in matches if float(get_best_metric_value(m)) >= threshold]
+                except Exception:
+                    filtered_matches = matches
             else:
                 # Respect clustering survivors without additional metric filtering
                 filtered_matches = matches

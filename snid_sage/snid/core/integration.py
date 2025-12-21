@@ -80,7 +80,7 @@ def integrate_fft_optimization(templates: List[Dict[str, Any]],
     Parameters
     ----------
     templates : List[Dict[str, Any]]
-        Template list in legacy format
+        Template list in dict-based format
     k1, k2, k3, k4 : int
         FFT band limits
     use_vectorized : bool, optional
@@ -124,7 +124,7 @@ class SimpleFFTCorrelator:
         Parameters
         ----------
         templates : List[Dict[str, Any]]
-            Templates in legacy format
+            Templates in dict-based format
         k1, k2, k3, k4 : int
             FFT band limits
         use_vectorized : bool, optional
@@ -209,7 +209,7 @@ class SimpleFFTCorrelator:
     def correlate_snid_style(self, spectrum_fft: np.ndarray, spectrum_rms: float,
                            template_names: Optional[List[str]] = None) -> Dict[str, Dict[str, Any]]:
         """
-        Correlate spectrum with templates using optimized or legacy correlation.
+        Correlate spectrum with templates using optimized or fallback correlation.
         
         Parameters
         ----------
@@ -364,7 +364,7 @@ def load_templates_unified(template_dir: str,
     Returns
     -------
     List[Dict[str, Any]]
-        Templates in legacy format (already rebinned to standard grid)
+        Templates in dict-based format (already rebinned to standard grid)
     """
     try:
         # Add defensive checks for widget cleanup issues
@@ -431,12 +431,12 @@ def load_templates_unified(template_dir: str,
     # Get the standard wavelength grid (same for all templates)
     standard_wave = storage.get_standard_wavelength_grid()
     
-    # Convert to legacy format - NO REBINNING NEEDED (already done in storage)
+    # Convert to dict-based format - NO REBINNING NEEDED (already done in storage)
     legacy_templates = []
     for entry in template_entries:
         # Handle multi-epoch templates by expanding them
         if entry.epochs > 1 and entry.epoch_data:
-            # Create separate template for each epoch (like legacy system)
+            # Create separate template for each epoch (per-epoch template layout)
             for i, epoch_data in enumerate(entry.epoch_data):
                 epoch_template_dict = {
                     'name': f"{entry.name}_epoch_{i}",
@@ -531,7 +531,7 @@ def enable_optimization(template_dir: str = "templates", use_vectorized_fft: boo
     if is_built and use_vectorized_fft:
         _LOG.info("🚀 FFT optimization enabled with vectorized cross-correlation (6.6x speedup)")
     elif is_built:
-        _LOG.info("FFT optimization enabled with legacy method")
+        _LOG.info("FFT optimization enabled with fallback method")
     else:
         _LOG.warning("FFT optimization not available - unified storage not built")
     

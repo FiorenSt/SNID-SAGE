@@ -84,7 +84,6 @@ def run_snid(
     forced_redshift: Optional[float] = None,
     peak_window_size: int = 10,
     lapmin: float = 0.3,
-    hlapmin: float = 0.1,
     # Output options
     output_dir: Optional[str] = None,
     output_main: bool = False,
@@ -131,7 +130,6 @@ def run_snid(
 | forced_redshift | float or None | None | Force analysis at specific redshift |
 | peak_window_size | int | 10 | Window size for peak detection |
 | lapmin | float | 0.3 | Minimum overlap fraction |
-| hlapmin | float | 0.1 | Minimum HLAP value (HLAP = height × lap) |
 | output_dir | str or None | None | Directory for output files |
 | output_main | bool | False | Generate main output file |
 | output_fluxed | bool | False | Generate fluxed spectrum file |
@@ -251,8 +249,7 @@ def run_snid_analysis(
     forced_redshift: Optional[float] = None,
     peak_window_size: int = 10,
     lapmin: float = 0.3,
-    hlapmin: float = 0.1,
-    hlap_ccc_threshold: float = 0.4,
+    hlap_ccc_threshold: float = 0.45,
     max_output_templates: int = 5,
     verbose: bool = False,
     show_plots: bool = True,
@@ -277,8 +274,7 @@ def run_snid_analysis(
 | forced_redshift | float or None | None | Force specific redshift |
 | peak_window_size | int | 10 | Peak detection window |
 | lapmin | float | 0.3 | Minimum overlap |
-| hlapmin | float | 0.1 | Minimum HLAP |
-| hlap_ccc_threshold | float | 0.4 | Threshold for clustering quality (HLAP-CCC: HLAP/(1−CCC)) |
+| hlap_ccc_threshold | float | 0.45 | Threshold for clustering quality (HLAP-CCC: HLAP/(1−CCC)) |
 | max_output_templates | int | 5 | Maximum output templates |
 | verbose | bool | False | Verbose output |
 | show_plots | bool | True | Show plots |

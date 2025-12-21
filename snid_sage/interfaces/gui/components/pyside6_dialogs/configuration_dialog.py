@@ -116,7 +116,6 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
             'age_min': -9999,  # Default minimum age (shows "No minimum")
             'age_max': 9999,   # Default maximum age (shows "No maximum") 
             'lapmin': 0.3,
-            'hlapmin': 0.1,
             'hlap_ccc_threshold': 0.4,  # HLAP-CCC threshold for clustering
             'max_output_templates': 10,
             
@@ -389,17 +388,14 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
         correlation_group = QtWidgets.QGroupBox("🔗 Correlation Settings")
         correlation_layout = QtWidgets.QFormLayout(correlation_group)
         
-        self.widgets['lapmin'] = create_flexible_double_input(min_val=0.0, max_val=1.0, default=0.0)
+        # Keep UI default consistent with CLI/config defaults (lapmin=0.3)
+        self.widgets['lapmin'] = create_flexible_double_input(min_val=0.0, max_val=1.0, default=0.3)
         self.widgets['lapmin'].setToolTip("Minimum overlap fraction required between spectrum and template (any precision)")
         correlation_layout.addRow("Minimum Overlap (lapmin):", self.widgets['lapmin'])
         
-        self.widgets['hlapmin'] = create_flexible_double_input(min_val=0.0, max_val=20.0, default=0.1)
-        self.widgets['hlapmin'].setToolTip("Minimum HLAP value required for a match (HLAP = height × lap; any precision)")
-        correlation_layout.addRow("Minimum HLAP (hlapmin):", self.widgets['hlapmin'])
-        
-        self.widgets['hlap_ccc_threshold'] = create_flexible_double_input(min_val=0.0, max_val=50.0, default=0.4)
+        self.widgets['hlap_ccc_threshold'] = create_flexible_double_input(min_val=0.0, max_val=50.0, default=0.45)
         self.widgets['hlap_ccc_threshold'].setToolTip(
-            "Minimum best-metric value required for clustering (HLAP-CCC: HLAP/(1−CCC), default: 0.4, any precision)"
+            "Minimum best-metric value required for clustering (HLAP-CCC: HLAP/(1−CCC), default: 0.45, any precision)"
         )
         correlation_layout.addRow("HLAP-CCC Clustering Threshold:", self.widgets['hlap_ccc_threshold'])
         
@@ -824,7 +820,7 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
                 _LOGGER.debug(f"Configuration dialog: Redshift mode is '{mode}', not using forced redshift")
         
         # Load basic parameters
-        for key in ['zmin', 'zmax', 'lapmin', 'hlapmin', 'hlap_ccc_threshold', 'age_min', 'age_max', 
+        for key in ['zmin', 'zmax', 'lapmin', 'hlap_ccc_threshold', 'age_min', 'age_max', 
                    'max_output_templates']:
             if key in params and key in self.widgets and params[key] is not None:
                 try:
@@ -838,8 +834,6 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
                         self.widgets[key].setValue(1.0)
                     elif key == 'lapmin':
                         self.widgets[key].setValue(0.3)
-                    elif key == 'hlapmin':
-                        self.widgets[key].setValue(0.1)
                     elif key == 'age_min':
                         self.widgets[key].setValue(-9999)
                     elif key == 'age_max':
@@ -920,7 +914,6 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
             result['zmin'] = self.widgets['zmin'].value()
             result['zmax'] = self.widgets['zmax'].value()
             result['lapmin'] = self.widgets['lapmin'].value()
-            result['hlapmin'] = self.widgets['hlapmin'].value()
             result['hlap_ccc_threshold'] = self.widgets['hlap_ccc_threshold'].value()
             result['max_output_templates'] = self.widgets['max_output_templates'].value()
             # Peak Window Size option removed; no longer captured

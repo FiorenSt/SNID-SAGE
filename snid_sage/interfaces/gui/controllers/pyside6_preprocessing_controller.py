@@ -193,8 +193,8 @@ class PySide6PreprocessingController:
                 display_flat = tapered_flux                      # Apodized continuum-removed
                 
                 # Store simplified view arrays for GUI plotting
-                processed_spectrum['display_flux'] = display_flux   # legacy key
-                processed_spectrum['display_flat'] = display_flat   # legacy key
+                processed_spectrum['display_flux'] = display_flux
+                processed_spectrum['display_flat'] = display_flat
                 processed_spectrum['flux_view'] = display_flux      # preferred key
                 processed_spectrum['flat_view'] = display_flat      # preferred key
                 

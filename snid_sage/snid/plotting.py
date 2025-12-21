@@ -557,7 +557,7 @@ def plot_comparison(result: Any, figsize: Tuple[int, int] = (12, 9),
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
     best_metric_value = get_best_metric_value(best_match)
     metric_name = get_best_metric_name(best_match)
-    template_info += f"{metric_name} = {best_metric_value:.1f}"
+    template_info += f"{metric_name} = {best_metric_value:.2f}"
     
     ax_top.text(0.02, 0.98, template_info, transform=ax_top.transAxes,
              verticalalignment='top', horizontalalignment='left',
@@ -889,7 +889,7 @@ def plot_correlation_function(result: Any, figsize: Tuple[int, int] = (8, 6),
     Plot the correlation function for the best match.
     
     Shows both the original and trimmed correlation functions, 
-    similar to the plotxcor function in Fortran SNID.
+    similar to the classic plotxcor visualization.
     
     Parameters:
         result: SNIDResult object
@@ -1014,7 +1014,7 @@ def plot_correlation_function(result: Any, figsize: Tuple[int, int] = (8, 6),
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
     best_metric_value = get_best_metric_value(best_match)
     metric_name = get_best_metric_name(best_match)
-    template_info += f"{metric_name} = {best_metric_value:.1f}"
+    template_info += f"{metric_name} = {best_metric_value:.2f}"
     
     # Add the annotation with a semi-transparent background
     ax.text(0.02, 0.98, template_info, transform=ax.transAxes,
@@ -1126,12 +1126,16 @@ def plot_redshift_age(result: Any, figsize: Tuple[int, int] = (8, 6),
     # Determine if clustering succeeded; if so, do not re-apply a strict metric filter
     clustering_ok = bool(getattr(result, 'clustering_results', None)) and bool(getattr(result, 'clustering_results', {}).get('success', False))
     
-    # Use configured HLAP-min threshold when clustering is not available; otherwise respect clustering survivors
+    # Use configured best-metric threshold when clustering is not available; otherwise respect clustering survivors
     if not clustering_ok:
-        hlapmin = getattr(result, 'min_hlap', getattr(result, 'hlapmin', 0.1))
-        matches = [m for m in matches if m.get('hlap', 0) >= hlapmin]
+        try:
+            from snid_sage.shared.utils.math_utils import get_best_metric_value
+            threshold = float(getattr(result, 'hlap_ccc_threshold', 0.45))
+            matches = [m for m in matches if float(get_best_metric_value(m)) >= threshold]
+        except Exception:
+            threshold = None
         if not matches:
-            ax.text(0.5, 0.5, f"No matches above HLAP threshold ({hlapmin})", 
+            ax.text(0.5, 0.5, f"No matches above metric threshold ({threshold})" if threshold is not None else "No matches above metric threshold", 
                    ha='center', va='center', fontsize=PLOT_ERROR_FONTSIZE, 
                    transform=ax.transAxes)
             ax.set_xlim(0, 1)
@@ -1205,10 +1209,10 @@ def plot_redshift_age(result: Any, figsize: Tuple[int, int] = (8, 6),
     all_ages = [item['age'] for item in data]
     all_redshifts = [item['z'] for item in data]
     
-    # Calculate axis limits based on actual data points (like original Fortran)
+    # Calculate axis limits based on actual data points
     # This prevents consensus lines from affecting the centering
     if all_ages and all_redshifts:
-        # Calculate data ranges (no error bars like original Fortran)
+        # Calculate data ranges (no error bars)
         z_min_data = min(all_redshifts)
         z_max_data = max(all_redshifts)
         age_min_data = min(all_ages)
@@ -1218,25 +1222,25 @@ def plot_redshift_age(result: Any, figsize: Tuple[int, int] = (8, 6),
         z_range = z_max_data - z_min_data
         age_range = age_max_data - age_min_data
         
-        # Use margins like original Fortran (3% for x, 10%/15% for y)
+        # Use simple margins (3% for x, 10%/15% for y)
         if z_range == 0:
             z_margin = 0.01  # Small default margin
         else:
-            z_margin = z_range * 0.03  # 3% margin like Fortran
+            z_margin = z_range * 0.03  # 3% margin
             
         if age_range == 0:
             # Single-point or flat age distribution: apply sensible default margins
             age_margin_bottom = 5.0
             age_margin_top = 5.0
         else:
-            age_margin_bottom = age_range * 0.10  # 10% bottom margin like Fortran
-            age_margin_top = age_range * 0.15     # 15% top margin like Fortran
+            age_margin_bottom = age_range * 0.10  # 10% bottom margin
+            age_margin_top = age_range * 0.15     # 15% top margin
         
         # Allow full redshift range (including negative redshifts)
         z_min_plot = z_min_data - z_margin
         z_max_plot = z_max_data + z_margin
         
-        # Age can be negative (pre-explosion), use asymmetric margins like Fortran
+        # Age can be negative (pre-explosion); use asymmetric margins
         age_min_plot = age_min_data - age_margin_bottom
         age_max_plot = age_max_data + age_margin_top
         
@@ -1321,7 +1325,7 @@ def plot_flux_comparison(match: Dict[str, Any], result: Any,
     """
     Plot comparison of original input spectrum with unflattened template.
     
-    This recreates the 'FLUX' view from Fortran SNID, showing the observed spectrum
+    This recreates the 'FLUX' view, showing the observed spectrum
     with the unflattened template in the same plot.
     
     Uses the processed spectrum from SNID analysis.
@@ -1607,7 +1611,7 @@ def plot_flat_comparison(match: Dict[str, Any], result: Any,
     """
     Plot comparison of flattened input spectrum with flattened template.
     
-    This recreates the 'FLAT' view from Fortran SNID, showing the processed spectra
+    This recreates the 'FLAT' view, showing the processed spectra
     for both the input and template, which highlights spectral features.
     
     Uses the processed spectrum from SNID analysis.
@@ -1706,7 +1710,7 @@ def plot_flat_comparison(match: Dict[str, Any], result: Any,
             )
             template_plotted = True
         
-        # Second try: Use processed_flux from match (legacy compatibility)
+        # Second try: Use processed_flux from match (compatibility)
         elif 'processed_flux' in match and input_wave is not None:
             template_flux_proc = match['processed_flux']
             
@@ -1846,7 +1850,7 @@ def plot_correlation_view(match: Dict[str, Any], result: Any,
     """
     Plot correlation function for the selected template.
     
-    This recreates the 'XCOR' view from Fortran SNID, showing the cross-correlation
+    This recreates the 'XCOR' view, showing the cross-correlation
     function with the identified peak.
     
     Parameters:
@@ -1961,7 +1965,7 @@ def plot_correlation_view(match: Dict[str, Any], result: Any,
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
     best_metric_value = get_best_metric_value(match)
     metric_name = get_best_metric_name(match)
-    template_info += f"{metric_name} = {best_metric_value:.1f}"
+    template_info += f"{metric_name} = {best_metric_value:.2f}"
     
     # Add the annotation with a semi-transparent background
     ax.text(0.02, 0.98, template_info, transform=ax.transAxes,
@@ -2013,7 +2017,7 @@ def plot_template_epochs(template_data: Dict[str, Any],
     """
     Plot multi-epoch template spectra with vertical stacking.
     
-    Replicates the functionality of Fortran plotlnw.f for displaying
+    Replicates the plotlnw-style visualization for displaying
     multiple spectra from the same template at different epochs/ages.
     
     Parameters:
@@ -2051,7 +2055,7 @@ def plot_template_epochs(template_data: Dict[str, Any],
     
     # Set up filter parameters
     if apply_filter and filter_params is None:
-        # Default filter parameters (similar to Fortran defaults)
+        # Default filter parameters
         nw = len(epochs[0].get('wave', []))
         filter_params = {
             'k1': 1,
@@ -2087,7 +2091,7 @@ def plot_template_epochs(template_data: Dict[str, Any],
             # For now, we'll skip filtering and just plot the original
             pass
         
-        # Apply vertical offset (plot from top to bottom like Fortran)
+        # Apply vertical offset (plot from top to bottom)
         plot_flux = np.array(flux) + (n_epochs - i) * yoff
         
         # Plot spectrum
@@ -2321,7 +2325,7 @@ def plot_cluster_subtype_proportions(result: Any, selected_cluster: Dict[str, An
                 subtype[:8],  # Truncate long subtype names
                 str(count),
                 f"{percentage:.1f}",
-                f"{avg_metric:.1f}",
+                f"{avg_metric:.2f}",
                 f"{avg_z:.4f}",
                 f"{avg_age:.1f}" if avg_age is not None and np.isfinite(avg_age) else "N/A"
             ])

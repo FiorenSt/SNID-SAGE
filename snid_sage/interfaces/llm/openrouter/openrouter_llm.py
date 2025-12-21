@@ -22,8 +22,8 @@ except ImportError:
 OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 
-# Default free model if nothing else works (must remain a free variant)
-# Using DeepSeek V3 0324 free route which is available on OpenRouter
+# Default free model if nothing else works (must remain a free variant).
+# NOTE: OpenRouter model IDs change over time; do not rely on this always existing.
 DEFAULT_MODEL = "deepseek/deepseek-chat-v3-0324:free"
 
 
@@ -46,7 +46,7 @@ def _get_openrouter_config_dir() -> str:
 
 
 def get_openrouter_api_key():
-    """Get OpenRouter API key from secure storage or legacy config file"""
+    """Get OpenRouter API key from secure storage or config file"""
     # Try secure storage first
     try:
         from snid_sage.shared.utils.secure_storage import retrieve_api_key
@@ -54,11 +54,11 @@ def get_openrouter_api_key():
         if api_key:
             return api_key
     except ImportError:
-        _LOGGER.debug("Secure storage not available, using legacy storage")
+        _LOGGER.debug("Secure storage not available, using config storage")
     except Exception as e:
         _LOGGER.warning(f"Failed to retrieve from secure storage: {e}")
     
-    # Fallback to legacy / config file
+    # Fallback to config file
     config_path = os.path.join(_get_openrouter_config_dir(), "openrouter_config.json")
     if os.path.exists(config_path):
         try:
@@ -72,7 +72,7 @@ def get_openrouter_api_key():
                         from snid_sage.shared.utils.secure_storage import store_api_key
                         if store_api_key("openrouter", api_key):
                             _LOGGER.info("Migrated API key to secure storage")
-                            # Remove from legacy file for security
+                            # Remove from config file for security
                             config.pop('api_key', None)
                             with open(config_path, 'w') as f:
                                 json.dump(config, f)
@@ -101,11 +101,11 @@ def save_openrouter_api_key(api_key):
             _LOGGER.info("OpenRouter API key saved to secure storage")
             return
     except ImportError:
-        _LOGGER.debug("Secure storage not available, using legacy storage")
+        _LOGGER.debug("Secure storage not available, using config storage")
     except Exception as e:
         _LOGGER.warning(f"Failed to save to secure storage: {e}")
     
-    # Fallback to legacy/config file (but don't store API key in plain text)
+    # Fallback to config file (but don't store API key in plain text)
     config_dir = _get_openrouter_config_dir()
     os.makedirs(config_dir, exist_ok=True)
     
@@ -128,7 +128,7 @@ def save_openrouter_api_key(api_key):
     try:
         with open(config_path, 'w') as f:
             json.dump(config, f)
-        _LOGGER.warning("OpenRouter API key saved to legacy storage (consider installing cryptography for secure storage)")
+        _LOGGER.warning("OpenRouter API key saved to config storage (consider installing cryptography for secure storage)")
     except IOError as e:
         _LOGGER.error(f"Failed to save OpenRouter API key: {e}")
         raise
@@ -356,6 +356,77 @@ def fetch_free_models(api_key=None):
         return None
 
 
+def _extract_openrouter_error_message(response: requests.Response) -> str:
+    """Best-effort extraction of an OpenRouter error message."""
+    try:
+        if response is None:
+            return ""
+        if not getattr(response, "text", None):
+            return ""
+        payload = response.json()
+        # OpenRouter typically responds with {"error": {"message": "..."}}
+        if isinstance(payload, dict):
+            err = payload.get("error", {})
+            if isinstance(err, dict):
+                msg = err.get("message")
+                if isinstance(msg, str):
+                    return msg
+            # Fallback: sometimes nested differently
+            msg = payload.get("message")
+            if isinstance(msg, str):
+                return msg
+        return str(payload)
+    except Exception:
+        try:
+            return (response.text or "").strip()
+        except Exception:
+            return ""
+
+
+def _is_model_not_found_response(response: requests.Response) -> bool:
+    """Return True if OpenRouter indicates the selected model does not exist/ isn't available."""
+    try:
+        if response is None:
+            return False
+        if getattr(response, "status_code", None) == 404:
+            return True
+        msg = _extract_openrouter_error_message(response).lower()
+        return ("model" in msg) and ("not found" in msg or "no such model" in msg)
+    except Exception:
+        return False
+
+
+def _pick_best_free_model(api_key: str, exclude_ids=None):
+    """
+    Pick an available free model from OpenRouter.
+
+    Returns:
+        tuple[str, str] | None: (model_id, model_name) or None if none can be fetched.
+    """
+    exclude = set(exclude_ids or [])
+    models = fetch_free_models(api_key)
+    if not models:
+        return None
+
+    candidates = [m for m in models if m.get("id") and m.get("id") not in exclude]
+    if not candidates:
+        candidates = [m for m in models if m.get("id")]
+    if not candidates:
+        return None
+
+    # Prefer larger context and (secondarily) models that advertise reasoning support.
+    candidates.sort(
+        key=lambda m: (
+            int(m.get("context_length") or 0),
+            1 if m.get("supports_reasoning") else 0,
+            str(m.get("name") or ""),
+        ),
+        reverse=True,
+    )
+    best = candidates[0]
+    return best["id"], (best.get("name") or best["id"])
+
+
 def format_context_length(length):
     """Format context length to be more readable"""
     try:
@@ -507,14 +578,14 @@ def configure_openrouter_dialog(parent):
         return False
 
 
-## GUI-only implementation; no legacy GUI fallback
+## GUI-only implementation; no GUI fallback
 
 
 def call_openrouter_api(prompt, max_tokens=2000):
     """Call the OpenRouter API with the given prompt"""
     config = get_openrouter_config()
 
-    # Always prefer secure storage for the API key; fall back to legacy config only if present
+    # Always prefer secure storage for the API key; fall back to config only if present
     try:
         api_key = get_openrouter_api_key()
     except Exception:
@@ -527,11 +598,27 @@ def call_openrouter_api(prompt, max_tokens=2000):
     if not api_key:
         _LOGGER.error("OpenRouter API key not configured")
         raise ValueError("OpenRouter API key not configured")
-    
+
+    # If no model is configured, auto-select an available free model (and persist it),
+    # instead of relying on a potentially stale hardcoded DEFAULT_MODEL.
     if not model_id:
-        # Use default model if none specified
-        model_id = DEFAULT_MODEL
-        _LOGGER.info(f"Using default model: {model_id}")
+        picked = _pick_best_free_model(api_key)
+        if picked:
+            model_id, model_name = picked
+            _LOGGER.info(f"No model configured; auto-selected free model: {model_id}")
+            try:
+                api_key_for_save = get_openrouter_api_key() or api_key
+            except Exception:
+                api_key_for_save = api_key
+            try:
+                save_openrouter_config(api_key_for_save, model_id, model_name, False)
+            except Exception:
+                pass
+        else:
+            model_id = DEFAULT_MODEL
+            _LOGGER.warning(
+                f"No model configured and could not fetch models; falling back to built-in default: {model_id}"
+            )
     else:
         _LOGGER.info(f"Using configured model: {model_id}")
     
@@ -562,31 +649,46 @@ def call_openrouter_api(prompt, max_tokens=2000):
         if response.status_code == 401:
             _LOGGER.error("OpenRouter API key is invalid or expired")
             raise ValueError("API key is invalid or expired")
-        elif response.status_code == 404:
-            # Model not found; fall back to a known free default model only
-            _LOGGER.error(f"Model '{model_id}' not found")
-            _LOGGER.info(f"Falling back to default free model: {DEFAULT_MODEL}")
+        elif _is_model_not_found_response(response):
+            # Model not found; fall back to an available free model fetched live from /models.
+            _LOGGER.error(f"Model '{model_id}' not found on OpenRouter")
+
+            picked = _pick_best_free_model(api_key, exclude_ids=[model_id])
+            if not picked:
+                msg = _extract_openrouter_error_message(response)
+                raise ValueError(
+                    f"Model '{model_id}' not found. Also failed to fetch an alternative free model from OpenRouter. "
+                    f"Please open the AI/OpenRouter settings, click 'Fetch Available Models', and select a model. "
+                    f"OpenRouter message: {msg or '(no details)'}"
+                )
+
+            fallback_model_id, fallback_model_name = picked
+            _LOGGER.info(f"Falling back to available free model: {fallback_model_id}")
+
             try:
                 api_key_for_save = get_openrouter_api_key() or api_key
             except Exception:
                 api_key_for_save = api_key
             try:
-                save_openrouter_config(api_key_for_save, DEFAULT_MODEL, DEFAULT_MODEL, False)
+                save_openrouter_config(api_key_for_save, fallback_model_id, fallback_model_name, False)
             except Exception:
                 pass
-            data["model"] = DEFAULT_MODEL
+
+            data["model"] = fallback_model_id
             response = requests.post(OPENROUTER_API_URL, headers=headers, json=data)
-            if response.status_code == 404:
-                _LOGGER.error(f"Default model '{DEFAULT_MODEL}' not found")
-                raise ValueError(f"Model '{model_id}' not found and default model unavailable")
+            if _is_model_not_found_response(response):
+                msg = _extract_openrouter_error_message(response)
+                raise ValueError(
+                    f"Model '{model_id}' not found, and fallback model '{fallback_model_id}' also appears unavailable. "
+                    f"Please fetch models in settings and pick a different one. "
+                    f"OpenRouter message: {msg or '(no details)'}"
+                )
             elif response.status_code >= 400:
-                error_info = response.json() if response.text else {"error": "Unknown error"}
-                error_message = error_info.get("error", {}).get("message", str(error_info))
+                error_message = _extract_openrouter_error_message(response)
                 _LOGGER.error(f"OpenRouter API request failed after fallback: {error_message}")
                 raise ValueError(f"API request failed: {error_message}")
         elif response.status_code >= 400:
-            error_info = response.json() if response.text else {"error": "Unknown error"}
-            error_message = error_info.get("error", {}).get("message", str(error_info))
+            error_message = _extract_openrouter_error_message(response)
             _LOGGER.error(f"OpenRouter API request failed: {error_message}")
             raise ValueError(f"API request failed: {error_message}")
 

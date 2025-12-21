@@ -704,7 +704,7 @@ def log_rebin(
     fsrc: NDArray[np.floating],
 ) -> Tuple[NDArray[np.floating], NDArray[np.floating]]:
     """
-    Exactly reproduces the Fortran `rebin` subroutine:
+    Log-grid rebinning routine:
       - Splits each input pixel [s0,s1] in linear λ
       - Maps its boundaries into log‐bin indices s0log, s1log
       - Distributes fsrc[l] * Δλ over all overlapping log‐bins
@@ -738,7 +738,7 @@ def log_rebin(
     s[0]    = 1.5 * wave[0] - 0.5 * wave[1]
     s[-1]   = 1.5 * wave[-1] - 0.5 * wave[-2]
 
-    # 6) Map those edges into log‐bin coordinates (1‐indexed to match Fortran)
+    # 6) Map those edges into log-bin coordinates (1-indexed)
     slog = np.log(s / w0) / dwlog + 1.0
 
     # 7) Loop each source pixel ℓ
@@ -747,7 +747,7 @@ def log_rebin(
         s1log = slog[l + 1]
         dλ     = s[l + 1] - s[l]   # Δλ for this pixel
 
-        # Fortran's: DO i = INT(s0log), INT(s1log)
+        # Iterate bins covering the [s0log, s1log] interval
         i0 = max(1, int(np.floor(s0log)))
         i1 = min(nlog, int(np.floor(s1log)))
 
@@ -818,7 +818,7 @@ def fit_continuum_spline(
     izoff:    int = 0,
 ) -> Tuple[NDArray[np.floating], NDArray[np.floating]]:
     """
-    Port of the Fortran MEANZERO + scale‐removal steps:
+    Continuum removal and scaling steps:
       1) find usable range [l1..l2] by chopping off up to one zero
          or negative pixel at each end,
       2) place knots by averaging within kw = n//knotnum bins,
@@ -829,8 +829,8 @@ def fit_continuum_spline(
     Parameters
     ----------
     flux : 1D array of flux (must be ≥0 for real data points)
-    knotnum : number of average‐knots (Fortran used 13)
-    izoff   : integer offset in log‐bins (Fortran z‐centroid → knot phase)
+    knotnum : number of average-knots
+    izoff   : integer offset in log-bins
     Returns
     -------
     flat : flux with continuum removed (flat[i] = flux[i]/cont[i] - 1)
@@ -860,7 +860,7 @@ def fit_continuum_spline(
     if (l2 - l1) < 3 * knotnum:
         return np.zeros_like(flux), np.ones_like(flux)
 
-    # --- 2) place knots using Fortran-congruent averages ---
+    # --- 2) place knots using robust averages ---
     # Use log10(mean(flux)) per block (NOT mean(log10(flux))).
     kwidth = n // knotnum
     istart = ((izoff % kwidth) - kwidth) if izoff > 0 else 0

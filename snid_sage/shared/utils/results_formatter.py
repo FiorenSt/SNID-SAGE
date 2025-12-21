@@ -624,7 +624,7 @@ class UnifiedResultsFormatter:
                 'subtype': subtype,
                 'age_days': age,
                 'redshift': match.get('redshift', 0),
-                # Keep legacy key for table/report compatibility.
+                # Keep key for table/report compatibility.
                 'redshift_error': sigma_z,
                 'sigma_z': sigma_z,
                 'hlap': match.get('hlap', 0.0),
@@ -1064,7 +1064,7 @@ class UnifiedResultsFormatter:
                     f"{template_name:<{template_w}} "
                     f"{full_type:<{type_w}} "
                     f"{subtype:<{subtype_w}} "
-                    f"{metric_value:>{metric_w}.1f} "
+                    f"{metric_value:>{metric_w}.2f} "
                     f"{match['redshift']:>{redshift_w}.6f} "
                     f"{redshift_error_str:>{error_w}} "
                     f"{age_str:>{age_w}}"

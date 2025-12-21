@@ -120,20 +120,6 @@ class ConfigController:
                     'validation_rule': self.config_manager._validation_rules['analysis']['age_max'],
                     'tooltip': 'Maximum supernova age in days from maximum light'
                 },
-                'correlation_min': {
-                    'label': 'Minimum Correlation',
-                    'widget_type': 'slider',
-                    'slider_config': {'from_': 0.0, 'to': 50.0, 'resolution': 0.5},
-                    'validation_rule': self.config_manager._validation_rules['analysis']['correlation_min'],
-                    'tooltip': 'Minimum correlation coefficient for good matches'
-                },
-                'fraction_coverage': {
-                    'label': 'Fraction Coverage',
-                    'widget_type': 'slider',
-                    'slider_config': {'from_': 0.1, 'to': 1.0, 'resolution': 0.05},
-                    'validation_rule': self.config_manager._validation_rules['analysis']['fraction_coverage'],
-                    'tooltip': 'Minimum fraction of spectrum that must overlap with template'
-                },
                 'max_output_templates': {
                     'label': 'Max Output Templates',
                     'widget_type': 'slider',
@@ -148,14 +134,7 @@ class ConfigController:
                     'validation_rule': self.config_manager._validation_rules['analysis']['wavelength_tolerance'],
                     'tooltip': 'Tolerance for wavelength matching in Angstroms'
                 },
-                # SNID-specific analysis parameters
-                'hlapmin': {
-                    'label': 'HLAP-min Threshold (hlapmin)',
-                    'widget_type': 'slider',
-                    'slider_config': {'from_': 0.0, 'to': 100.0, 'resolution': 0.5},
-                    'validation_rule': self.config_manager._validation_rules['analysis']['hlapmin'],
-                    'tooltip': 'Minimum HLAP (height × lap) required for template matching'
-                },
+                # Analysis gating parameter
                 'lapmin': {
                     'label': 'Overlap Fraction (lapmin)',
                     'widget_type': 'slider',

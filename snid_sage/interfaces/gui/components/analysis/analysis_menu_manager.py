@@ -293,7 +293,6 @@ class AnalysisMenuManager:
                 zmax=1.0,
                 age_range=None,
                 lapmin=0.3,
-                hlapmin=0.1,
                 max_output_templates=configured_max,
                 verbose=False,
                 show_plots=False,
@@ -589,7 +588,7 @@ class AnalysisMenuManager:
                 _LOGGER.info(f"Opening cluster selection dialog with {len(all_candidates)} candidates")
                 self._show_cluster_selection_dialog(all_candidates, snid_results)
             else:
-                # Otherwise show the visualization dialog (legacy fallback)
+                # Otherwise show the visualization dialog (fallback)
                 _LOGGER.info("Opening GMM clustering visualization dialog")
                 self._show_gmm_visualization_dialog(snid_results)
                 

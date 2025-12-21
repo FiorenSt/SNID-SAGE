@@ -441,7 +441,7 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                 _LOGGER.info(f"Found storage file in managed templates bank: {candidate}")
                 return str(candidate)
         except Exception:
-            # Best-effort only; fall through to user/legacy paths.
+            # Best-effort only; fall through to user paths.
             pass
 
         # 2) User templates directory resolved by TemplateService (configured path)

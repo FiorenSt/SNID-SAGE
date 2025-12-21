@@ -3,7 +3,7 @@ SNID SAGE - SuperNova IDentification – Spectral Analysis and Guided Exploratio
 ================================================================================
 
 A comprehensive Python package for supernova spectrum identification and analysis,
-based on the original Fortran SNID by Stéphane Blondin & John L. Tonry.
+focused on spectrum identification and analysis.
 
 Features:
 - Spectrum identification and classification

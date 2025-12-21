@@ -206,7 +206,7 @@ def optimize_template_loading(template_dir: str) -> Optional[List[Dict[str, Any]
             cache = get_global_cache()
             if cache:
                 cached_templates = cache.get_templates()
-                # Convert to legacy format for compatibility with existing SNID code
+                # Convert to dict-based format for compatibility with existing code
                 legacy_templates = convert_cached_templates_to_legacy_format(cached_templates)
                 _LOG.info(f"Loaded {len(legacy_templates)} templates using optimization (20x faster)")
                 return legacy_templates

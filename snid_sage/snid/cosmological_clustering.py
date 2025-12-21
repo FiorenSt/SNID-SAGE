@@ -223,11 +223,9 @@ def _compute_weighted_cluster_stats(
 def perform_direct_gmm_clustering(
     matches: List[Dict[str, Any]], 
     min_matches_per_type: int = 2,
-    # Deprecated/unused quality taxonomy: kept only for signature compatibility.
-    quality_threshold: float = 0.02,
     max_clusters_per_type: int = 10,
     verbose: bool = False,
-    hlap_ccc_threshold: float = 0.4,  # Best-metric threshold for clustering (HLAP-CCC)
+    hlap_ccc_threshold: float = 0.45,  # Best-metric threshold for clustering (HLAP-CCC)
     use_weighted_gmm: Optional[bool] = None,  # Hidden option: when True, use weighted GMM + weighted BIC
     # Optional progress reporting (message, percent). If provided, emit per-type updates.
     progress_callback: Optional[Callable[[str, float], None]] = None,
@@ -249,8 +247,6 @@ def perform_direct_gmm_clustering(
         List of template matches from SNID analysis
     min_matches_per_type : int, optional
         Minimum number of matches required per type for clustering
-    quality_threshold : float, optional
-        Redshift span threshold for cluster quality assessment
     max_clusters_per_type : int, optional
         Maximum clusters for GMM
     verbose : bool, optional
@@ -289,9 +285,7 @@ def perform_direct_gmm_clustering(
     metric_key = "best_metric"  # Not actually used anymore, see get_best_metric_value() calls
     
     _LOGGER.info(f"🔄 Starting direct GMM {metric_name} clustering")
-    # quality_threshold is retained for compatibility, but we no longer classify clusters
-    # as tight/moderate/loose/very_loose.
-    _LOGGER.info(f"🎯 HLAP-CCC threshold: {hlap_ccc_threshold:.1f} (matches below this are excluded from clustering)")
+    _LOGGER.info(f"🎯 HLAP-CCC threshold: {hlap_ccc_threshold:.2f} (matches below this are excluded from clustering)")
     
     # Filter matches by best-metric threshold before grouping
     from snid_sage.shared.utils.math_utils import get_best_metric_value
@@ -306,11 +300,11 @@ def perform_direct_gmm_clustering(
             excluded_count += 1
     
     if excluded_count > 0:
-        _LOGGER.info(f"🙅 Filtered out {excluded_count} matches below HLAP-CCC threshold {hlap_ccc_threshold:.1f}")
+        _LOGGER.info(f"🙅 Filtered out {excluded_count} matches below HLAP-CCC threshold {hlap_ccc_threshold:.2f}")
         _LOGGER.info(f"✅ Proceeding with {len(filtered_matches)} matches for clustering")
     
     if not filtered_matches:
-        _LOGGER.info(f"No matches above HLAP-CCC threshold {hlap_ccc_threshold:.1f}")
+        _LOGGER.info(f"No matches above HLAP-CCC threshold {hlap_ccc_threshold:.2f}")
         return {'success': False, 'reason': 'no_matches_above_threshold'}
     
     # Group filtered matches by type
@@ -353,7 +347,7 @@ def perform_direct_gmm_clustering(
         type_matches = filtered_type_groups[sn_type]
         type_result = _perform_direct_gmm_clustering(
             type_matches, sn_type, max_clusters_per_type, 
-            quality_threshold, verbose, "best_metric",  # Parameter is deprecated
+            verbose, "best_metric",
             use_weighted_gmm=use_weighted_gmm
         )
         
@@ -528,15 +522,22 @@ def perform_direct_gmm_clustering(
         _LOGGER.info("No valid clusters found")
         return {'success': False, 'reason': 'no_clusters'}
     
-    # Use the new top-5 method for cluster selection
+    # Select best cluster (top-5 penalized score) and apply cluster validity gate.
     best_cluster, quality_assessment = find_winning_cluster_top5_method(
         all_cluster_candidates,
+        hlap_ccc_threshold=float(hlap_ccc_threshold),
         verbose=verbose
     )
     
     if best_cluster is None:
         _LOGGER.warning("New cluster selection method failed")
         return {'success': False, 'reason': 'cluster_selection_failed'}
+
+    # Expose only clusters that pass the Q_cluster gate.
+    valid_candidates = [
+        c for c in all_cluster_candidates
+        if isinstance(c, dict) and (c.get('is_valid_cluster', False) is True)
+    ]
     
     # Update the best cluster with new quality metrics
     best_cluster['quality_assessment'] = quality_assessment['quality_assessment']
@@ -563,13 +564,12 @@ def perform_direct_gmm_clustering(
         'selection_method': 'top5_best_metric',  # Selection method used
         'type_clustering_results': clustering_results,
         'best_cluster': best_cluster,
-        'all_candidates': all_cluster_candidates,
+        'all_candidates': valid_candidates,
         'quality_assessment': quality_assessment,  # NEW: Complete quality assessment
-        'quality_threshold': quality_threshold,
         'total_computation_time': total_time,
         'n_types_clustered': len(clustering_results),
         'use_weighted_gmm': bool(use_weighted_gmm),
-        'total_candidates': len(all_cluster_candidates)
+        'total_candidates': len(valid_candidates)
     }
 
 
@@ -577,9 +577,8 @@ def _perform_direct_gmm_clustering(
     type_matches: List[Dict[str, Any]], 
     sn_type: str,
     max_clusters: int,
-    quality_threshold: float,
     verbose: bool,
-    metric_key: str = 'best_metric',  # DEPRECATED: Now uses get_best_metric_value() automatically
+    metric_key: str = 'best_metric',  # Uses get_best_metric_value() automatically
     *,
     use_weighted_gmm: bool = False
 ) -> Dict[str, Any]:
@@ -608,7 +607,7 @@ def _perform_direct_gmm_clustering(
             # Single match or too few for multi-cluster GMM - create single cluster
             _LOGGER.info(f"Creating single cluster for {sn_type} ({n_matches} matches)")
             return _create_single_cluster_result(
-                type_matches, sn_type, redshifts, quality_threshold, "best_metric"
+                type_matches, sn_type, redshifts, "best_metric"
             )
         
         # Build weights only when requested; default to unweighted GMM
@@ -838,7 +837,6 @@ def _perform_direct_gmm_clustering(
             'gmm_model': best_gmm,
             'gamma': gamma,
             'type_matches': type_matches,  # Store the original matches used for gamma matrix
-            'quality_threshold': quality_threshold,
             'contiguity_split_applied': True if final_clusters else bool(split_applied),
             # Debug extras
             'weights': weights.tolist() if isinstance(weights, np.ndarray) else []
@@ -853,8 +851,7 @@ def _create_single_cluster_result(
     type_matches: List[Dict[str, Any]], 
     sn_type: str, 
     redshifts: np.ndarray, 
-    quality_threshold: float,
-    metric_key: str = 'best_metric'  # DEPRECATED: Now uses get_best_metric_value()
+    metric_key: str = 'best_metric'  # Uses get_best_metric_value()
 ) -> Dict[str, Any]:
     """Create a single cluster result when clustering isn't possible/needed."""
     
@@ -902,7 +899,6 @@ def _create_single_cluster_result(
         'optimal_n_clusters': 1,
         'final_n_clusters': 1,
         'clusters': [cluster_info],
-        'quality_threshold': quality_threshold,
         'gamma': gamma,
         'type_matches': type_matches
     }
@@ -1123,6 +1119,8 @@ def create_3d_visualization_data(clustering_results: Dict[str, Any]) -> Dict[str
 
 def find_winning_cluster_top5_method(
     all_cluster_candidates: List[Dict[str, Any]], 
+    hlap_ccc_threshold: float = 0.45,
+    *,
     verbose: bool = False
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """
@@ -1151,10 +1149,16 @@ def find_winning_cluster_top5_method(
     if not all_cluster_candidates:
         return None, {'error': 'No cluster candidates available'}
     
-    # DEPRECATED: Parameters not used anymore, see get_best_metric_value() calls
+    # Parameters not used anymore; see get_best_metric_value() calls
     # Standardize metric naming; do not imply comparison phrasing.
     metric_name = 'HLAP-CCC'
     
+    # Cluster validity gate: Q_cluster = top_5_mean * (min(N, 5)/5) must exceed (HLAP-CCC threshold)/2.
+    try:
+        q_cluster_threshold = float(hlap_ccc_threshold) / 2.0
+    except Exception:
+        q_cluster_threshold = 0.0
+
     # Calculate top-5 means for each cluster
     cluster_scores = []
     
@@ -1210,7 +1214,15 @@ def find_winning_cluster_top5_method(
         if penalty_factor > 1.0:
             penalty_factor = 1.0
         
-        penalized_score = top_5_mean * penalty_factor  # Keep ALL clusters; penalize small ones linearly
+        penalized_score = top_5_mean * penalty_factor  # Q_cluster (penalized top-5 best metric)
+
+        # Validity gate: Q_cluster must exceed threshold (no minimum cluster size enforced)
+        is_valid_cluster = (float(penalized_score) > float(q_cluster_threshold))
+        validity_reason = ""
+        if not is_valid_cluster:
+            validity_reason = f"Q_cluster<={float(q_cluster_threshold):.3f}"
+            # Disqualify from winning by zeroing the score (but keep diagnostics)
+            penalized_score = 0.0
         
         # Annotate the original cluster dictionary so downstream UIs can display these metrics
         cluster['top_5_values'] = top_5_values
@@ -1219,6 +1231,10 @@ def find_winning_cluster_top5_method(
         cluster['penalized_score'] = penalized_score
         # For convenience update composite_score field used in various summaries
         cluster['composite_score'] = penalized_score
+        # Validity annotations for reporting/UX
+        cluster['is_valid_cluster'] = bool(is_valid_cluster)
+        cluster['q_cluster_threshold'] = float(q_cluster_threshold)
+        cluster['cluster_validity_reason'] = validity_reason
         # Store the top-1 contribution share for diagnostics/reporting
         cluster['top_1_share'] = top_1_share
         
@@ -1231,7 +1247,10 @@ def find_winning_cluster_top5_method(
             'penalized_score': penalized_score,
             'cluster_type': cluster.get('type', 'Unknown'),
             'cluster_id': cluster.get('cluster_id', 0),
-            'top_1_share': top_1_share
+            'top_1_share': top_1_share,
+            'is_valid_cluster': bool(is_valid_cluster),
+            'q_cluster_threshold': float(q_cluster_threshold),
+            'cluster_validity_reason': validity_reason
         }
         
         cluster_scores.append(cluster_info)
@@ -1245,6 +1264,17 @@ def find_winning_cluster_top5_method(
     # Winner is the cluster with highest penalized score
     winning_cluster_info = cluster_scores[0]
     winning_cluster = winning_cluster_info['cluster']
+
+    # If the best cluster is disqualified by the validity gate, treat as "no valid clusters"
+    try:
+        if not bool(winning_cluster_info.get('is_valid_cluster', False)):
+            return None, {
+                'error': 'No clusters passed validity threshold',
+                'q_cluster_threshold': float(q_cluster_threshold),
+                'all_cluster_scores': cluster_scores,
+            }
+    except Exception:
+        pass
     
     # Calculate confidence assessment
     confidence_assessment = _calculate_cluster_confidence(cluster_scores, metric_name)
@@ -1409,7 +1439,13 @@ def _log_cluster_selection_details(assessment: Dict[str, Any]) -> None:
     # Show top 3 clusters
     _LOGGER.info(f"🏅 TOP 3 CLUSTERS:")
     for i, cluster_info in enumerate(assessment['all_cluster_scores'][:3], 1):
-        disqualified = " [DISQUALIFIED: below quality threshold]" if cluster_info['penalized_score'] == 0.0 and cluster_info['top_5_mean'] > 0 else ""
+        disqualified = ""
+        try:
+            if not bool(cluster_info.get('is_valid_cluster', True)):
+                rsn = cluster_info.get('cluster_validity_reason', '') or 'invalid'
+                disqualified = f" [DISQUALIFIED: {rsn}]"
+        except Exception:
+            pass
         _LOGGER.info(f"   {i}. {cluster_info['cluster_type']} (score: {cluster_info['penalized_score']:.3f}, "
                     f"size: {cluster_info['cluster_size']}, "
                     f"top-5 mean: {cluster_info['top_5_mean']:.3f}){disqualified}")

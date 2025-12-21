@@ -288,7 +288,7 @@ class EmissionDialogEventHandlers:
 
     # Legacy event handlers for backward compatibility
     def on_sn_type_selected(self, sn_type):
-        """Handle SN type selection from old dropdown (legacy compatibility)"""
+        """Handle SN type selection from old dropdown (compatibility)"""
         if not sn_type or sn_type in ["Select SN Type...", "Select..."]:
             return
         
@@ -303,7 +303,7 @@ class EmissionDialogEventHandlers:
             _LOGGER.error(f"Error selecting SN type {sn_type}: {e}")
     
     def on_sn_phase_selected(self, phase):
-        """Handle SN phase selection from old dropdown (legacy compatibility)"""
+        """Handle SN phase selection from old dropdown (compatibility)"""
         if not phase or phase in ["Select Phase...", "Select..."]:
             return
         
@@ -318,7 +318,7 @@ class EmissionDialogEventHandlers:
             _LOGGER.error(f"Error selecting SN phase {phase}: {e}")
     
     def on_element_selected(self, element):
-        """Handle element selection from old dropdown (legacy compatibility)"""
+        """Handle element selection from old dropdown (compatibility)"""
         if not element or element in ["Select Element...", "Select..."]:
             return
         
@@ -333,7 +333,7 @@ class EmissionDialogEventHandlers:
             _LOGGER.error(f"Error selecting element {element}: {e}")
     
     def on_galaxy_selected(self, galaxy_type):
-        """Handle galaxy line selection from old dropdown (legacy compatibility)"""
+        """Handle galaxy line selection from old dropdown (compatibility)"""
         if not galaxy_type or galaxy_type in ["Select Galaxy Lines...", "Select..."]:
             return
         

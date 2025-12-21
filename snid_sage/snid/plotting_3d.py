@@ -230,7 +230,7 @@ def _plot_improved_approach(ax, improved_results):
     for candidate in all_candidates:
         matches = candidate['matches']
         redshifts = [m['redshift'] for m in matches]
-        # Use the new metric system instead of direct legacy access
+        # Use the new metric system instead of direct metric access
         from snid_sage.shared.utils.math_utils import get_best_metric_value, get_metric_name_for_match
         metric_values = [get_best_metric_value(m) for m in matches]
         

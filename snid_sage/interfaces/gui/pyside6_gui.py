@@ -179,7 +179,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
         self.app_controller.analysis_completed.connect(self._on_analysis_completed)
         self.app_controller.preprocessing_completed.connect(self._on_preprocessing_completed)
         self.app_controller.workflow_state_changed.connect(self._on_workflow_state_changed)
-        # Keep legacy connection for any code still emitting unordered updates
+        # Keep connection for any code still emitting unordered updates
         self.app_controller.progress_updated.connect(self._on_progress_updated)
         # Consume strictly ordered progress messages
         if hasattr(self.app_controller, 'ordered_progress_updated'):
@@ -1862,7 +1862,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                     metric_name = get_best_metric_name(result.best_matches[0])
                     metric_text = f"{metric_name}: {best_metric_value:.2f}"
                 else:
-                    metric_text = f"HLAP: {getattr(result, 'hlap', getattr(result, 'hlapmin', 0.0)):.2f}"
+                    metric_text = f"HLAP: {float(getattr(result, 'hlap', 0.0) or 0.0):.2f}"
                 
                 summary = (f"SNID Analysis Complete!\n\n"
                           f"Best match: {getattr(result, 'template_name', 'Unknown')}\n"
@@ -2231,7 +2231,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
 
     
     def reset_gui(self):
-        """Reset GUI to initial state (legacy method name)"""
+        """Reset GUI to initial state."""
         # Delegate to the new method name
         self.reset_to_initial_state()
     

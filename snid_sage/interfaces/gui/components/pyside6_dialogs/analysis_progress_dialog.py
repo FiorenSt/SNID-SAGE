@@ -329,7 +329,7 @@ class AnalysisProgressDialog(QtWidgets.QDialog):
                 return
             
             # Skip messages about individual template processing during batches
-            if "Template " in message and "/" in message and ("processed" in message or "legacy method" in message or "OPTIMIZED" in message):
+            if "Template " in message and "/" in message and ("processed" in message or "method" in message or "OPTIMIZED" in message):
                 return
                 
             timestamp = time.strftime("%H:%M:%S")

@@ -249,7 +249,7 @@ class EmissionDialogUIBuilder:
         layout.addWidget(status_group)
     
     def create_legacy_dropdowns(self, layout):
-        """Create legacy dropdown interface for compatibility"""
+        """Create dropdown interface for compatibility"""
         # This creates the old dropdown structure for backward compatibility
         
         # SN Line Presets

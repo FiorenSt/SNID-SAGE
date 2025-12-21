@@ -206,6 +206,11 @@ templates/Individual_templates/
 /user_templates/
 /user_templates.json
 
+# ===== LLM / OPENROUTER CONFIGURATION =====
+# User-specific LLM configuration (OpenRouter API settings, model preferences)
+# Contains personal API key metadata and model selections - should never be committed
+/LLM/
+
 # ===== PLOT & VISUALIZATION FILES =====
 # Generated plot files
 plots/*.pdf

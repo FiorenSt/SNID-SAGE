@@ -54,10 +54,8 @@ class SNIDConfig:
     template_filter: Optional[List[str]] = None
     peak_window_size: int = 10
     lapmin: float = 0.3
-    # Minimum HLAP value required to accept a match (HLAP = height * lap)
-    hlapmin: float = 0.1
     # Best-metric threshold for clustering (HLAP-CCC: HLAP/(1−CCC))
-    hlap_ccc_threshold: float = 0.4
+    hlap_ccc_threshold: float = 0.45
 
     forced_redshift: Optional[float] = None
     
@@ -67,7 +65,7 @@ class SNIDConfig:
     
     # FFT Optimization settings
     use_vectorized_fft: bool = True  # NEW: Use vectorized FFT cross-correlation (6.6x faster)
-    legacy_fft_fallback: bool = True  # Keep legacy method available for compatibility
+    fft_fallback: bool = True
     
     # Clustering options
     use_clustering: bool = True
@@ -252,7 +250,6 @@ class SNIDConfig:
             'template_filter': self.template_filter,
             'peak_window_size': self.peak_window_size,
             'lapmin': self.lapmin,
-            'hlapmin': self.hlapmin,
             'hlap_ccc_threshold': self.hlap_ccc_threshold,
 
             'forced_redshift': self.forced_redshift

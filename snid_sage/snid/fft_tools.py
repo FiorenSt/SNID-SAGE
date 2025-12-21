@@ -12,7 +12,7 @@ calculate_rms           calculate RMS of a bandpassed FFT spectrum
 aspart                   calculate symmetric/antisymmetric components of a spectrum
 shiftit                  shift a time-domain signal by a fractional amount
 
-The implementation matches the original Fortran SNID code exactly.
+Implementation notes: FFT helpers and overlap bookkeeping.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 # ----------------------------------------------------------------------
 
 def compute_redshift_from_lag(lag: float, dlog: float) -> float:
-    """z = exp(lag·dlog) – 1   (natural-log base, like the Fortran code)."""
+    """z = exp(lag·dlog) – 1   (natural-log base)."""
     try:
         z = np.exp(lag * dlog) - 1.0
         return 0.0 if z < -0.95 or z > 10.0 else z
@@ -302,7 +302,7 @@ def weighted_median_from_rlap(
         
         buf.extend([z] * nadd)
     
-    # DEPRECATED: Simple median calculation - use enhanced methods instead
+    # Simple median calculation - use enhanced methods instead
     return float(np.median(buf)) if buf else 0.0
 
 

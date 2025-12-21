@@ -498,7 +498,7 @@ class BossBullet:
             s = speed if speed is not None else base_speed
             self.vel = (math.cos(initial_angle) * s, math.sin(initial_angle) * s)
         else:
-            # Aim at target position (legacy behavior)
+            # Aim at target position
             if target_pos is None:
                 target_pos = (pos[0], pos[1] + 1)
             dx = target_pos[0] - pos[0]

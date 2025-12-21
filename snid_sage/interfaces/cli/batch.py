@@ -216,7 +216,7 @@ class BatchTemplateManager:
                 self._templates_metadata = {}
                 self._log.info(f"✅ Loaded {len(self._templates)} templates using UNIFIED STORAGE")
             except ImportError:
-                # Fallback to standard loading (legacy path removed)
+                # Fallback to standard loading
                 from snid_sage.snid.io import load_templates
                 self._templates, self._templates_metadata = load_templates(self.templates_dir, flatten=True)
                 self._log.info(f"✅ Loaded {len(self._templates)} templates using STANDARD method")
@@ -535,9 +535,10 @@ def process_single_spectrum_optimized(
             type_filter=getattr(args, 'type_filter', None),
             template_filter=getattr(args, 'template_filter', None),
             exclude_templates=getattr(args, 'exclude_templates', None),
-            hlapmin=getattr(args, 'hlapmin', 0.1),
             lapmin=getattr(args, 'lapmin', 0.3),
-            hlap_ccc_threshold=getattr(args, 'hlap_ccc_threshold', 0.4),
+            hlap_ccc_threshold=getattr(args, 'hlap_ccc_threshold', 0.45),
+            phase1_peak_min_height=getattr(args, "phase1_peak_min_height", 0.3),
+            phase1_peak_min_distance=getattr(args, "phase1_peak_min_distance", 3),
             forced_redshift=used_forced_redshift,
             verbose=False,
             show_plots=False,
@@ -1398,13 +1399,6 @@ Examples:
         help="Maximum redshift to consider (default: 1.0 for optical, 2.5 for ONIR)"
     )
     analysis_group.add_argument(
-        "--hlapmin",
-        dest="hlapmin",
-        type=float,
-        default=0.1,
-        help="Minimum HLAP value required (HLAP = height * lap)"
-    )
-    analysis_group.add_argument(
         "--lapmin",
         type=float,
         default=0.3,
@@ -1414,8 +1408,22 @@ Examples:
         "--hlap-ccc-threshold",
         dest="hlap_ccc_threshold",
         type=float,
-        default=0.4,
+        default=0.45,
         help="Minimum HLAP-CCC value required for clustering (HLAP-CCC: HLAP/(1−CCC))"
+    )
+    analysis_group.add_argument(
+        "--phase1-peak-min-height",
+        dest="phase1_peak_min_height",
+        type=float,
+        default=0.3,
+        help="Phase-1 peak finding: minimum normalized correlation peak height (default: 0.3)"
+    )
+    analysis_group.add_argument(
+        "--phase1-peak-min-distance",
+        dest="phase1_peak_min_distance",
+        type=int,
+        default=3,
+        help="Phase-1 peak finding: minimum distance between peaks in bins (default: 3)"
     )
     analysis_group.add_argument(
         "--forced-redshift", 
@@ -1673,7 +1681,7 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
             if not isinstance(metric_val, (int, float)) or not np.isfinite(metric_val):
                 from snid_sage.shared.utils.math_utils import get_best_metric_value
                 metric_val = get_best_metric_value(summary)
-            best_metric_str = f"{float(metric_val):.1f}"
+            best_metric_str = f"{float(metric_val):.2f}"
 
             # Match Quality (cluster quality category) and Type Confidence (cluster confidence level)
             match_quality = (summary.get('cluster_quality_category', '') or '') if summary.get('has_clustering') else ''
@@ -1859,7 +1867,7 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
             report.append(f"   Low Confidence: {low_confidence}/{success_count} ({low_confidence/success_count*100:.1f}%)")
             report.append(f"   Very Low Confidence: {very_low_confidence}/{success_count} ({very_low_confidence/success_count*100:.1f}%)")
         else:
-            report.append(f"   Note: Using legacy analysis method (no cluster-based confidence available)")
+            report.append("   Note: Cluster-based confidence not available in this run")
         
         # Clustering effectiveness
         cluster_count = sum(1 for _, _, _, s in successful_results if s.get('has_clustering', False))
@@ -2313,7 +2321,7 @@ def main(args: argparse.Namespace) -> int:
 
                 effective_templates_dir = str(get_templates_dir())
             except Exception:
-                # Fallback to relative path for legacy/dev environments
+                # Fallback to relative path for dev environments
                 effective_templates_dir = 'templates'
 
         # Reflect resolved path back into args for downstream consumers and reporting
@@ -2354,9 +2362,8 @@ def main(args: argparse.Namespace) -> int:
                 'zmax': float(args.zmax),
                 'age_min': getattr(args, 'age_min', None),
                 'age_max': getattr(args, 'age_max', None),
-                'hlapmin': float(getattr(args, 'hlapmin', 0.1)),
                 'lapmin': float(getattr(args, 'lapmin', 0.3)),
-                'hlap_ccc_threshold': float(getattr(args, 'hlap_ccc_threshold', 0.4)),
+                'hlap_ccc_threshold': float(getattr(args, 'hlap_ccc_threshold', 0.45)),
                 'forced_redshift': getattr(args, 'forced_redshift', None),
                 'type_filter': getattr(args, 'type_filter', None),
                 'template_filter': getattr(args, 'template_filter', None),
@@ -2644,7 +2651,7 @@ def main(args: argparse.Namespace) -> int:
                             )
                         else:
                             weak_note = " (weak)" if summary.get('weak_match') else ""
-                            print(f"      {name}: {type_display}{weak_note} z={float(redshift):.6f} {best_metric_name}={best_metric_value:.1f} {z_marker}")
+                            print(f"      {name}: {type_display}{weak_note} z={float(redshift):.6f} {best_metric_name}={best_metric_value:.2f} {z_marker}")
         
         # Results summary
         successful_count = len(results) - failed_count

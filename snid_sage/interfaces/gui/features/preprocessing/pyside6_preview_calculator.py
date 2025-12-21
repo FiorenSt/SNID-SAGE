@@ -409,7 +409,7 @@ class PySide6PreviewCalculator(QtCore.QObject):
                 except Exception:
                     self.current_mask_logbins = mask_logbins
             else:
-                # Fallback when SNID is unavailable: build grid and interpolate (legacy behavior)
+                # Fallback when SNID is unavailable: build grid and interpolate
                 try:
                     if SNID_AVAILABLE and mask_regions:
                         # (This branch no longer reachable; kept for clarity)
@@ -528,7 +528,7 @@ class PySide6PreviewCalculator(QtCore.QObject):
         if manual_continuum is not None and len(manual_continuum) == len(self.current_wave):
             return self._calculate_manual_continuum_preview(manual_continuum)
         
-        # Handle legacy continuum points approach for compatibility
+        # Handle continuum points approach for compatibility
         if not continuum_points or len(continuum_points) < 2:
             return self.current_wave.copy(), self.current_flux.copy()
         

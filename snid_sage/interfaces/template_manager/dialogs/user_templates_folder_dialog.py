@@ -72,7 +72,7 @@ class UserTemplatesFolderDialog(QtWidgets.QDialog):
         except Exception:
             pass
 
-        # 2) Discover legacy/existing user libraries
+        # 2) Discover existing user libraries
         try:
             if discover_legacy_user_templates is not None:
                 legacy_paths = discover_legacy_user_templates()

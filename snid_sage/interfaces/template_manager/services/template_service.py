@@ -46,7 +46,7 @@ def _get_builtin_dir() -> Path:
     state-root bank (typically ``<cwd>/SNID-SAGE/templates``). For
     development/editable installs we fall back to the repo-relative top-level
     ``templates`` folder in the Git checkout, and only as a last resort to
-    any legacy ``snid_sage/templates`` package data.
+    any bundled ``snid_sage/templates`` package data.
     """
     try:
         from snid_sage.shared.templates_manager import get_templates_dir
@@ -245,7 +245,7 @@ class TemplateService:
     def get_user_index(self, profile_id: Optional[str] = None) -> Dict[str, Any]:
         """Return only the user index; optionally filtered by profile.
 
-        For legacy entries missing profile_id, infer by HDF5 grid metadata.
+        For entries missing profile_id, infer by HDF5 grid metadata.
         """
         idx_path = _user_index_path(profile_id)
         data = self._read_json(idx_path) or {
@@ -569,7 +569,7 @@ class TemplateService:
                         except Exception:
                             pass
 
-                    # Single-epoch legacy layout (no epochs subgroup)
+                    # Single-epoch layout (no epochs subgroup)
                     if "epochs" not in g:
                         if epoch_index != 0:
                             return False
@@ -1090,7 +1090,7 @@ class TemplateService:
 
         # Final fallback to repo-relative unified path (editable installs):
         # prefer the top-level ``templates`` folder next to the repo root,
-        # then fall back to any legacy ``snid_sage/templates`` tree.
+        # then fall back to any bundled ``snid_sage/templates`` tree.
         try:
             root = Path(__file__).resolve().parents[3]
             # New layout: top-level templates bank

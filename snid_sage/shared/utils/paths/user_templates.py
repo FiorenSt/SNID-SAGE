@@ -4,7 +4,7 @@ User Templates Path Resolver
 
 - Single source of truth for resolving and persisting the User Templates directory.
 - GUI should call with strict=True to avoid silent fallbacks and instead prompt users.
-- CLI can decide policy (e.g., require config or allow legacy discovery explicitly).
+- CLI can decide policy (e.g., require config or allow discovery explicitly).
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ def get_user_templates_dir(strict: bool = False) -> Optional[Path]:
 
     The ``strict`` flag is preserved for backwards compatibility but no longer
     changes the resolution behaviour – callers that previously passed
-    ``strict=True`` to avoid legacy fallbacks now simply get the managed default.
+    ``strict=True`` to avoid fallbacks now simply get the managed default.
     """
     # 1) Minimal persistence independent of global config: a small JSON selector
     #    under the shared state root (typically <cwd>/SNID_SAGE).
@@ -176,7 +176,7 @@ def discover_legacy_user_templates() -> List[Path]:
     except Exception:
         pass
 
-    # 3) App config dir templates/User_templates (legacy) and user_templates (new)
+    # 3) App config dir templates/User_templates and user_templates
     try:
         cm = ConfigurationManager()
         cfg_root = Path(cm.config_dir)
@@ -191,7 +191,7 @@ def discover_legacy_user_templates() -> List[Path]:
     except Exception:
         pass
 
-    # 4) (removed): legacy home fallback ~/.snid_sage/User_templates
+    # 4) (removed): home fallback ~/.snid_sage/User_templates
 
     # Filter for libraries that look populated
     filtered: List[Path] = []

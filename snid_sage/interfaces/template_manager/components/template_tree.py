@@ -88,7 +88,7 @@ class TemplateTreeWidget(QtWidgets.QTreeWidget):
                 else:
                     index_data = svc.get_merged_index(profile_id=active_pid)
             except Exception as e:
-                _LOGGER.warning(f"Falling back to legacy index loading: {e}")
+                _LOGGER.warning(f"Falling back to alternate index loading: {e}")
                 template_index_path = self._find_template_index()
                 if not template_index_path:
                     _LOGGER.warning("Template index not found")
@@ -212,7 +212,7 @@ class TemplateTreeWidget(QtWidgets.QTreeWidget):
                 _LOGGER.info(f"Found managed template index at: {idx_path}")
                 return str(idx_path)
         except Exception:
-            # Best-effort only; fall through to legacy/local discovery.
+            # Best-effort only; fall through to local discovery.
             pass
 
         # 2) Legacy/local fallbacks relative to the current working directory

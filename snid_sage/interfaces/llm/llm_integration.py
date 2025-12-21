@@ -64,11 +64,12 @@ class LLMIntegration:
                 # Backward compatibility if key was stored previously
                 self.api_key = config.get('api_key')
 
-            # Use saved model or default to a known free variant
-            self.current_model = config.get('model_id') or DEFAULT_MODEL
+            # Prefer saved model; if none is set, allow runtime to auto-pick a free model.
+            # (call_openrouter_api() will persist the chosen model after the first successful call)
+            self.current_model = config.get('model_id') or None
             
             # Check if configuration is valid
-            if self.api_key and self.current_model:
+            if self.api_key:
                 self.llm_available = True
             else:
                 self.llm_available = False

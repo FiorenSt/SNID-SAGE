@@ -259,7 +259,6 @@ class LineDetectionController:
                         zmin=0.0,
                         zmax=1.0,
                         # Correlation parameters
-                        hlapmin=0.01,  # HLAP-min for galaxy detection
                         lapmin=0.2,    # Lower overlap requirement for galaxies
                         peak_window_size=20,
                         # Output control

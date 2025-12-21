@@ -415,8 +415,7 @@ def load_templates(template_dir: str, flatten: bool = True) -> Tuple[List[Dict[s
     """
     Load all template spectra from a directory.
     
-    This is a legacy fallback that should only be used if unified storage fails.
-    It now tries HDF5 files first, then falls back to .lnw files.
+    Fallback loader that is only used if unified storage is unavailable.
     
     Parameters:
         template_dir (str): Directory containing template files
@@ -440,9 +439,9 @@ def load_templates(template_dir: str, flatten: bool = True) -> Tuple[List[Dict[s
         return templates, type_counts
         
     except Exception as e:
-        _LOG.warning(f"Unified storage failed in legacy fallback: {e}, trying .lnw files")
+        _LOG.warning(f"Unified storage failed in fallback loader: {e}, trying .lnw files")
     
-    # Original legacy behavior: look for .lnw files
+    # Fallback behavior: look for .lnw files
     templates = []
     type_counts = {}
     
@@ -528,7 +527,7 @@ def load_templates(template_dir: str, flatten: bool = True) -> Tuple[List[Dict[s
 
 def write_detailed_result(result: Any, filename: str) -> None:
     """
-    Write detailed SNID results to a file, matching Fortran output format.
+    Write detailed SNID results to a file.
     
     Parameters:
         result: SNIDResult object
@@ -547,8 +546,17 @@ def write_detailed_result(result: Any, filename: str) -> None:
             if len(wave) > 0:
                 f.write(f"# Wavelength range               : {wave.min():.1f} - {wave.max():.1f} Å\n")
         
-        # Write processing parameters if available
-        f.write(f"# Minimum HLAP (hlapmin)         : {getattr(result, 'min_hlap', None) or 0.1}\n")
+        # Write analysis parameters if available
+        try:
+            if hasattr(result, 'lapmin'):
+                f.write(f"# Minimum overlap (lapmin)       : {float(getattr(result, 'lapmin')):.3f}\n")
+        except Exception:
+            pass
+        try:
+            if hasattr(result, 'hlap_ccc_threshold'):
+                f.write(f"# Metric threshold (HLAP-CCC)    : {float(getattr(result, 'hlap_ccc_threshold')):.3f}\n")
+        except Exception:
+            pass
         if hasattr(result, 'dwlog') and result.dwlog:
             f.write(f"# Log wavelength step            : {result.dwlog:.6f}\n")
         f.write("\n")
@@ -652,7 +660,7 @@ def write_detailed_result(result: Any, filename: str) -> None:
             template = match['template']
             name = template.get('name', 'Unknown')[:12]  # Limit to 12 chars
             
-            # Use subtype if available, otherwise fall back to main type (matching Fortran behavior)
+            # Use subtype if available, otherwise fall back to main type
             subtype = template.get('subtype', '')
             if subtype and subtype != 'Unknown' and subtype != '':
                 t_type = subtype[:10]  # Use subtype (limit to 10 chars)
@@ -731,15 +739,15 @@ def write_result(result: Any, filename: str) -> None:
         formatter.save_to_file(filename, format_type='txt')
         
     except Exception as e:
-        # Fallback to legacy format if unified formatter fails
+        # Fallback formatter if unified formatter fails
         import logging
-        logging.getLogger('snid_sage.snid.io').warning(f"Unified formatter failed, using legacy format: {e}")
+        logging.getLogger('snid_sage.snid.io').warning(f"Unified formatter failed, using fallback formatter: {e}")
         write_detailed_result(result, filename)
 
 
 def write_fluxed_spectrum(wave: np.ndarray, flux: np.ndarray, filename: str, header: str = None) -> None:
     """
-    Write a fluxed spectrum to a file (similar to Fortran's wfluxout).
+    Write a fluxed spectrum to a file.
     Only writes the non-zero flux range.
     
     Parameters:
@@ -771,7 +779,7 @@ def write_fluxed_spectrum(wave: np.ndarray, flux: np.ndarray, filename: str, hea
 
 def write_flattened_spectrum(wave: np.ndarray, flux: np.ndarray, filename: str, header: str = None) -> None:
     """
-    Write a flattened (continuum-removed) spectrum to a file (similar to Fortran's wflatout).
+    Write a flattened (continuum-removed) spectrum to a file.
     Only writes the non-zero flux range.
     
     Parameters:
@@ -825,7 +833,7 @@ def write_correlation(z_axis: np.ndarray, correlation: np.ndarray, filename: str
 
 def write_parameter_file(params: Dict[str, Any], filename: str = "snid.param") -> None:
     """
-    Write SNID parameters to a file (similar to Fortran's parameter file).
+    Write SNID parameters to a file.
     
     Parameters:
         params: Dictionary of parameters
@@ -875,7 +883,7 @@ def write_template_correlation_data(match: Dict[str, Any], template_index: int,
     metric_name = str(get_best_metric_name(match))
     redshift = match.get('redshift', 0.0)
     
-    # Create header with template information (matching Fortran format)
+    # Create header with template information
     header = f"# Template: {template_name}\n"
     header += f"# Type: {template_type}"
     if template_subtype and template_subtype != 'Unknown' and template_subtype != '':
@@ -936,7 +944,7 @@ def write_template_spectra_data(match: Dict[str, Any], template_index: int,
     metric_name = str(get_best_metric_name(match))
     redshift = match.get('redshift', 0.0)
     
-    # Create header with template information (matching Fortran format)
+    # Create header with template information
     header = f"# Template: {template_name}\n"
     header += f"# Type: {template_type}"
     if template_subtype and template_subtype != 'Unknown' and template_subtype != '':
@@ -1244,7 +1252,7 @@ def get_template_info(library_path: str) -> Dict[str, Any]:
     """
     Get information about templates in a library.
     
-    This function now supports both H5 unified storage and legacy .lnw files.
+    This function supports unified storage and optional text-based template folders.
     It will automatically detect and use H5 storage when available.
     
     Parameters:
@@ -1262,7 +1270,7 @@ def get_template_info(library_path: str) -> Dict[str, Any]:
             _LOG.info("Using H5 unified storage for template info")
             return storage.get_template_info_for_gui()
         else:
-            _LOG.error("Unified storage index/files missing. SNID-SAGE expects prebuilt HDF5/index; legacy .lnw fallback is disabled.")
+            _LOG.error("Unified storage index/files missing. SNID-SAGE expects prebuilt HDF5/index; .lnw fallback is disabled.")
             return {
                 'path': library_path,
                 'total': 0,
@@ -1274,7 +1282,7 @@ def get_template_info(library_path: str) -> Dict[str, Any]:
     except Exception as e:
         _LOG.error(f"Error accessing H5 storage: {e}")
     
-    # No legacy fallback; return empty info structure to signal missing storage
+    # No fallback; return empty info structure to signal missing storage
     return {
         'path': library_path,
         'total': 0,

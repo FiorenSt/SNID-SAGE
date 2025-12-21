@@ -282,11 +282,15 @@ class PySide6RedshiftAgeDialog(QtWidgets.QDialog):
             self.all_matches = matches
             self.match_source = match_source
             
-            # Apply HLAP-min threshold filtering only if clustering did not succeed (align with CLI)
+            # Apply best-metric threshold filtering only if clustering did not succeed
             clustering_ok = bool(getattr(self.analysis_results, 'clustering_results', None)) and bool(getattr(self.analysis_results, 'clustering_results', {}).get('success', False))
             if not clustering_ok:
-                hlapmin = getattr(self.analysis_results, 'min_hlap', getattr(self.analysis_results, 'hlapmin', 0.1))
-                filtered_matches = [m for m in matches if m.get('hlap', 0) >= hlapmin]
+                try:
+                    from snid_sage.shared.utils.math_utils import get_best_metric_value
+                    threshold = float(getattr(self.analysis_results, 'hlap_ccc_threshold', 0.45))
+                    filtered_matches = [m for m in matches if float(get_best_metric_value(m)) >= threshold]
+                except Exception:
+                    filtered_matches = matches
             else:
                 filtered_matches = matches
             
@@ -360,7 +364,7 @@ Please run a successful SNID analysis first.
 
 No valid data points found for plotting.
 This may be due to:
-• Insufficient template matches above HLAP threshold
+• Insufficient template matches above the metric threshold
 • Missing redshift or age information in templates
 • Data format issues
 
@@ -370,7 +374,7 @@ Please check your analysis results and try again.
             return
         
         # Build summary text
-        hlapmin = getattr(self.analysis_results, 'hlapmin', 0.1)
+        threshold = float(getattr(self.analysis_results, 'hlap_ccc_threshold', 0.45))
         total_matches = len(self.all_matches)
         valid_points = len(self.plot_data)
         
@@ -385,7 +389,7 @@ Please check your analysis results and try again.
             f"📊 DATA SOURCE: {self.match_source}",
             f"📝 TOTAL MATCHES: {total_matches}",
             f"🎯 VALID DATA POINTS: {valid_points}",
-            f"📏 HLAP THRESHOLD: {hlapmin}",
+            f"📏 METRIC THRESHOLD (HLAP-CCC): {threshold}",
             "",
             "📊 DISTRIBUTION STATISTICS:",
             f"   Redshift Range: {min(redshifts):.4f} - {max(redshifts):.4f}",

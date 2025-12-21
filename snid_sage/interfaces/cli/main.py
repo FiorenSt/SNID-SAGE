@@ -7,7 +7,7 @@ Main entry point for the SNID SAGE CLI application.
 This provides comprehensive command-line access to SNID SAGE functionality.
 
 Version 1.0.0 - Developed by Fiorenzo Stoppa
-Based on the original Fortran SNID by Stéphane Blondin & John L. Tonry
+SuperNova spectrum identification and guided exploration
 """
 
 import sys
@@ -68,7 +68,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="SNID SAGE: SuperNova IDentification – Spectral Analysis and Guided Exploration",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        epilog="Developed by Fiorenzo Stoppa, based on the original Fortran SNID by Stéphane Blondin & John L. Tonry"
+        epilog="Developed by Fiorenzo Stoppa"
     )
     
     parser.add_argument(

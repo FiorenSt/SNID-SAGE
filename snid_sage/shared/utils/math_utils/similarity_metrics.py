@@ -27,8 +27,7 @@ def concordance_correlation_coefficient_trimmed(
     Compute Lin's CCC after trimming (dropping) the top (100-trim_percentile)% bins
     with the highest absolute contribution |(a-μa)(b-μb)|.
 
-    This mirrors the demo logic in scripts/demo_softclip_hlap_ccc.py, and is meant
-    to reduce domination by extreme peaks.
+    This is meant to reduce domination by extreme peaks.
     """
     a = np.asarray(spec1, dtype=float)
     b = np.asarray(spec2, dtype=float)

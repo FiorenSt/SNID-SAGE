@@ -20,7 +20,7 @@ def find_templates_directory() -> Optional[Path]:
 
     New behavior:
     - Prefer the centralized templates manager (lazy download into user cache).
-    - Fall back to the previous discovery strategies only for legacy/dev setups.
+    - Fall back to the previous discovery strategies only for dev setups.
     """
     # Strategy 0: centralized manager (preferred)
     try:

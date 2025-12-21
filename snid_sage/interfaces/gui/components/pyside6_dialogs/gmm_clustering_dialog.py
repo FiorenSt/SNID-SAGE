@@ -465,10 +465,9 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
                 self.clustering_results = perform_direct_gmm_clustering(
                     matches=self.all_matches,
                     min_matches_per_type=1,  # Accept any type with at least 1 match
-                    quality_threshold=0.02,
                     max_clusters_per_type=10,
                     verbose=True,
-                    hlap_ccc_threshold=0.4  # Default HLAP-CCC threshold
+                    hlap_ccc_threshold=0.45  # Default HLAP-CCC threshold
                 )
                 
                 # If clustering failed (e.g., too few/weak survivors), create a weak fallback so UI can still render
@@ -559,7 +558,11 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
             )
             return
         
-        clusters = self.clustering_results.get('clusters', [])
+        # Only consider clusters explicitly marked valid; invalid clusters are treated as non-existent.
+        clusters = [
+            c for c in (self.clustering_results.get('clusters', []) or [])
+            if isinstance(c, dict) and (c.get('is_valid_cluster', False) is True)
+        ]
         winning_cluster = self.clustering_results.get('winning_cluster')
         method = self.clustering_results.get('method', 'direct_gmm')
         
@@ -747,7 +750,18 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
             # Clear the existing plot
             self.ax.clear()
             
-            clusters = self.clustering_results.get('clusters', [])
+            # Cluster list for plotting (may be clusters or candidates depending on the producer).
+            clusters = (
+                self.clustering_results.get('clusters', None)
+                or self.clustering_results.get('all_candidates', None)
+                or []
+            )
+
+            # Filter out disqualified clusters so they never appear in the 3D plot.
+            clusters = [
+                c for c in clusters
+                if isinstance(c, dict) and (c.get('is_valid_cluster', False) is True)
+            ]
             
             if not clusters:
                 self.ax.text(0.5, 0.5, 0.5, 'No clustering data available', 
@@ -932,11 +946,17 @@ Please try running the analysis again or check the logs for more details.
                 export_data = {
                     'clustering_method': self.clustering_results.get('method', 'unknown'),
                     'total_matches': len(self.all_matches),
-                    'num_clusters': len(self.clustering_results.get('clusters', [])),
+                    'num_clusters': len([
+                        c for c in (self.clustering_results.get('clusters', []) or [])
+                        if isinstance(c, dict) and (c.get('is_valid_cluster', False) is True)
+                    ]),
                     'clusters': []
                 }
                 
-                for cluster in self.clustering_results.get('clusters', []):
+                for cluster in [
+                    c for c in (self.clustering_results.get('clusters', []) or [])
+                    if isinstance(c, dict) and (c.get('is_valid_cluster', False) is True)
+                ]:
                     cluster_data = {
                         'cluster_id': cluster.get('cluster_id', -1),
                         'type': cluster.get('type', 'Unknown'),

@@ -5,8 +5,8 @@ SNID SAGE: SuperNova IDentification – Spectral Analysis and Guided Exploration
 Core SNID pipeline implementing template matching using cross-correlation techniques
 to identify the type, age and redshift of supernova spectra.
 
-This implementation follows the original SNID Fortran flow with numbered stages
-and includes GMM clustering for outlier rejection and comprehensive statistical analysis.
+This implementation uses a staged pipeline and includes GMM clustering for outlier rejection
+and comprehensive statistical analysis.
 """
 
 from __future__ import annotations
@@ -580,7 +580,6 @@ def _process_template_peaks(
     DWLOG_grid: float,
     k1: int, k2: int, k3: int, k4: int,
     lapmin: float,
-    hlapmin: float,
     zmin: float,
     zmax: float,
     peak_window_size: int,
@@ -813,10 +812,8 @@ def _process_template_peaks(
                 # Arms / antisymmetric-noise machinery is intentionally disabled in SNID-SAGE:
                 # it is not used by the HLAP/HLAP-CCC pipeline and is computationally expensive.
 
-                # HLAP gate (HLAP = phase-2 peak height * lap).
+                # HLAP is computed for downstream scoring (HLAP-CCC) and reporting.
                 hlap = float(hgt_p) * float(lap) if (np.isfinite(hgt_p) and np.isfinite(lap)) else 0.0
-                if hlap < hlapmin:
-                    continue
                 
                 # Prepare spectra data for plotting (required by GUI plotting system)
                 # Use the same approach as the original working code - global spectrum edges
@@ -902,7 +899,6 @@ def _run_forced_redshift_analysis_optimized(
     DWLOG_grid: float,
     k1: int, k2: int, k3: int, k4: int,
     lapmin: float, 
-    hlapmin: float, 
     zmin: float, 
     zmax: float,
     log_wave: np.ndarray,
@@ -1136,7 +1132,6 @@ def _run_forced_redshift_analysis_optimized(
                     k3,
                     k4,
                     lapmin,
-                    hlapmin,
                     left_edge,
                     right_edge,
                     lap,
@@ -1190,7 +1185,6 @@ def _process_forced_redshift_match(
     DWLOG_grid: float,
     k1: int, k2: int, k3: int, k4: int,
     lapmin: float,
-    hlapmin: float,
     left_edge: int,
     right_edge: int,
     lap: float,
@@ -1296,10 +1290,9 @@ def _process_forced_redshift_match(
         # it is not used by the HLAP/HLAP-CCC pipeline and is computationally expensive.
 
         # Store results if they pass quality criteria
-        # HLAP gate (HLAP = phase-2 peak height * lap).
-        # HLAP-min gate
+        # HLAP is computed for downstream scoring (HLAP-CCC) and reporting.
         hlap = float(hgt_p) * float(lap) if (np.isfinite(hgt_p) and np.isfinite(lap)) else 0.0
-        if hlap >= hlapmin and lap >= lapmin:
+        if lap >= lapmin:
             # Convert overlap indices into [left_edge:right_edge] coordinates for downstream metrics.
             overlap_indices = None  # type: Optional[Dict[str, int]]
             try:
@@ -1398,11 +1391,11 @@ def run_snid_analysis(
     template_filter: Optional[List[str]] = None,
     exclude_templates: Optional[List[str]] = None,
     peak_window_size: int = 10,
+    # Phase-1 peak detection (normalized correlation peak-finder knobs)
+    phase1_peak_min_height: float = 0.3,
+    phase1_peak_min_distance: int = 3,
     lapmin: float = 0.3,
-    hlapmin: float = 0.1,
-    hlap_ccc_threshold: float = 0.4,  # Best-metric threshold for clustering
-    # Soft-clipping is not used (kept only for signature compatibility).
-    ccc_softclip: str = "none",
+    hlap_ccc_threshold: float = 0.45,  # Best-metric threshold for clustering
     # NEW: Forced redshift parameter
     forced_redshift: Optional[float] = None,
     # Output options
@@ -1446,8 +1439,6 @@ def run_snid_analysis(
         Window size for finding correlation peaks
     lapmin : float
         Minimum overlap fraction required
-    hlapmin : float
-        Minimum HLAP value required for a match (HLAP = height * lap)
     forced_redshift : float, optional
         If provided, bypass redshift search and force all templates to this redshift.
         When set, all templates will be shifted to this exact redshift value,
@@ -1475,6 +1466,7 @@ def run_snid_analysis(
     
     tic = time.time()
     analysis_trace = {}
+
     
     # Helper function for progress reporting
     def report_progress(message, progress=None):
@@ -1522,18 +1514,17 @@ def run_snid_analysis(
     # Initialize result object
     result = SNIDResult(
         success=False,
-        min_hlap=hlapmin,
         dwlog=DWLOG_grid
     )
     # Persist thresholds used for downstream reporting/plotting
     try:
-        result.hlapmin = float(hlapmin)
-    except Exception:
-        result.hlapmin = hlapmin
-    try:
         result.hlap_ccc_threshold = float(hlap_ccc_threshold)
     except Exception:
         result.hlap_ccc_threshold = hlap_ccc_threshold
+    try:
+        result.lapmin = float(lapmin)
+    except Exception:
+        result.lapmin = lapmin
     
     # Store input spectrum info
     result.input_spectrum = processed_spectrum['input_spectrum']
@@ -1683,7 +1674,7 @@ def run_snid_analysis(
         if pid == 'onir':
             # Effective log span for active grid
             ln_span_active = float(DWLOG_grid) * float(NW_grid)
-            # Reference optical span from built-in profile (fallback to legacy bounds)
+            # Reference optical span from built-in profile (fallback bounds)
             try:
                 opt = get_profile('optical')
                 ln_span_opt = math.log(float(opt.grid.max_wave_A) / float(opt.grid.min_wave_A))
@@ -1767,7 +1758,6 @@ def run_snid_analysis(
                 k3,
                 k4,
                 lapmin,
-                hlapmin,
                 zmin,
                 zmax,
                 log_wave,
@@ -1775,9 +1765,9 @@ def run_snid_analysis(
                 report_progress,
                 profile_id=profile_id,
             )
-            
-            _LOG.info(f"Phase 1 complete: Forced redshift analysis found {len(matches)} matches with hlap >= {hlapmin}")
-            
+
+            _LOG.info(f"Phase 1 complete: Forced redshift analysis found {len(matches)} matches")
+
         except Exception as e:
             _LOG.error(f"Error in forced redshift analysis: {e}")
             _LOG.error(f"This may be due to incompatible preprocessing data structure")
@@ -1897,7 +1887,19 @@ def run_snid_analysis(
                             r_scale = 0.75 if pid == 'onir' else 1.0
                         except Exception:
                             r_scale = 1.0
-                        peak_finder = VectorizedPeakFinder(NW_grid, DWLOG_grid, lz1, lz2, k1, k2, k3, k4, r_scale=r_scale)
+                        peak_finder = VectorizedPeakFinder(
+                            NW_grid,
+                            DWLOG_grid,
+                            lz1,
+                            lz2,
+                            k1,
+                            k2,
+                            k3,
+                            k4,
+                            r_scale=r_scale,
+                            phase1_peak_min_distance=int(phase1_peak_min_distance),
+                            phase1_peak_min_height=float(phase1_peak_min_height),
+                        )
 
                         correlation_matrix = []
                         template_names = []
@@ -1941,7 +1943,6 @@ def run_snid_analysis(
                                     k3,
                                     k4,
                                     lapmin,
-                                    hlapmin,
                                     zmin_phase1,
                                     zmax,
                                     peak_window_size,
@@ -1968,7 +1969,11 @@ def run_snid_analysis(
                                 Rz = Rz_rolled / (NW_grid * drms * template_rms)
                             else:
                                 continue
-                            peaks_indices, _ = find_peaks(Rz, distance=3, height=0.3)
+                            peaks_indices, _ = find_peaks(
+                                Rz,
+                                distance=int(phase1_peak_min_distance),
+                                height=float(phase1_peak_min_height),
+                            )
                             valid_peaks_indices = [i for i in peaks_indices if lz1 <= i <= lz2]
                             if not valid_peaks_indices:
                                 continue
@@ -1986,7 +1991,6 @@ def run_snid_analysis(
                                 k3,
                                 k4,
                                 lapmin,
-                                hlapmin,
                                 zmin_phase1,
                                 zmax,
                                 peak_window_size,
@@ -2024,7 +2028,7 @@ def run_snid_analysis(
             _LOG.error(f"Vectorized FFT correlation failed (fatal): {e}")
             raise
 
-        _LOG.info(f"Phase 1 complete: Normal correlation analysis found {len(matches)} matches with hlap >= {hlapmin}")
+        _LOG.info(f"Phase 1 complete: Normal correlation analysis found {len(matches)} matches")
 
     # END of if/else block for forced_redshift vs normal analysis
 
@@ -2046,8 +2050,8 @@ def run_snid_analysis(
                 compute_hlap_ccc_metric,
                 compute_sigma_z_metrics,
             )
-            report_progress("Computing phase-2 overlap diagnostics (CCC + residual noise)")
-            _LOG.info("Computing phase-2 overlap diagnostics (CCC trimmed + residual noise)")
+            report_progress("Computing phase-2 overlap diagnostics")
+            _LOG.info("Computing phase-2 overlap diagnostics")
 
             processed_spectrum_for_metrics = {
                 'tapered_flux': tapered_flux,
@@ -2125,7 +2129,6 @@ def run_snid_analysis(
             clustering_results = perform_direct_gmm_clustering(
                 matches, 
                 min_matches_per_type=1,  # Accept any type with at least 1 match
-                quality_threshold=0.05,  # Fixed threshold in z space
                 max_clusters_per_type=10,
                 verbose=verbose,
                 hlap_ccc_threshold=hlap_ccc_threshold,
@@ -2677,7 +2680,6 @@ def run_snid(
     apodize_percent: float = 10.0,
     peak_window_size: int = 10,
     lapmin: float = 0.3,
-    hlapmin: float = 0.1,
 
     # NEW: Forced redshift parameter
     forced_redshift: Optional[float] = None,
@@ -2716,7 +2718,7 @@ def run_snid(
         --output-dir results/ --plot-dir plots/ \\
         --output-main --output-fluxed --output-flattened --output-correlation \\
         --save-plots --show-plots --verbose \\
-        --max-output-templates 10 --hlapmin 5.0 --lapmin 0.3 \\
+        --max-output-templates 10 --lapmin 0.3 \\
         --zmin -0.01 --zmax 1.0 --aband-remove --skyclip
     
     Parameters
@@ -2759,8 +2761,6 @@ def run_snid(
         Window size for finding correlation peaks
     lapmin : float, optional
         Minimum overlap fraction required
-    hlapmin : float, optional
-        Minimum HLAP value required for a match (HLAP = height * lap)
     output_dir : str or Path, optional
         Directory for output files
     output_main : bool, optional
@@ -2806,7 +2806,6 @@ def run_snid(
     _LOG.info(f"Input spectrum: {spectrum_path}")
     _LOG.info(f"Templates directory: {templates_dir}")
     _LOG.info(f"Redshift range: {zmin:.6f} - {zmax:.6f}")
-    _LOG.info(f"HLAP-min threshold: {hlapmin}")
     _LOG.info("="*80)
     
     full_trace = {}
@@ -2890,7 +2889,6 @@ def run_snid(
         exclude_templates=exclude_templates,
         peak_window_size=peak_window_size,
         lapmin=lapmin,
-        hlapmin=hlapmin,
         hlap_ccc_threshold=hlap_ccc_threshold,
         
         forced_redshift=forced_redshift,
@@ -2972,7 +2970,6 @@ def run_snid(
                 "emclip_z": emclip_z,
                 "emwidth": emwidth,
                 "lapmin": lapmin,
-                "hlapmin": hlapmin,
         
                 "apodize_percent": apodize_percent,
                 "output_plots": int(output_plots),
@@ -3025,7 +3022,7 @@ def run_snid(
     
     else:
         _LOG.error(f"[FAILED] NO GOOD MATCH FOUND")
-        _LOG.error(f"   Try lowering lapmin (overlap) and/or hlapmin. If you expect z > 1, use the 'onir' profile (supports up to z≈2.5).")
+    _LOG.error(f"   Try lowering lapmin (overlap). If you expect z > 1, use the 'onir' profile (supports up to z≈2.5).")
     
     _LOG.info(f"   Runtime: {result.runtime_sec:.2f} seconds")
     _LOG.info("="*80)
@@ -3052,7 +3049,6 @@ if __name__ == "__main__":
     parser.add_argument("--output-dir", "-o", help="Directory for output files")
     parser.add_argument("--zmin", type=float, default=-0.01, help="Minimum redshift to consider")
     parser.add_argument("--zmax", type=float, default=1.0, help="Maximum redshift to consider")
-    parser.add_argument("--hlapmin", type=float, default=0.1, help="Minimum HLAP value required (HLAP = height * lap)")
     parser.add_argument("--lapmin", type=float, default=0.3, help="Minimum overlap fraction required")
     parser.add_argument("--aband-remove", action="store_true", help="Remove telluric A-band")
     parser.add_argument("--skyclip", action="store_true", help="Clip sky emission lines")
@@ -3077,7 +3073,6 @@ if __name__ == "__main__":
             output_dir=args.output_dir,
             zmin=args.zmin,
             zmax=args.zmax,
-            hlapmin=args.hlapmin,
             lapmin=args.lapmin,
             aband_remove=args.aband_remove,
             skyclip=args.skyclip,

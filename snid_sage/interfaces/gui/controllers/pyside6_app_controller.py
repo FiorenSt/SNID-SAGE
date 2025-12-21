@@ -160,7 +160,7 @@ class PySide6AppController(QtCore.QObject):
         Strategy:
         - Prefer the centralized templates manager (lazy download into a writable cache).
         - If a configured templates_dir exists and looks complete, honor it instead.
-        - Final fallbacks are only used in dev/legacy environments.
+        - Final fallbacks are only used in dev environments.
         """
         try:
             active_pid = (profile_id or getattr(self, 'active_profile_id', None) or 'optical')
@@ -963,11 +963,11 @@ class PySide6AppController(QtCore.QObject):
                     progress_callback(f"Searching around z = {redshift_value:.6f} ± {search_range:.6f}", 45)
                     _LOGGER.info(f"Using SEARCH MODE around z = {redshift_value:.6f} (range: {zmin:.4f} to {zmax:.4f})")
             
-            # Fallback to legacy manual_redshift if no mode config
+            # Fallback to manual_redshift if no mode config
             elif hasattr(self, 'manual_redshift') and self.manual_redshift:
                 # Legacy behavior: manual_redshift is treated as forced
                 forced_redshift = self.manual_redshift
-                progress_callback(f"Using MANUAL REDSHIFT (legacy): z = {forced_redshift:.6f}", 45)
+                progress_callback(f"Using MANUAL REDSHIFT: z = {forced_redshift:.6f}", 45)
             
             # Check for forced_redshift parameter in analysis_kwargs (from config dialog)
             elif analysis_kwargs.get('forced_redshift') is not None:
@@ -1000,8 +1000,7 @@ class PySide6AppController(QtCore.QObject):
                 template_filter=analysis_kwargs.get('template_filter', None),
                 peak_window_size=analysis_kwargs.get('peak_window_size', 10),
                 lapmin=analysis_kwargs.get('lapmin', 0.3),
-                hlapmin=float(analysis_kwargs.get('hlapmin', 0.1)),
-                hlap_ccc_threshold=float(analysis_kwargs.get('hlap_ccc_threshold', 0.4)),
+                hlap_ccc_threshold=float(analysis_kwargs.get('hlap_ccc_threshold', 0.45)),
                 forced_redshift=forced_redshift,  # NEW: Pass forced redshift parameter
                 max_output_templates=analysis_kwargs.get('max_output_templates', 10),
                 verbose=analysis_kwargs.get('verbose', False),

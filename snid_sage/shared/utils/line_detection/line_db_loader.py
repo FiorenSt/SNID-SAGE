@@ -60,7 +60,7 @@ def _default_db_path() -> Path:
         # snid_sage/lines/line_database.json relative to this file
         return Path(__file__).resolve().parents[3] / "lines" / "line_database.json"
     except Exception:
-        # Final fallback to legacy repo path (for editable installs during transition)
+        # Final fallback to repo path (for editable installs during transition)
         return Path("config") / "lines" / "line_database.json"
 
 

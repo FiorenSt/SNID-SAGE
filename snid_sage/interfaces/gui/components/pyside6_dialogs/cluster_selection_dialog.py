@@ -80,8 +80,11 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         # Ensure this dialog fully deletes its widgets when closed to avoid stale references
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
         
-        # Store input data
-        self.all_candidates = clusters or []
+        # Store input data (only clusters that pass the Q_cluster gate).
+        self.all_candidates = [
+            c for c in (clusters or [])
+            if isinstance(c, dict) and (c.get('is_valid_cluster', False) is True)
+        ]
         self.snid_result = snid_result
         self.callback = callback
         
@@ -93,6 +96,9 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self.automatic_best = None
         if hasattr(snid_result, 'clustering_results') and snid_result.clustering_results:
             self.automatic_best = snid_result.clustering_results.get('best_cluster')
+        # If the automatic best isn't explicitly valid, fall back to the best valid candidate.
+        if not (isinstance(self.automatic_best, dict) and (self.automatic_best.get('is_valid_cluster', False) is True)):
+            self.automatic_best = None
         if not self.automatic_best and self.all_candidates:
             self.automatic_best = self.all_candidates[0]
         

@@ -85,7 +85,7 @@ class TemplateFFTStorage:
         self.storage_files = {}  # Will be populated with type -> file mapping
         # Profile-aware index selection: prefer unified folder naming
         if str(profile_id or '').strip().lower() == 'onir':
-            # Prefer same-folder ONIR index; fallback to legacy name variants handled in _load_index
+            # Prefer same-folder ONIR index; fallback name variants handled in _load_index
             self.index_file = self.output_dir / 'template_index_onir.json'
         else:
             self.index_file = self.output_dir / 'template_index.json'

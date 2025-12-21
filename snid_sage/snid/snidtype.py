@@ -1,17 +1,9 @@
 """
-snidtype.py – post-processing / typing / statistics for the Python SNID port
-============================================================================
+snidtype.py – post-processing / typing / statistics
+===============================================
 
-This module implements the exact type determination logic from Fortran SNID,
-including template ranking, type fractions, slopes, and security assessment.
-
-Public API
-----------
-SNIDResult                       *dataclass container* returned by run_snid
-determine_best_type_fortran      *main function* - complete Fortran pipeline
-compute_type_fractions           weighted fractions of each SN type
-compute_subtype_fractions        same for sub-types
-compute_consensus_z_age          ensemble ⟨z⟩, ⟨age⟩ with covariance
+Implements type/subtype aggregation, ranking, and summary statistics from the
+template-match list produced by the correlation engine.
 """
 
 from __future__ import annotations
@@ -30,16 +22,8 @@ from snid_sage.shared.utils.math_utils.weighted_statistics import (
 # ----------------------------------------------------------------------
 # 0.  Constants
 # ----------------------------------------------------------------------
-HLAP_MIN   = 0.1
-LAP_MIN    = 0.4
-# Z_FILTER constant removed (deprecated)
-EPSFRAC    = 0.01
-EPSSLOPE   = 0.01
 
-# DEPRECATED: Legacy security thresholds removed
-# Use cluster-based security assessment from cosmological_clustering.py instead
-
-# Fortran type mapping (from enhanced typeinfo.f - 13 types, 70+ subtypes)
+# Type mapping (13 main types, many subtypes)
 TYPENAME = {
     # Type 1 - SN Ia (10 subtypes)
     1: {1: 'Ia', 2: 'Ia-norm', 3: 'Ia-91T', 4: 'Ia-91bg', 5: 'Ia-csm', 6: 'Ia-pec', 
@@ -242,7 +226,7 @@ class SNIDResult:
     type_fractions_weighted: Dict[str, float] = field(default_factory=dict)
     type_statistics: Dict[str, Any] = field(default_factory=dict)
     
-    # Additional comprehensive statistics (matching Fortran SNID)
+    # Additional comprehensive statistics
     type_slopes: Dict[str, float] = field(default_factory=dict)
     subtype_fractions: Dict[str, Dict[str, float]] = field(default_factory=dict)
     template_rankings: Dict[str, List[int]] = field(default_factory=dict)
@@ -292,19 +276,12 @@ class SNIDResult:
             # Add subtype with confidence if available
             if (self.best_subtype and self.best_subtype != "Unknown" and 
                 hasattr(self, 'subtype_confidence') and self.subtype_confidence > 0):
-                
-                # Convert confidence to descriptive level (qualitative only like CLI)
-                if self.subtype_confidence > 0.7:
-                    conf_icon = "🔒"
-                    conf_desc = "High"
-                elif self.subtype_confidence > 0.4:
-                    conf_icon = "🔓"
-                    conf_desc = "Medium"
-                else:
-                    conf_icon = "🔑"
-                    conf_desc = "Low"
-                
-                type_str += f" / {self.best_subtype} ({conf_icon} {conf_desc})"
+                # Display the numeric confidence directly (no hardcoded High/Medium/Low cutoffs).
+                try:
+                    conf_val = float(self.subtype_confidence)
+                except Exception:
+                    conf_val = 0.0
+                type_str += f" / {self.best_subtype} (p={conf_val:.2f})"
             elif self.best_subtype and self.best_subtype != "Unknown":
                 type_str += f" / {self.best_subtype}"
             
@@ -379,12 +356,12 @@ def linear_fit_weighted(x: np.ndarray, y: np.ndarray, w: np.ndarray) -> Tuple[fl
 
 
 # ----------------------------------------------------------------------
-# 3.  Core statistics functions (following Fortran logic exactly)
+# 3.  Core statistics functions
 # ----------------------------------------------------------------------
 def compute_type_subtype_stats(matches: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Compute redshift/age statistics by type and subtype.
-    Following Fortran getzt logic.
+    Compute a robust redshift consensus estimate.
     """
     if not matches:
         return {}
@@ -570,6 +547,4 @@ __all__ = [
     # Utility functions
     "get_main_type_from_template", "get_type_indices_from_template",
     "linear_fit_weighted",
-    # Constants
-    "HLAP_MIN", "EPSFRAC"
 ]
