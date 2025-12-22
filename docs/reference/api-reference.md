@@ -249,7 +249,7 @@ def run_snid_analysis(
     forced_redshift: Optional[float] = None,
     peak_window_size: int = 10,
     lapmin: float = 0.3,
-    hlap_ccc_threshold: float = 0.45,
+    hlap_ccc_threshold: float = 0.5,
     max_output_templates: int = 5,
     verbose: bool = False,
     show_plots: bool = True,
@@ -274,7 +274,7 @@ def run_snid_analysis(
 | forced_redshift | float or None | None | Force specific redshift |
 | peak_window_size | int | 10 | Peak detection window |
 | lapmin | float | 0.3 | Minimum overlap |
-| hlap_ccc_threshold | float | 0.45 | Threshold for clustering quality (HLAP-CCC: HLAP/(1−CCC)) |
+| hlap_ccc_threshold | float | 0.5 | Threshold for clustering quality (HLAP-CCC: HLAP/(1−CCC)) |
 | max_output_templates | int | 5 | Maximum output templates |
 | verbose | bool | False | Verbose output |
 | show_plots | bool | True | Show plots |

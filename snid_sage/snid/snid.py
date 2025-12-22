@@ -1395,7 +1395,7 @@ def run_snid_analysis(
     phase1_peak_min_height: float = 0.3,
     phase1_peak_min_distance: int = 3,
     lapmin: float = 0.3,
-    hlap_ccc_threshold: float = 0.45,  # Best-metric threshold for clustering
+    hlap_ccc_threshold: float = 0.5,  # Best-metric threshold for clustering
     # NEW: Forced redshift parameter
     forced_redshift: Optional[float] = None,
     # Output options
@@ -1525,6 +1525,15 @@ def run_snid_analysis(
         result.lapmin = float(lapmin)
     except Exception:
         result.lapmin = lapmin
+    # Persist analysis bounds used (after any profile-aware clamping)
+    try:
+        result.zmin_used = float(zmin)
+    except Exception:
+        result.zmin_used = zmin
+    try:
+        result.zmax_used = float(zmax)
+    except Exception:
+        result.zmax_used = zmax
     
     # Store input spectrum info
     result.input_spectrum = processed_spectrum['input_spectrum']
@@ -2022,7 +2031,7 @@ def run_snid_analysis(
             _LOG.info(f"🚀 Vectorized type-by-type correlation analysis found {len(matches)} total matches")
             _LOG.info(f"⚡ Performance: {vectorized_total_time:.2f}s total, {templates_per_second:.1f} templates/sec")
             _LOG.info(f"⚡ Average: {vectorized_total_time/len(templates)*1000:.1f}ms per template")
-            report_progress(f"✅ Correlation complete: {len(matches)} matches found", 100)
+            report_progress("✅ Correlation complete", 100)
 
         except Exception as e:
             _LOG.error(f"Vectorized FFT correlation failed (fatal): {e}")
@@ -2037,6 +2046,47 @@ def run_snid_analysis(
     # ============================================================================
     report_progress("Processing results and computing statistics")
     _LOG.info("Phase 2: Processing results and computing statistics...")
+
+    # ------------------------------------------------------------------------
+    # PHASE-2 REDSHIFT GATING (STRICT)
+    #
+    # Phase 1 intentionally allows a slightly wider redshift window (zmin_phase1)
+    # to avoid missing near-zero-lag peaks due to discretization / peak fitting.
+    #
+    # However, Phase 2 (metrics + clustering) must respect the user-requested
+    # analysis bounds [zmin, zmax]. Without this gate, out-of-range Phase-1
+    # matches (e.g. z < -0.01) can leak into GMM clustering and appear in 3D plots.
+    # ------------------------------------------------------------------------
+    phase1_match_count = len(matches)
+    phase2_redshift_filtered = 0
+    if phase1_match_count:
+        _kept: list[dict[str, Any]] = []
+        for _m in matches:
+            try:
+                _z = float(_m.get("redshift", float("nan")))
+            except Exception:
+                _z = float("nan")
+            if not np.isfinite(_z):
+                phase2_redshift_filtered += 1
+                continue
+            # Strict Phase-2 bounds
+            if (_z < float(zmin)) or (_z > float(zmax)):
+                phase2_redshift_filtered += 1
+                continue
+            _kept.append(_m)
+        if phase2_redshift_filtered:
+            _LOG.info(
+                "Phase 2: Filtered %d/%d Phase-1 matches outside strict redshift bounds "
+                "[%.6f, %.6f] before metrics/clustering",
+                phase2_redshift_filtered,
+                phase1_match_count,
+                float(zmin),
+                float(zmax),
+            )
+        matches = _kept
+    analysis_trace["phase1_match_count"] = int(phase1_match_count)
+    analysis_trace["phase2_redshift_filtered"] = int(phase2_redshift_filtered)
+    analysis_trace["phase2_match_count_after_redshift_filter"] = int(len(matches))
 
     # ============================================================================
     # PHASE-2 METRICS: overlap diagnostics (CCC + residual-noise), HLAP-CCC scoring, and sigma_z
@@ -2119,6 +2169,10 @@ def run_snid_analysis(
     except Exception:
         thresholded_matches = list(matches)
     
+    # Report the count that will actually go to clustering (after HLAP-CCC threshold filtering)
+    report_progress(f"✅ Correlation complete: {len(thresholded_matches)} matches found (passed HLAP-CCC threshold ≥{hlap_ccc_threshold:.2f})", 100)
+    _LOG.info(f"Phase 2: {len(matches)} matches after redshift filtering, {len(thresholded_matches)} matches above HLAP-CCC threshold (≥{hlap_ccc_threshold:.2f}) proceeding to clustering")
+    
     if len(matches) >= 1:  # Allow clustering with any number of matches
         try:
             from .cosmological_clustering import perform_direct_gmm_clustering
@@ -2133,6 +2187,9 @@ def run_snid_analysis(
                 verbose=verbose,
                 hlap_ccc_threshold=hlap_ccc_threshold,
                 use_weighted_gmm=bool(use_weighted_gmm),
+                # Defensive: ensure clustering cannot see out-of-bounds redshifts
+                zmin=float(zmin),
+                zmax=float(zmax),
                 # Wire progress so GUI can show incremental updates in Results & Clustering
                 progress_callback=(progress_callback if 'progress_callback' in locals() else None),
                 progress_min=90.0,
@@ -2233,7 +2290,7 @@ def run_snid_analysis(
             )
             
             _LOG.info(f"Cluster-aware subtype determination: {best_subtype} "
-                     f"(confidence: {subtype_confidence:.3f}, margin: {margin_over_second:.3f}, second: {second_best_subtype})")
+                     f"(margin: {margin_over_second:.3f}, second: {second_best_subtype})")
             
             # Create type determination result with cluster-based metrics
             type_determination = {
@@ -2509,13 +2566,13 @@ def run_snid_analysis(
             result.correlation = best_match['correlation'].get('correlation_full', np.array([]))
             result.redshift_axis = best_match['correlation'].get('z_axis_full', np.array([]))
         
-        # Type confidence: rely on cluster/top-5 penalized scoring and relative comparisons.
+        # Type confidence: removed - only using cluster/top-5 penalized scoring and relative comparisons.
         # Legacy confidence normalizations (/8, /6 and redshift_quality taxonomy) removed.
-        result.type_confidence = float(result.subtype_confidence) if np.isfinite(getattr(result, "subtype_confidence", 0.0)) else 0.0
+        result.type_confidence = 0.0
             
-        _LOG.info(f"Analysis complete: {result.consensus_type} (confidence: {result.type_confidence:.2f})")
+        _LOG.info(f"Analysis complete: {result.consensus_type}")
         result.success = True
-        report_progress(f"Analysis complete: {result.consensus_type} (confidence: {result.type_confidence:.2f})")
+        report_progress(f"Analysis complete: {result.consensus_type}")
     else:
         # No good matches
         result.r = 0.0
@@ -3018,7 +3075,6 @@ def run_snid(
                 _LOG.info(f"   {get_best_metric_name(result.best_matches[0])}: {get_best_metric_value(result.best_matches[0]):.2f}")
         except Exception:
             pass
-        _LOG.info(f"   Confidence: {result.type_confidence:.2f}")
     
     else:
         _LOG.error(f"[FAILED] NO GOOD MATCH FOUND")

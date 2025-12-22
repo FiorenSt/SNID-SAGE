@@ -221,7 +221,7 @@ Examples:
         "--hlap-ccc-threshold",
         dest="hlap_ccc_threshold",
         type=float,
-        default=0.45,
+        default=0.5,
         help="Minimum HLAP-CCC value required for clustering (HLAP-CCC: HLAP/(1−CCC))"
     )
     # Analysis options completed
@@ -1011,7 +1011,7 @@ def main(args: argparse.Namespace) -> int:
             phase1_peak_min_height=getattr(args, "phase1_peak_min_height", 0.3),
             phase1_peak_min_distance=getattr(args, "phase1_peak_min_distance", 3),
             lapmin=args.lapmin,
-                hlap_ccc_threshold=getattr(args, 'hlap_ccc_threshold', 0.45),
+                hlap_ccc_threshold=getattr(args, 'hlap_ccc_threshold', 0.5),
 
             forced_redshift=args.forced_redshift,
             max_output_templates=args.max_output_templates,

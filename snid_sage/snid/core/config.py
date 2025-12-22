@@ -55,7 +55,7 @@ class SNIDConfig:
     peak_window_size: int = 10
     lapmin: float = 0.3
     # Best-metric threshold for clustering (HLAP-CCC: HLAP/(1−CCC))
-    hlap_ccc_threshold: float = 0.45
+    hlap_ccc_threshold: float = 0.5
 
     forced_redshift: Optional[float] = None
     

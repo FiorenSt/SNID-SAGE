@@ -80,11 +80,8 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         # Ensure this dialog fully deletes its widgets when closed to avoid stale references
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
         
-        # Store input data (only clusters that pass the Q_cluster gate).
-        self.all_candidates = [
-            c for c in (clusters or [])
-            if isinstance(c, dict) and (c.get('is_valid_cluster', False) is True)
-        ]
+        # Store input data (do not gate/throw away clusters).
+        self.all_candidates = [c for c in (clusters or []) if isinstance(c, dict)]
         self.snid_result = snid_result
         self.callback = callback
         
@@ -96,14 +93,25 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self.automatic_best = None
         if hasattr(snid_result, 'clustering_results') and snid_result.clustering_results:
             self.automatic_best = snid_result.clustering_results.get('best_cluster')
-        # If the automatic best isn't explicitly valid, fall back to the best valid candidate.
-        if not (isinstance(self.automatic_best, dict) and (self.automatic_best.get('is_valid_cluster', False) is True)):
+        # If automatic best isn't a dict, fall back to first candidate.
+        if not isinstance(self.automatic_best, dict):
             self.automatic_best = None
         if not self.automatic_best and self.all_candidates:
             self.automatic_best = self.all_candidates[0]
         
         # Sort candidates by score
         self._sort_candidates()
+
+        # Special case: if ONLY Very Low clusters exist, show them by default
+        # (otherwise the user would see an empty 3D plot on open).
+        try:
+            has_any = bool(self.all_candidates)
+            has_non_very_low = any((not self._is_very_low(c)) for c in self.all_candidates)
+            has_very_low = any(self._is_very_low(c) for c in self.all_candidates)
+            if has_any and has_very_low and (not has_non_very_low):
+                self.show_very_low = True
+        except Exception:
+            pass
         
         # UI components
         self.cluster_dropdown = None
@@ -121,6 +129,12 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         # Cached type mapping for plots/highlights
         self._unique_types: Optional[List[str]] = None
         self._type_to_index: Optional[Dict[str, int]] = None
+
+        # Plot filter state: hide "Very Low" clusters by default (Q_cluster < 0.7)
+        self.show_very_low: bool = False
+        self._very_low_checkbox: Optional[QtWidgets.QCheckBox] = None
+        self._dropdown_index_to_candidate_index: List[Optional[int]] = []
+        self._candidate_index_to_dropdown_index: Dict[int, int] = {}
         
         # Validate matplotlib availability
         if not MATPLOTLIB_AVAILABLE:
@@ -178,6 +192,52 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
     # ------------------------------------------------------------------
     # Cluster helper utilities
     # ------------------------------------------------------------------
+    def _get_candidate_q_score(self, candidate: Dict[str, Any]) -> float:
+        """
+        Return the cluster quality score used as Q_cluster in the GUI.
+
+        Uses the same hierarchy as dropdown/sorting:
+        penalized_score → penalised_score → composite_score → mean_metric.
+        Returns NaN if missing/unparseable so it won't be treated as Very Low by default.
+        """
+        raw = (
+            candidate.get('penalized_score')
+            or candidate.get('penalised_score')  # British spelling safeguard
+            or candidate.get('composite_score')
+            or candidate.get('mean_metric')
+        )
+        if raw is None:
+            return float('nan')
+        try:
+            return float(raw)
+        except Exception:
+            return float('nan')
+
+    def _is_very_low(self, candidate: Dict[str, Any]) -> bool:
+        """Very Low is defined as Q_cluster < 0.7, matching backend thresholds."""
+        try:
+            q = self._get_candidate_q_score(candidate)
+            return bool(np.isfinite(q) and q < 0.7)
+        except Exception:
+            return False
+
+    def _position_very_low_checkbox(self) -> None:
+        """Pin the 'Show Very Low' checkbox to the top-right corner of the plot canvas."""
+        try:
+            if self.plot_widget is None or self._very_low_checkbox is None:
+                return
+            # A very small in-canvas margin; keep it almost in the corner.
+            margin_x = 3
+            margin_y = 0
+            cb = self._very_low_checkbox
+            cb.adjustSize()
+            x = max(margin_x, self.plot_widget.width() - cb.width() - margin_x)
+            y = margin_y
+            cb.move(x, y)
+            cb.raise_()
+        except Exception:
+            return
+
     def _get_cluster_display_redshift(self, candidate: Dict[str, Any]) -> float:
         """
         Get a robust display redshift for a cluster.
@@ -447,6 +507,47 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         
         # Add canvas to layout
         layout.addWidget(self.plot_widget)
+
+        # In-plot (in-canvas) toggle using Qt for consistent styling (top-right corner).
+        try:
+            self._very_low_checkbox = QtWidgets.QCheckBox("Show Very Low", self.plot_widget)
+            self._very_low_checkbox.setChecked(bool(self.show_very_low))
+            # Lightweight styling that matches the dialog's modern look
+            self._very_low_checkbox.setStyleSheet("""
+                QCheckBox {
+                    background: rgba(255, 255, 255, 230);
+                    border: 1px solid #cbd5e1;
+                    border-radius: 6px;
+                    padding: 4px 8px;
+                    color: #111827;
+                    font-weight: 600;
+                }
+                QCheckBox::indicator {
+                    width: 14px;
+                    height: 14px;
+                }
+            """)
+
+            def _on_checkbox_changed(state: int) -> None:
+                self.show_very_low = bool(state)
+                self._plot_clusters()
+
+            self._very_low_checkbox.stateChanged.connect(_on_checkbox_changed)
+
+            # Keep it pinned on resize
+            _orig_resize_event = self.plot_widget.resizeEvent
+
+            def _resize_event(evt):
+                try:
+                    if callable(_orig_resize_event):
+                        _orig_resize_event(evt)
+                finally:
+                    self._position_very_low_checkbox()
+
+            self.plot_widget.resizeEvent = _resize_event  # type: ignore[assignment]
+            self._position_very_low_checkbox()
+        except Exception as e:
+            _LOGGER.debug(f"Could not create Qt 'Show Very Low' checkbox overlay: {e}")
         
         # Connect matplotlib events for interactivity
         self.plot_widget.mpl_connect('pick_event', self._on_plot_pick)
@@ -506,7 +607,17 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
     def _populate_dropdown(self):
         """Populate the cluster dropdown"""
         self.cluster_dropdown.clear()
-        
+
+        self._dropdown_index_to_candidate_index = []
+        self._candidate_index_to_dropdown_index = {}
+
+        # Find where Very Low starts (first candidate with Q_cluster < 0.7)
+        very_low_start = None
+        for idx, cand in enumerate(self.all_candidates):
+            if self._is_very_low(cand):
+                very_low_start = idx
+                break
+
         for idx, candidate in enumerate(self.all_candidates):
             cluster_type = candidate.get('type', 'Unknown')
             size = len(candidate.get('matches', []))
@@ -528,11 +639,45 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
                 f"#{idx+1}: {cluster_type} "
                 f"({size} templates, z={z_val:.6f}, Q={quality:.1f}){best_mark}"
             )
+
+            # Insert a visual separator just before the first Very Low cluster entry.
+            if very_low_start is not None and idx == very_low_start and idx != 0:
+                try:
+                    header_text = "──────── Very Low clusters (Q<0.7) ────────"
+                    self.cluster_dropdown.addItem(header_text)
+                    header_combo_idx = self.cluster_dropdown.count() - 1
+                    self._dropdown_index_to_candidate_index.append(None)
+
+                    # Make it look like a section header (disabled, bold, shaded)
+                    try:
+                        model = self.cluster_dropdown.model()
+                        item = model.item(header_combo_idx)
+                        if item is not None:
+                            item.setEnabled(False)
+                            f = item.font()
+                            f.setBold(True)
+                            item.setFont(f)
+                            item.setForeground(QtGui.QBrush(QtGui.QColor("#475569")))  # slate-600
+                            item.setBackground(QtGui.QBrush(QtGui.QColor("#f1f5f9")))  # slate-100
+                    except Exception:
+                        pass
+
+                    # Extra visual separation line
+                    self.cluster_dropdown.insertSeparator(self.cluster_dropdown.count())
+                    self._dropdown_index_to_candidate_index.append(None)
+                except Exception:
+                    pass
+
             self.cluster_dropdown.addItem(item_text)
+            combo_idx = self.cluster_dropdown.count() - 1
+            self._dropdown_index_to_candidate_index.append(idx)
+            self._candidate_index_to_dropdown_index[idx] = combo_idx
         
         # Set current selection
         if self.selected_index >= 0:
-            self.cluster_dropdown.setCurrentIndex(self.selected_index)
+            dd_idx = self._candidate_index_to_dropdown_index.get(self.selected_index, -1)
+            if dd_idx >= 0:
+                self.cluster_dropdown.setCurrentIndex(dd_idx)
     
     def _plot_clusters(self):
         """Plot clusters with 3D scatter plot"""
@@ -548,9 +693,16 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self.ax.clear()
         self.scatter_plots.clear()
         self.scatter_to_index.clear()
-        
-        # Prepare and cache type mapping with consistent ordering
-        self._unique_types = sorted(list(set(c.get('type', 'Unknown') for c in self.all_candidates)))
+
+        # Filter candidates for plotting: hide "Very Low" by default unless toggled on.
+        plotted = []
+        for orig_idx, cand in enumerate(self.all_candidates):
+            if (not self.show_very_low) and self._is_very_low(cand):
+                continue
+            plotted.append((orig_idx, cand))
+
+        # Prepare and cache type mapping based on plotted candidates (keeps Type axis clean)
+        self._unique_types = sorted(list(set(c.get('type', 'Unknown') for _, c in plotted))) if plotted else []
         self._type_to_index = {sn_type: i for i, sn_type in enumerate(self._unique_types)}
         
         # Determine metric name (HLAP-CCC or HLAP)
@@ -562,7 +714,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
                     break
         
         # Plot all clusters with enhanced styling
-        for i, candidate in enumerate(self.all_candidates):
+        for i, candidate in plotted:
             candidate_redshifts, candidate_metrics = self._get_cluster_redshifts_and_metrics(candidate)
             if not candidate_redshifts:
                 continue
@@ -709,35 +861,41 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
     def _add_persistent_highlight(self, cluster_index):
         """Add persistent highlight for selected cluster"""
         try:
-            if 0 <= cluster_index < len(self.scatter_plots):
-                scatter, idx, candidate = self.scatter_plots[cluster_index]
-                
-                # Use the same helper logic as in _plot_clusters to get points
-                candidate_redshifts, candidate_metrics = self._get_cluster_redshifts_and_metrics(candidate)
-                if not candidate_redshifts:
-                    return
-                
-                # Reuse cached type-to-index mapping from last plot (fallback safely if missing)
-                if self._type_to_index is None:
-                    type_index = 0
-                else:
-                    type_index = self._type_to_index.get(candidate.get('type', 'Unknown'), 0)
-                candidate_type_indices = [type_index] * len(candidate_redshifts)
-                
-                # Add highlighted scatter with BLACK edges
-                # Add highlighted scatter with picking disabled (so picks map to the base scatter only)
-                highlight_scatter = self.ax.scatter(
-                    candidate_redshifts,
-                    candidate_type_indices,
-                    candidate_metrics,
-                    c=self.type_colors.get(candidate['type'], self.type_colors['Unknown']),
-                    s=40,
-                    alpha=1.0,
-                    edgecolors='black',
-                    linewidths=1.2,
-                    zorder=3,
-                    picker=False
-                )
+            # scatter_plots contains only *plotted* clusters; find by stored original index
+            candidate = None
+            for _scatter, idx, cand in self.scatter_plots:
+                if idx == cluster_index:
+                    candidate = cand
+                    break
+            if candidate is None:
+                return
+
+            # Use the same helper logic as in _plot_clusters to get points
+            candidate_redshifts, candidate_metrics = self._get_cluster_redshifts_and_metrics(candidate)
+            if not candidate_redshifts:
+                return
+
+            # Reuse cached type-to-index mapping from last plot (fallback safely if missing)
+            if self._type_to_index is None:
+                type_index = 0
+            else:
+                type_index = self._type_to_index.get(candidate.get('type', 'Unknown'), 0)
+            candidate_type_indices = [type_index] * len(candidate_redshifts)
+
+            # Add highlighted scatter with BLACK edges
+            # Add highlighted scatter with picking disabled (so picks map to the base scatter only)
+            self.ax.scatter(
+                candidate_redshifts,
+                candidate_type_indices,
+                candidate_metrics,
+                c=self.type_colors.get(candidate['type'], self.type_colors['Unknown']),
+                s=40,
+                alpha=1.0,
+                edgecolors='black',
+                linewidths=1.2,
+                zorder=3,
+                picker=False
+            )
                 
         except Exception as e:
             _LOGGER.debug(f"Error adding persistent highlight: {e}")
@@ -765,11 +923,21 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
     
     def _on_cluster_changed(self, index):
         """Handle cluster dropdown selection change"""
-        # Avoid reprocessing if the same index is selected again (prevents duplicate logs)
-        if index == self.selected_index:
+        try:
+            cand_idx = None
+            if 0 <= index < len(self._dropdown_index_to_candidate_index):
+                cand_idx = self._dropdown_index_to_candidate_index[index]
+            if cand_idx is None:
+                return
+
+            # Avoid reprocessing if the same cluster is selected again (prevents duplicate logs)
+            if cand_idx == self.selected_index:
+                return
+
+            if 0 <= cand_idx < len(self.all_candidates):
+                self._select_cluster(cand_idx)
+        except Exception:
             return
-        if 0 <= index < len(self.all_candidates):
-            self._select_cluster(index)
     
     def _select_cluster(self, cluster_index):
         """Select a cluster and update UI"""
@@ -782,12 +950,14 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
             self.selected_index = cluster_index
 
             # Update dropdown without emitting signals to avoid recursive selection
-            if self.cluster_dropdown is not None and self.cluster_dropdown.currentIndex() != cluster_index:
-                was_blocked = self.cluster_dropdown.blockSignals(True)
-                try:
-                    self.cluster_dropdown.setCurrentIndex(cluster_index)
-                finally:
-                    self.cluster_dropdown.blockSignals(was_blocked)
+            if self.cluster_dropdown is not None:
+                dd_idx = self._candidate_index_to_dropdown_index.get(cluster_index, -1)
+                if dd_idx >= 0 and self.cluster_dropdown.currentIndex() != dd_idx:
+                    was_blocked = self.cluster_dropdown.blockSignals(True)
+                    try:
+                        self.cluster_dropdown.setCurrentIndex(dd_idx)
+                    finally:
+                        self.cluster_dropdown.blockSignals(was_blocked)
 
             # Clear and add highlights
             if MATPLOTLIB_AVAILABLE:

@@ -116,7 +116,7 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
             'age_min': -9999,  # Default minimum age (shows "No minimum")
             'age_max': 9999,   # Default maximum age (shows "No maximum") 
             'lapmin': 0.3,
-            'hlap_ccc_threshold': 0.4,  # HLAP-CCC threshold for clustering
+            'hlap_ccc_threshold': 0.5,  # HLAP-CCC threshold for clustering
             'max_output_templates': 10,
             
             
@@ -393,9 +393,9 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
         self.widgets['lapmin'].setToolTip("Minimum overlap fraction required between spectrum and template (any precision)")
         correlation_layout.addRow("Minimum Overlap (lapmin):", self.widgets['lapmin'])
         
-        self.widgets['hlap_ccc_threshold'] = create_flexible_double_input(min_val=0.0, max_val=50.0, default=0.45)
+        self.widgets['hlap_ccc_threshold'] = create_flexible_double_input(min_val=0.0, max_val=50.0, default=0.5)
         self.widgets['hlap_ccc_threshold'].setToolTip(
-            "Minimum best-metric value required for clustering (HLAP-CCC: HLAP/(1−CCC), default: 0.45, any precision)"
+            "Minimum best-metric value required for clustering (HLAP-CCC: HLAP/(1−CCC), default: 0.5, any precision)"
         )
         correlation_layout.addRow("HLAP-CCC Clustering Threshold:", self.widgets['hlap_ccc_threshold'])
         

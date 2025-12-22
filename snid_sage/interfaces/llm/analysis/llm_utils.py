@@ -92,6 +92,9 @@ def build_enhanced_context(snid_results: Union[Dict[str, Any], Any],
                     enhanced_redshift = best_cluster.get('weighted_mean_redshift', 0)
                     redshift_span = best_cluster.get('redshift_span', 0)
                     cluster_matches = best_cluster.get('matches', [])
+                    # Extract pipeline-computed quality and confidence assessments
+                    quality_assessment = best_cluster.get('quality_assessment', {})
+                    confidence_assessment = best_cluster.get('confidence_assessment', {})
                 else:
                     # Handle as object with attributes
                     cluster_type = getattr(best_cluster, 'type', 'Unknown')
@@ -101,6 +104,23 @@ def build_enhanced_context(snid_results: Union[Dict[str, Any], Any],
                     enhanced_redshift = getattr(best_cluster, 'weighted_mean_redshift', 0)
                     redshift_span = getattr(best_cluster, 'redshift_span', 0)
                     cluster_matches = getattr(best_cluster, 'matches', [])
+                    # Extract pipeline-computed quality and confidence assessments
+                    quality_assessment = getattr(best_cluster, 'quality_assessment', {})
+                    confidence_assessment = getattr(best_cluster, 'confidence_assessment', {})
+                
+                # Handle quality_assessment and confidence_assessment as dict or object
+                if not isinstance(quality_assessment, dict):
+                    quality_assessment = {
+                        'quality_category': getattr(quality_assessment, 'quality_category', ''),
+                        'quality_description': getattr(quality_assessment, 'quality_description', ''),
+                        'penalized_score': getattr(quality_assessment, 'penalized_score', 0.0),
+                    } if quality_assessment else {}
+                if not isinstance(confidence_assessment, dict):
+                    confidence_assessment = {
+                        'confidence_level': getattr(confidence_assessment, 'confidence_level', ''),
+                        'confidence_pct': getattr(confidence_assessment, 'confidence_pct', None),
+                        'confidence_description': getattr(confidence_assessment, 'confidence_description', ''),
+                    } if confidence_assessment else {}
                 
                 context['clustering_analysis'] = {
                     'method': 'top5_hlap_ccc_gmm',
@@ -112,6 +132,11 @@ def build_enhanced_context(snid_results: Union[Dict[str, Any], Any],
                         'top_5_mean': top_5_mean,
                         'enhanced_redshift': enhanced_redshift,
                         'redshift_span': redshift_span,
+                        # Use pipeline-computed quality and confidence
+                        'quality_category': quality_assessment.get('quality_category', ''),
+                        'quality_description': quality_assessment.get('quality_description', ''),
+                        'confidence_level': confidence_assessment.get('confidence_level', ''),
+                        'confidence_pct': confidence_assessment.get('confidence_pct', None),
                     },
                     'n_types_clustered': n_types_clustered,
                     'total_candidates': total_candidates,
@@ -302,8 +327,7 @@ def _extract_template_info(template: Dict) -> Dict[str, Any]:
             'age': template.get('age', 0.0),
             'lap_score': template.get('lap', 0.0),
             'metric_score': template.get('hlap_1mccc', template.get('hlap_ccc', template.get('hlap', 0.0))),
-            'grade': template.get('grade', ''),
-            'confidence_assessment': _assess_match_confidence(template)
+            'grade': template.get('grade', '')
         }
     else:
         # Handle as object with attributes
@@ -316,29 +340,8 @@ def _extract_template_info(template: Dict) -> Dict[str, Any]:
             'age': getattr(template, 'age', 0.0),
             'lap_score': getattr(template, 'lap', 0.0),
             'metric_score': getattr(template, 'hlap_1mccc', getattr(template, 'hlap_ccc', getattr(template, 'hlap', 0.0))),
-            'grade': getattr(template, 'grade', ''),
-            'confidence_assessment': _assess_match_confidence(template)
+            'grade': getattr(template, 'grade', '')
         }
-
-def _assess_match_confidence(template: Dict) -> str:
-    """Assess confidence level of template match."""
-    # Handle template as either dict or object
-    if isinstance(template, dict):
-        metric = template.get('hlap_1mccc', template.get('hlap_ccc', template.get('hlap', 0.0)))
-        lap = template.get('lap', 0.0)
-    else:
-        metric = getattr(template, 'hlap_1mccc', getattr(template, 'hlap_ccc', getattr(template, 'hlap', 0.0)))
-        lap = getattr(template, 'lap', 0.0)
-    
-    # Heuristic labels for LLM (consistent with pipeline match quality cutoffs)
-    if metric > 2.5 and lap > 0.5:
-        return 'High'
-    elif metric >= 1.0 and lap > 0.3:
-        return 'Moderate'
-    elif metric >= 0.6:
-        return 'Low'
-    else:
-        return 'Very Low'
 
 def _calculate_match_statistics(templates: List[Dict]) -> Dict[str, Any]:
     """Calculate statistics across template matches."""
@@ -430,14 +433,51 @@ def _check_redshift_consistency(templates: List[Dict]) -> Dict[str, Any]:
     }
 
 def _assess_analysis_quality(snid_results: Dict) -> Dict[str, Any]:
-    """Assess overall quality of the SNID-SAGE analysis."""
+    """
+    Assess overall quality of the SNID-SAGE analysis.
+    
+    Prefers pipeline-computed quality categories from cluster analysis.
+    Falls back to basic checks if no cluster data available.
+    """
     quality = {
         'template_database_coverage': 'good',  # Assume good coverage
         'correlation_quality': 'unknown',
         'potential_issues': []
     }
     
-    # Check for potential issues
+    # Try to get pipeline-computed quality from cluster analysis
+    result = snid_results.get('result') if isinstance(snid_results, dict) else snid_results
+    if result and hasattr(result, 'clustering_results') and result.clustering_results:
+        clustering_results = result.clustering_results
+        if isinstance(clustering_results, dict):
+            best_cluster = clustering_results.get('best_cluster', {})
+        else:
+            best_cluster = getattr(clustering_results, 'best_cluster', {})
+        
+        if best_cluster:
+            # Extract pipeline-computed quality assessment
+            if isinstance(best_cluster, dict):
+                quality_assessment = best_cluster.get('quality_assessment', {})
+            else:
+                quality_assessment = getattr(best_cluster, 'quality_assessment', {})
+            
+            if quality_assessment:
+                if not isinstance(quality_assessment, dict):
+                    quality_category = getattr(quality_assessment, 'quality_category', '')
+                    quality_description = getattr(quality_assessment, 'quality_description', '')
+                else:
+                    quality_category = quality_assessment.get('quality_category', '')
+                    quality_description = quality_assessment.get('quality_description', '')
+                
+                if quality_category:
+                    quality['correlation_quality'] = quality_category
+                    quality['quality_description'] = quality_description
+                    # Add potential issues based on quality category
+                    if quality_category in ['Very Low', 'Low']:
+                        quality['potential_issues'].append(f'Low match quality: {quality_description}')
+                    return quality
+    
+    # Fallback: basic checks if no cluster data
     if 'templates' in snid_results and snid_results['templates']:
         best_match = snid_results['templates'][0]
         
@@ -449,7 +489,7 @@ def _assess_analysis_quality(snid_results: Dict) -> Dict[str, Any]:
             metric = getattr(best_match, 'hlap_1mccc', getattr(best_match, 'hlap_ccc', getattr(best_match, 'hlap', 0.0)))
             zerr = getattr(best_match, 'zerr', 1)
         
-        if float(metric) < 0.6:
+        if float(metric) < 0.7:
             quality['potential_issues'].append('Low correlation score - weak match')
         if zerr > 0.1:
             quality['potential_issues'].append('Large redshift uncertainty')
@@ -560,10 +600,51 @@ def analyse_spectrum_advanced(snid_results: Union[Dict, Any]) -> Optional[Dict]:
 
     # Enhanced template analysis
     if templates:
+        # Try to get cluster confidence level from result if available
+        cluster_confidence_level = None
+        if hasattr(snid_results, 'clustering_results') and snid_results.clustering_results:
+            clustering_results = snid_results.clustering_results
+            if isinstance(clustering_results, dict):
+                best_cluster = clustering_results.get('best_cluster', {})
+            else:
+                best_cluster = getattr(clustering_results, 'best_cluster', {})
+            
+            if best_cluster:
+                if isinstance(best_cluster, dict):
+                    confidence_assessment = best_cluster.get('confidence_assessment', {})
+                else:
+                    confidence_assessment = getattr(best_cluster, 'confidence_assessment', {})
+                
+                if confidence_assessment:
+                    if not isinstance(confidence_assessment, dict):
+                        cluster_confidence_level = getattr(confidence_assessment, 'confidence_level', None)
+                    else:
+                        cluster_confidence_level = confidence_assessment.get('confidence_level', None)
+        elif isinstance(snid_results, dict) and 'result' in snid_results:
+            result = snid_results['result']
+            if hasattr(result, 'clustering_results') and result.clustering_results:
+                clustering_results = result.clustering_results
+                if isinstance(clustering_results, dict):
+                    best_cluster = clustering_results.get('best_cluster', {})
+                else:
+                    best_cluster = getattr(clustering_results, 'best_cluster', {})
+                
+                if best_cluster:
+                    if isinstance(best_cluster, dict):
+                        confidence_assessment = best_cluster.get('confidence_assessment', {})
+                    else:
+                        confidence_assessment = getattr(best_cluster, 'confidence_assessment', {})
+                    
+                    if confidence_assessment:
+                        if not isinstance(confidence_assessment, dict):
+                            cluster_confidence_level = getattr(confidence_assessment, 'confidence_level', None)
+                        else:
+                            cluster_confidence_level = confidence_assessment.get('confidence_level', None)
+        
         analysis['template_analysis'] = {
             'best_match': _extract_template_info(templates[0]),
             'consistency_check': _calculate_match_statistics(templates),
-            'classification_confidence': _assess_classification_confidence(templates)
+            'classification_confidence': _assess_classification_confidence(templates, cluster_confidence_level)
         }
 
     # Flat spectrum analysis if available
@@ -589,8 +670,17 @@ def analyse_spectrum_advanced(snid_results: Union[Dict, Any]) -> Optional[Dict]:
 
     return analysis 
 
-def _assess_classification_confidence(templates: List[Dict]) -> str:
-    """Assess overall classification confidence based on template matches."""
+def _assess_classification_confidence(templates: List[Dict], cluster_confidence_level: Optional[str] = None) -> str:
+    """
+    Assess overall classification confidence based on template matches.
+    
+    Prefers the pipeline-computed cluster confidence level if available.
+    Falls back to heuristic assessment based on template metrics if no cluster data.
+    """
+    # Use pipeline-computed confidence if available
+    if cluster_confidence_level:
+        return cluster_confidence_level
+    
     if not templates:
         return 'no_data'
     
@@ -606,11 +696,12 @@ def _assess_classification_confidence(templates: List[Dict]) -> str:
     type_consistency = _check_type_consistency(templates)
     redshift_consistency = _check_redshift_consistency(templates)
     
-    if float(metric) > 2.5 and type_consistency and redshift_consistency.get('consistent', False):
+    # Fallback heuristic (not the official quality category - that comes from cluster)
+    if float(metric) > 2.0 and type_consistency and redshift_consistency.get('consistent', False):
         return 'High'
     elif float(metric) >= 1.0 and type_consistency:
         return 'Moderate'
-    elif float(metric) >= 0.6:
+    elif float(metric) >= 0.7:
         return 'Low'
     else:
         return 'Very Low'

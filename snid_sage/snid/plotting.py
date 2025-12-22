@@ -1130,7 +1130,7 @@ def plot_redshift_age(result: Any, figsize: Tuple[int, int] = (8, 6),
     if not clustering_ok:
         try:
             from snid_sage.shared.utils.math_utils import get_best_metric_value
-            threshold = float(getattr(result, 'hlap_ccc_threshold', 0.45))
+            threshold = float(getattr(result, 'hlap_ccc_threshold', 0.5))
             matches = [m for m in matches if float(get_best_metric_value(m)) >= threshold]
         except Exception:
             threshold = None
@@ -2382,6 +2382,15 @@ def plot_cluster_subtype_proportions(result: Any, selected_cluster: Dict[str, An
                 for subtype in subtype_proportions_by_threshold:
                     subtype_proportions_by_threshold[subtype].append(0)
         
+        # Get the actual metric name from the matches
+        metric_name = "HLAP"
+        if cluster_matches:
+            try:
+                from snid_sage.shared.utils.math_utils import get_best_metric_name
+                metric_name = get_best_metric_name(cluster_matches[0])
+            except Exception:
+                pass
+        
         # Plot lines for each subtype using consistent colors from pie chart
         for subtype, proportions in subtype_proportions_by_threshold.items():
             if any(p > 0 for p in proportions):  # Only plot if subtype has non-zero proportions
@@ -2390,7 +2399,7 @@ def plot_cluster_subtype_proportions(result: Any, selected_cluster: Dict[str, An
                 ax3.plot(metric_thresholds, proportions, 'o-', label=subtype, 
                         color=color, linewidth=2, markersize=6)
         
-        ax3.set_xlabel('Best-metric Threshold', fontsize=PLOT_AXIS_LABEL_FONTSIZE)
+        ax3.set_xlabel(f'{metric_name} Threshold', fontsize=PLOT_AXIS_LABEL_FONTSIZE)
         ax3.set_ylabel('Subtype Proportion', fontsize=PLOT_AXIS_LABEL_FONTSIZE)
         ax3.grid(True, alpha=0.3)
         ax3.legend(loc='center right', frameon=True, fontsize=PLOT_LEGEND_FONTSIZE)
@@ -2417,8 +2426,14 @@ def plot_cluster_subtype_proportions(result: Any, selected_cluster: Dict[str, An
     
     # Explicitly set font sizes for the subtype plot (ax3) to override theme defaults
     if cluster_matches and len(set(subtype_counts.keys())) > 1:
-        ax3.set_xlabel('Metric Threshold', fontsize=PLOT_AXIS_LABEL_FONTSIZE)
-        ax3.set_xlabel('Metric Threshold', fontsize=PLOT_AXIS_LABEL_FONTSIZE)
+        # Get the actual metric name from the matches
+        metric_name = "HLAP"
+        try:
+            from snid_sage.shared.utils.math_utils import get_best_metric_name
+            metric_name = get_best_metric_name(cluster_matches[0])
+        except Exception:
+            pass
+        ax3.set_xlabel(f'{metric_name} Threshold', fontsize=PLOT_AXIS_LABEL_FONTSIZE)
         ax3.set_ylabel('Subtype Proportion', fontsize=PLOT_AXIS_LABEL_FONTSIZE)
         ax3.tick_params(axis='both', labelsize=PLOT_TICK_FONTSIZE)  # Set tick label size
     

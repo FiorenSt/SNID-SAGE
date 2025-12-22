@@ -441,8 +441,15 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
             return
         
         try:
-            # Extract all template matches from analysis results
-            if hasattr(self.analysis_results, 'best_matches'):
+            # Extract template matches from analysis results.
+            #
+            # For parity with the core pipeline (CLI + GUI main analysis), prefer:
+            # 1) all_matches (full post-phase-2-gating list)
+            # 2) best_matches (top-N display list)
+            # 3) filtered_matches / top_matches as fallbacks
+            if hasattr(self.analysis_results, 'all_matches') and isinstance(self.analysis_results.all_matches, list) and self.analysis_results.all_matches:
+                self.all_matches = self.analysis_results.all_matches
+            elif hasattr(self.analysis_results, 'best_matches') and isinstance(self.analysis_results.best_matches, list):
                 self.all_matches = self.analysis_results.best_matches
             elif hasattr(self.analysis_results, 'clusters') and self.analysis_results.clusters:
                 # If we have clusters, extract matches from all clusters
@@ -450,6 +457,10 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
                 for cluster in self.analysis_results.clusters:
                     if 'matches' in cluster:
                         self.all_matches.extend(cluster['matches'])
+            elif hasattr(self.analysis_results, 'filtered_matches') and isinstance(self.analysis_results.filtered_matches, list) and self.analysis_results.filtered_matches:
+                self.all_matches = self.analysis_results.filtered_matches
+            elif hasattr(self.analysis_results, 'top_matches') and isinstance(self.analysis_results.top_matches, list) and self.analysis_results.top_matches:
+                self.all_matches = self.analysis_results.top_matches
             else:
                 _LOGGER.warning("No template matches found in analysis results")
                 return
@@ -462,12 +473,27 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
             if GMM_AVAILABLE and len(self.all_matches) >= 1:  # Allow clustering with any matches
                 _LOGGER.info(f"Running GMM clustering on {len(self.all_matches)} template matches")
                 
+                # Use the same threshold/bounds as the pipeline when available
+                try:
+                    thr = float(getattr(self.analysis_results, "hlap_ccc_threshold", 0.5) or 0.5)
+                except Exception:
+                    thr = 0.5
+                try:
+                    zmin_used = getattr(self.analysis_results, "zmin_used", None)
+                    zmax_used = getattr(self.analysis_results, "zmax_used", None)
+                    zmin_used = float(zmin_used) if zmin_used is not None else None
+                    zmax_used = float(zmax_used) if zmax_used is not None else None
+                except Exception:
+                    zmin_used, zmax_used = None, None
+
                 self.clustering_results = perform_direct_gmm_clustering(
                     matches=self.all_matches,
                     min_matches_per_type=1,  # Accept any type with at least 1 match
                     max_clusters_per_type=10,
                     verbose=True,
-                    hlap_ccc_threshold=0.45  # Default HLAP-CCC threshold
+                    hlap_ccc_threshold=thr,
+                    zmin=zmin_used,
+                    zmax=zmax_used,
                 )
                 
                 # If clustering failed (e.g., too few/weak survivors), create a weak fallback so UI can still render
@@ -558,10 +584,10 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
             )
             return
         
-        # Only consider clusters explicitly marked valid; invalid clusters are treated as non-existent.
+        # Do not gate/throw away clusters in the UI.
         clusters = [
             c for c in (self.clustering_results.get('clusters', []) or [])
-            if isinstance(c, dict) and (c.get('is_valid_cluster', False) is True)
+            if isinstance(c, dict)
         ]
         winning_cluster = self.clustering_results.get('winning_cluster')
         method = self.clustering_results.get('method', 'direct_gmm')
@@ -757,11 +783,8 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
                 or []
             )
 
-            # Filter out disqualified clusters so they never appear in the 3D plot.
-            clusters = [
-                c for c in clusters
-                if isinstance(c, dict) and (c.get('is_valid_cluster', False) is True)
-            ]
+            # Do not gate/throw away clusters in the 3D plot.
+            clusters = [c for c in clusters if isinstance(c, dict)]
             
             if not clusters:
                 self.ax.text(0.5, 0.5, 0.5, 'No clustering data available', 
@@ -948,14 +971,14 @@ Please try running the analysis again or check the logs for more details.
                     'total_matches': len(self.all_matches),
                     'num_clusters': len([
                         c for c in (self.clustering_results.get('clusters', []) or [])
-                        if isinstance(c, dict) and (c.get('is_valid_cluster', False) is True)
+                        if isinstance(c, dict)
                     ]),
                     'clusters': []
                 }
                 
                 for cluster in [
                     c for c in (self.clustering_results.get('clusters', []) or [])
-                    if isinstance(c, dict) and (c.get('is_valid_cluster', False) is True)
+                    if isinstance(c, dict)
                 ]:
                     cluster_data = {
                         'cluster_id': cluster.get('cluster_id', -1),

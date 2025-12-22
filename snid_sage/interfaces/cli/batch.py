@@ -536,7 +536,7 @@ def process_single_spectrum_optimized(
             template_filter=getattr(args, 'template_filter', None),
             exclude_templates=getattr(args, 'exclude_templates', None),
             lapmin=getattr(args, 'lapmin', 0.3),
-            hlap_ccc_threshold=getattr(args, 'hlap_ccc_threshold', 0.45),
+            hlap_ccc_threshold=getattr(args, 'hlap_ccc_threshold', 0.5),
             phase1_peak_min_height=getattr(args, "phase1_peak_min_height", 0.3),
             phase1_peak_min_distance=getattr(args, "phase1_peak_min_distance", 3),
             forced_redshift=used_forced_redshift,
@@ -946,30 +946,24 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                     summary['winning_subtype_age'] = age_mean
                     summary['winning_subtype_age_err'] = age_err
 
-                # Penalized score for winning subtype (mean of top-5, weighted by metric^2/sigma^2) × (n_top/5)
+                # Penalized score for winning subtype:
+                # Q = mean(top-5 best metric values) × (N_top/5). No uncertainty weighting.
                 if metrics:
                     import numpy as _np
-                    from snid_sage.shared.utils.math_utils import compute_cluster_weights
                     mets_arr = _np.array(metrics, dtype=float)
                     sigmas_arr = _np.array([e if (e is not None and _np.isfinite(e) and e > 0) else _np.nan for e in z_errs], dtype=float)
                     if mets_arr.size:
                         top_idx = _np.argsort(-mets_arr)[:5]
                         top_metrics = mets_arr[top_idx]
                         top_sigmas = sigmas_arr[top_idx]
-                        valid_mask = _np.isfinite(top_metrics) & _np.isfinite(top_sigmas) & (top_sigmas > 0)
-                        if _np.any(valid_mask):
-                            weights = compute_cluster_weights(top_metrics[valid_mask], top_sigmas[valid_mask])
-                            sum_w = _np.sum(weights)
-                            mean_top = float(_np.sum(weights * top_metrics[valid_mask]) / sum_w) if sum_w > 0 else float(_np.mean(top_metrics))
-                        else:
-                            mean_top = float(_np.mean(top_metrics))
+                        finite_top = _np.isfinite(top_metrics)
+                        mean_top = float(_np.mean(top_metrics[finite_top])) if _np.any(finite_top) else 0.0
                         penalty_factor = min(top_metrics.size / 5.0, 1.0)
                         summary['winning_subtype_penalized_score'] = float(mean_top * penalty_factor)
 
                 # Compute penalized scores for all subtypes within the winning type to derive qualitative confidence
                 try:
                     import numpy as _np
-                    from snid_sage.shared.utils.math_utils import compute_cluster_weights
                     subtype_scores: Dict[str, float] = {}
                     for st, agg in by_subtype.items():
                         mets = _np.asarray(agg['metrics'], dtype=float)
@@ -980,13 +974,8 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                         top_idx = _np.argsort(-mets)[:5]
                         top_m = mets[top_idx]
                         top_s = sigs[top_idx]
-                        valid = _np.isfinite(top_m) & _np.isfinite(top_s) & (top_s > 0)
-                        if _np.any(valid):
-                            w = compute_cluster_weights(top_m[valid], top_s[valid])
-                            sw = _np.sum(w)
-                            mean_top = float(_np.sum(w * top_m[valid]) / sw) if sw > 0 else float(_np.mean(top_m))
-                        else:
-                            mean_top = float(_np.mean(top_m))
+                        finite_top = _np.isfinite(top_m)
+                        mean_top = float(_np.mean(top_m[finite_top])) if _np.any(finite_top) else 0.0
                         penalty = min(top_m.size / 5.0, 1.0)
                         subtype_scores[st] = float(mean_top * penalty)
                     # Winner and runner-up within same type
@@ -1055,7 +1044,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
         summary['cluster_method'] = 'No clustering'
         # Compute a type-level match quality from Q
         try:
-            from snid_sage.shared.utils.math_utils import get_best_metric_value, compute_cluster_weights
+            from snid_sage.shared.utils.math_utils import get_best_metric_value
             active = []
             # Use filtered_matches if available; else best_matches
             if hasattr(result, 'filtered_matches') and result.filtered_matches:
@@ -1075,23 +1064,18 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 import numpy as _np
                 mets = _np.asarray([p[0] for p in top], dtype=float)
                 sigs = _np.asarray([p[1] for p in top], dtype=float)
-                valid = _np.isfinite(mets) & _np.isfinite(sigs) & (sigs > 0)
-                if _np.any(valid):
-                    weights = compute_cluster_weights(mets[valid], sigs[valid])
-                    sw = _np.sum(weights)
-                    mean_top = float(_np.sum(weights * mets[valid]) / sw) if sw > 0 else float(_np.mean(mets))
-                else:
-                    mean_top = float(_np.mean(mets)) if mets.size else 0.0
+                finite_mets = _np.isfinite(mets)
+                mean_top = float(_np.mean(mets[finite_mets])) if _np.any(finite_mets) else 0.0
                 penalty = min(mets.size / 5.0, 1.0) if mets.size else 0.0
                 penalized = mean_top * penalty
                 summary['cluster_penalized_score'] = penalized
-                if penalized > 2.5:
+                if penalized > 2.0:
                     summary['cluster_quality_category'] = 'High'
                     summary['cluster_quality_description'] = f'Excellent match quality (HLAP-CCC: {penalized:.2f})'
                 elif penalized >= 1.0:
                     summary['cluster_quality_category'] = 'Medium'
                     summary['cluster_quality_description'] = f'Good match quality (HLAP-CCC: {penalized:.2f})'
-                elif penalized >= 0.6:
+                elif penalized >= 0.7:
                     summary['cluster_quality_category'] = 'Low'
                     summary['cluster_quality_description'] = f'Poor match quality (HLAP-CCC: {penalized:.2f})'
                 else:
@@ -1408,7 +1392,7 @@ Examples:
         "--hlap-ccc-threshold",
         dest="hlap_ccc_threshold",
         type=float,
-        default=0.45,
+        default=0.5,
         help="Minimum HLAP-CCC value required for clustering (HLAP-CCC: HLAP/(1−CCC))"
     )
     analysis_group.add_argument(
@@ -2363,7 +2347,7 @@ def main(args: argparse.Namespace) -> int:
                 'age_min': getattr(args, 'age_min', None),
                 'age_max': getattr(args, 'age_max', None),
                 'lapmin': float(getattr(args, 'lapmin', 0.3)),
-                'hlap_ccc_threshold': float(getattr(args, 'hlap_ccc_threshold', 0.45)),
+                'hlap_ccc_threshold': float(getattr(args, 'hlap_ccc_threshold', 0.5)),
                 'forced_redshift': getattr(args, 'forced_redshift', None),
                 'type_filter': getattr(args, 'type_filter', None),
                 'template_filter': getattr(args, 'template_filter', None),

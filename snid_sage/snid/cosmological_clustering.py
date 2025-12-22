@@ -225,12 +225,16 @@ def perform_direct_gmm_clustering(
     min_matches_per_type: int = 2,
     max_clusters_per_type: int = 10,
     verbose: bool = False,
-    hlap_ccc_threshold: float = 0.45,  # Best-metric threshold for clustering (HLAP-CCC)
+    hlap_ccc_threshold: float = 0.5,  # Best-metric threshold for clustering (HLAP-CCC)
     use_weighted_gmm: Optional[bool] = None,  # Hidden option: when True, use weighted GMM + weighted BIC
     # Optional progress reporting (message, percent). If provided, emit per-type updates.
     progress_callback: Optional[Callable[[str, float], None]] = None,
     progress_min: float = 90.0,
-    progress_max: float = 98.0
+    progress_max: float = 98.0,
+    # Optional strict redshift gating (defense-in-depth). When provided, matches outside
+    # [zmin, zmax] are excluded BEFORE metric-threshold filtering and clustering.
+    zmin: Optional[float] = None,
+    zmax: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     Direct GMM clustering on redshift values with automatic best metric selection.
@@ -286,13 +290,46 @@ def perform_direct_gmm_clustering(
     
     _LOGGER.info(f"🔄 Starting direct GMM {metric_name} clustering")
     _LOGGER.info(f"🎯 HLAP-CCC threshold: {hlap_ccc_threshold:.2f} (matches below this are excluded from clustering)")
+
+    # ---------------------------------------------------------------------
+    # Optional strict redshift gating
+    # ---------------------------------------------------------------------
+    gated_matches = matches
+    try:
+        zlo = float(zmin) if zmin is not None else float("-inf")
+        zhi = float(zmax) if zmax is not None else float("inf")
+        if np.isfinite(zlo) or np.isfinite(zhi):
+            tmp: List[Dict[str, Any]] = []
+            excluded_z = 0
+            for m in matches:
+                try:
+                    zz = float(m.get("redshift", float("nan")))
+                except Exception:
+                    zz = float("nan")
+                if not np.isfinite(zz):
+                    excluded_z += 1
+                    continue
+                if (zz < zlo) or (zz > zhi):
+                    excluded_z += 1
+                    continue
+                tmp.append(m)
+            gated_matches = tmp
+            if excluded_z > 0:
+                _LOGGER.info(
+                    "🙅 Filtered out %d matches outside strict redshift bounds [%.6f, %.6f] before clustering",
+                    int(excluded_z),
+                    float(zlo),
+                    float(zhi),
+                )
+    except Exception:
+        gated_matches = matches
     
     # Filter matches by best-metric threshold before grouping
     from snid_sage.shared.utils.math_utils import get_best_metric_value
     filtered_matches = []
     excluded_count = 0
     
-    for match in matches:
+    for match in gated_matches:
         metric_value = get_best_metric_value(match)
         if metric_value >= hlap_ccc_threshold:
             filtered_matches.append(match)
@@ -458,7 +495,7 @@ def perform_direct_gmm_clustering(
                         
                         if verbose:
                             _LOGGER.info(f"  Cluster {cluster_id} subtypes: {best_subtype} "
-                                        f"(confidence: {subtype_confidence:.3f}, margin: {subtype_margin_over_second:.3f}, second: {second_best_subtype})")
+                                        f"(margin: {subtype_margin_over_second:.3f}, second: {second_best_subtype})")
                             
                             if not np.isnan(subtype_redshift) and not np.isnan(subtype_age):
                                 _LOGGER.info(f"  Subtype {best_subtype} joint estimates: z={subtype_redshift:.6f}±{subtype_redshift_err:.6f}, "
@@ -522,7 +559,7 @@ def perform_direct_gmm_clustering(
         _LOGGER.info("No valid clusters found")
         return {'success': False, 'reason': 'no_clusters'}
     
-    # Select best cluster (top-5 penalized score) and apply cluster validity gate.
+    # Select best cluster (top-5 penalized score). Do not gate/throw away clusters.
     best_cluster, quality_assessment = find_winning_cluster_top5_method(
         all_cluster_candidates,
         hlap_ccc_threshold=float(hlap_ccc_threshold),
@@ -533,11 +570,8 @@ def perform_direct_gmm_clustering(
         _LOGGER.warning("New cluster selection method failed")
         return {'success': False, 'reason': 'cluster_selection_failed'}
 
-    # Expose only clusters that pass the Q_cluster gate.
-    valid_candidates = [
-        c for c in all_cluster_candidates
-        if isinstance(c, dict) and (c.get('is_valid_cluster', False) is True)
-    ]
+    # Expose all cluster candidates (no Q_cluster gate).
+    valid_candidates = [c for c in all_cluster_candidates if isinstance(c, dict)]
     
     # Update the best cluster with new quality metrics
     best_cluster['quality_assessment'] = quality_assessment['quality_assessment']
@@ -922,7 +956,7 @@ def choose_subtype_weighted_voting(
         resp_cut: Minimum responsibility threshold
     
     Returns:
-        tuple: (best_subtype, confidence, margin_over_second, second_best_subtype)
+        tuple: (best_subtype, confidence (always 0.0), margin_over_second, second_best_subtype)
     """
     
     # Collect cluster members
@@ -973,7 +1007,9 @@ def choose_subtype_weighted_voting(
     for member in cluster_members:
         subtype_groups[member['subtype']].append(member)
     
-    # Calculate top-5 weighted mean for each subtype using weights w = metric^2 / sigma_z^2
+    # Calculate top-5 mean for each subtype using the SAME scoring rule as cluster selection:
+    # simple mean of the top-5 best-metric values, with a linear penalty when fewer than 5
+    # templates are available. No uncertainty-based weighting is used for Q_cluster.
     subtype_scores = {}
     for subtype, members in subtype_groups.items():
         # Sort by metric value (best available) descending
@@ -982,22 +1018,10 @@ def choose_subtype_weighted_voting(
         # Take top 5 (or all if less than 5)
         top_members = sorted_members[:5]
         top_values = [m['metric_value'] for m in top_members]
-        # Compute weights using the same scheme as weighted redshift: w = (metric)^2 / sigma_z^2
-        from snid_sage.shared.utils.math_utils import compute_cluster_weights
-        metrics_array = np.asarray([m['metric_value'] for m in top_members], dtype=float)
-        sigmas_array = np.asarray([
-            (m.get('sigma_z') if m.get('sigma_z') is not None else np.nan)
-            for m in top_members
-        ], dtype=float)
-        # Valid where finite and sigma > 0
-        valid_mask = (np.isfinite(metrics_array) & np.isfinite(sigmas_array) & (sigmas_array > 0))
-        if np.any(valid_mask):
-            weights = compute_cluster_weights(metrics_array[valid_mask], sigmas_array[valid_mask])
-            sum_w = np.sum(weights)
-            mean_top = float(np.sum(weights * metrics_array[valid_mask]) / sum_w) if sum_w > 0 else (sum(top_values) / len(top_values))
-        else:
-            # Fallback to unweighted mean if no valid uncertainties
-            mean_top = sum(top_values) / len(top_values)
+        # Simple mean (no uncertainty weighting)
+        metrics_array = np.asarray(top_values, dtype=float)
+        metrics_array = metrics_array[np.isfinite(metrics_array)]
+        mean_top = float(np.mean(metrics_array)) if metrics_array.size else 0.0
         
         # Apply penalty if less than 5 templates
         penalty_factor = len(top_values) / 5.0  # 1.0 if 5 templates, 0.8 if 4, etc.
@@ -1016,9 +1040,8 @@ def choose_subtype_weighted_voting(
     sorted_scores = sorted(subtype_scores.values(), reverse=True)
     margin_over_second = sorted_scores[0] - (sorted_scores[1] if len(sorted_scores) > 1 else 0)
     
-    # Convert score to confidence (0-1 range)
-    total_score = sum(subtype_scores.values())
-    confidence = best_score / total_score if total_score > 0 else 0.0
+    # Confidence calculation removed - only using top-5 mean and relative margin
+    confidence = 0.0
     
     # Calculate relative margin as percentage (more intuitive for display)
     relative_margin_pct = 0.0
@@ -1119,7 +1142,7 @@ def create_3d_visualization_data(clustering_results: Dict[str, Any]) -> Dict[str
 
 def find_winning_cluster_top5_method(
     all_cluster_candidates: List[Dict[str, Any]], 
-    hlap_ccc_threshold: float = 0.45,
+    hlap_ccc_threshold: float = 0.5,
     *,
     verbose: bool = False
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
@@ -1127,9 +1150,9 @@ def find_winning_cluster_top5_method(
     Find the winning cluster using the top-5 best metric method (HLAP-CCC preferred; fallback to HLAP).
     
     This method:
-    1. Takes the top 5 best metric values from each cluster (using get_best_metric_value())
-    2. Calculates the mean of these top 5 values
-    3. Penalizes clusters with fewer than 5 points
+    1. Takes the top 5 best metric values from each cluster (using get_best_metric_value()).
+    2. Calculates the SIMPLE mean of these top-5 values (no uncertainty weighting).
+    3. Penalizes clusters with fewer than 5 points (linear penalty = N_top/5).
     4. Selects the cluster with the highest mean
     5. Provides confidence assessment vs other clusters
     6. Provides absolute quality assessment (Low/Mid/High)
@@ -1153,11 +1176,8 @@ def find_winning_cluster_top5_method(
     # Standardize metric naming; do not imply comparison phrasing.
     metric_name = 'HLAP-CCC'
     
-    # Cluster validity gate: Q_cluster = top_5_mean * (min(N, 5)/5) must exceed (HLAP-CCC threshold)/2.
-    try:
-        q_cluster_threshold = float(hlap_ccc_threshold) / 2.0
-    except Exception:
-        q_cluster_threshold = 0.0
+    # NOTE: We intentionally do NOT "gate" / discard clusters based on Q_cluster.
+    # We still compute the penalized top-5 score (a.k.a. Q_cluster) for ranking/reporting.
 
     # Calculate top-5 means for each cluster
     cluster_scores = []
@@ -1167,44 +1187,31 @@ def find_winning_cluster_top5_method(
         if not matches:
             continue
             
-        # Extract (metric, sigma_z) pairs and sort descending by metric
-        metric_sigma_pairs = []
+        # Extract metric values (HLAP-CCC preferred via get_best_metric_value) and sort descending.
+        metric_vals = []
         for match in matches:
             # Top-5 penalized scoring / comparisons use HLAP-CCC
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             metric = get_best_metric_value(match)
-            sigma_z = match.get('sigma_z', match.get('z_err', None))
-            metric_sigma_pairs.append((float(metric), (float(sigma_z) if sigma_z is not None else np.nan)))
+            try:
+                metric_vals.append(float(metric))
+            except Exception:
+                continue
         
-        metric_sigma_pairs.sort(key=lambda x: x[0], reverse=True)  # Highest metric first
+        metric_vals.sort(reverse=True)  # Highest metric first
         
         # Take top 5 (or all if fewer than 5)
-        top_5_pairs = metric_sigma_pairs[:5]
-        top_5_values = [m for m, _ in top_5_pairs]
-        sigmas = [s for _, s in top_5_pairs]
-        
-        # Calculate weighted mean of top 5 using w = metric^2 / sigma_z^2; fallback to unweighted mean
+        top_5_values = metric_vals[:5]
+
+        # Simple mean of top-5 (no uncertainty weighting).
         top_1_share = 0.0
         if top_5_values:
-            from snid_sage.shared.utils.math_utils import compute_cluster_weights
             metrics_array = np.asarray(top_5_values, dtype=float)
-            sigmas_array = np.asarray(sigmas, dtype=float)
-            valid_mask = (np.isfinite(metrics_array) & np.isfinite(sigmas_array) & (sigmas_array > 0))
-            if np.any(valid_mask):
-                weights = compute_cluster_weights(metrics_array[valid_mask], sigmas_array[valid_mask])
-                sum_w = np.sum(weights)
-                top_5_mean = float(np.sum(weights * metrics_array[valid_mask]) / sum_w) if sum_w > 0 else float(np.mean(metrics_array))
-                # Contribution share of the first/top match among the top-5 weights
-                if sum_w > 0 and valid_mask.size > 0 and valid_mask[0]:
-                    # Index 0 corresponds to the highest-metric match
-                    # Map index 0 in full array to its position in the compressed valid array
-                    pos0 = int(np.flatnonzero(valid_mask)[0])
-                    top_1_share = float(weights[pos0] / sum_w) if pos0 < len(weights) else 0.0
-                else:
-                    top_1_share = 0.0
-            else:
-                top_5_mean = float(np.mean(metrics_array))
-                top_1_share = 1.0 / float(len(metrics_array))
+            metrics_array = metrics_array[np.isfinite(metrics_array)]
+            top_5_mean = float(np.mean(metrics_array)) if metrics_array.size else 0.0
+            # Diagnostic: top-1 share of the SUM of top-5 metrics (not weights).
+            denom = float(np.sum(metrics_array)) if metrics_array.size else 0.0
+            top_1_share = float(metrics_array[0] / denom) if denom > 0 else 0.0
         else:
             top_5_mean = 0.0
             top_1_share = 0.0
@@ -1216,13 +1223,9 @@ def find_winning_cluster_top5_method(
         
         penalized_score = top_5_mean * penalty_factor  # Q_cluster (penalized top-5 best metric)
 
-        # Validity gate: Q_cluster must exceed threshold (no minimum cluster size enforced)
-        is_valid_cluster = (float(penalized_score) > float(q_cluster_threshold))
+        # No validity gate: always keep clusters as valid.
+        is_valid_cluster = True
         validity_reason = ""
-        if not is_valid_cluster:
-            validity_reason = f"Q_cluster<={float(q_cluster_threshold):.3f}"
-            # Disqualify from winning by zeroing the score (but keep diagnostics)
-            penalized_score = 0.0
         
         # Annotate the original cluster dictionary so downstream UIs can display these metrics
         cluster['top_5_values'] = top_5_values
@@ -1233,7 +1236,7 @@ def find_winning_cluster_top5_method(
         cluster['composite_score'] = penalized_score
         # Validity annotations for reporting/UX
         cluster['is_valid_cluster'] = bool(is_valid_cluster)
-        cluster['q_cluster_threshold'] = float(q_cluster_threshold)
+        cluster['q_cluster_threshold'] = None
         cluster['cluster_validity_reason'] = validity_reason
         # Store the top-1 contribution share for diagnostics/reporting
         cluster['top_1_share'] = top_1_share
@@ -1249,7 +1252,7 @@ def find_winning_cluster_top5_method(
             'cluster_id': cluster.get('cluster_id', 0),
             'top_1_share': top_1_share,
             'is_valid_cluster': bool(is_valid_cluster),
-            'q_cluster_threshold': float(q_cluster_threshold),
+            'q_cluster_threshold': None,
             'cluster_validity_reason': validity_reason
         }
         
@@ -1265,16 +1268,7 @@ def find_winning_cluster_top5_method(
     winning_cluster_info = cluster_scores[0]
     winning_cluster = winning_cluster_info['cluster']
 
-    # If the best cluster is disqualified by the validity gate, treat as "no valid clusters"
-    try:
-        if not bool(winning_cluster_info.get('is_valid_cluster', False)):
-            return None, {
-                'error': 'No clusters passed validity threshold',
-                'q_cluster_threshold': float(q_cluster_threshold),
-                'all_cluster_scores': cluster_scores,
-            }
-    except Exception:
-        pass
+    # No validity gate: the best cluster is always the top-ranked penalized score.
     
     # Calculate confidence assessment
     confidence_assessment = _calculate_cluster_confidence(cluster_scores, metric_name)
@@ -1378,17 +1372,17 @@ def _calculate_absolute_quality(winning_cluster_info: Dict[str, Any], metric_nam
     cluster_size = winning_cluster_info['cluster_size']
     
     # Quality categories based on penalized top-5 HLAP-CCC score (global rule)
-    #  - Very Low: < 0.6
-    #  - Low: 0.6 to < 1.0
-    #  - Medium: 1.0 to ≤ 2.5
-    #  - High: > 2.5
-    if penalized_score > 2.5:
+    #  - Very Low: < 0.7
+    #  - Low: 0.7 to < 1.0
+    #  - Medium: 1.0 to ≤ 2.0
+    #  - High: > 2.0
+    if penalized_score > 2.0:
         quality_category = 'High'
         quality_description = f'Excellent match quality (HLAP-CCC: {penalized_score:.2f})'
     elif penalized_score >= 1.0:
         quality_category = 'Medium'
         quality_description = f'Good match quality (HLAP-CCC: {penalized_score:.2f})'
-    elif penalized_score >= 0.6:
+    elif penalized_score >= 0.7:
         quality_category = 'Low'
         quality_description = f'Poor match quality (HLAP-CCC: {penalized_score:.2f})'
     else:
@@ -1424,7 +1418,7 @@ def _log_cluster_selection_details(assessment: Dict[str, Any]) -> None:
     _LOGGER.info(f"   Final score: {winning_info['penalized_score']:.3f}")
     try:
         share_pct = float(winning_info.get('top_1_share', 0.0)) * 100.0
-        _LOGGER.info(f"   Top-1 share of weighted top-5: {share_pct:.1f}%")
+        _LOGGER.info(f"   Top-1 share of top-5 metric sum: {share_pct:.1f}%")
     except Exception:
         pass
     
@@ -1439,15 +1433,8 @@ def _log_cluster_selection_details(assessment: Dict[str, Any]) -> None:
     # Show top 3 clusters
     _LOGGER.info(f"🏅 TOP 3 CLUSTERS:")
     for i, cluster_info in enumerate(assessment['all_cluster_scores'][:3], 1):
-        disqualified = ""
-        try:
-            if not bool(cluster_info.get('is_valid_cluster', True)):
-                rsn = cluster_info.get('cluster_validity_reason', '') or 'invalid'
-                disqualified = f" [DISQUALIFIED: {rsn}]"
-        except Exception:
-            pass
         _LOGGER.info(f"   {i}. {cluster_info['cluster_type']} (score: {cluster_info['penalized_score']:.3f}, "
                     f"size: {cluster_info['cluster_size']}, "
-                    f"top-5 mean: {cluster_info['top_5_mean']:.3f}){disqualified}")
+                    f"top-5 mean: {cluster_info['top_5_mean']:.3f})")
 
 

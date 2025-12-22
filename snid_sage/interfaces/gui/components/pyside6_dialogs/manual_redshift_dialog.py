@@ -1005,8 +1005,8 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                 
                 progress.close()
                 
-                # Check if the match is confident enough (HLAP-CCC >= 0.6 for non-very-low matches)
-                if metric_score >= 0.6:
+                # Check if the match is confident enough (HLAP-CCC >= 0.5 for non-very-low matches)
+                if metric_score >= 0.5:
                     # Directly apply the redshift without asking
                     self.redshift_input.setValue(best_redshift)
                     # Trigger the redshift change which will update the line positions

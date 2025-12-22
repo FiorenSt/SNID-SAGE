@@ -359,8 +359,16 @@ class PySide6AnalysisPlotter:
                     plotted_any = True
             
             if plotted_any:
-                ax.set_title('Subtype Proportions vs Metric Threshold', fontsize=12, fontweight='bold', pad=15)
-                ax.set_xlabel('Metric Threshold', fontsize=10, fontweight='bold')
+                # Get the actual metric name from the matches
+                metric_name = "HLAP"
+                if cluster_matches:
+                    try:
+                        from snid_sage.shared.utils.math_utils import get_best_metric_name
+                        metric_name = get_best_metric_name(cluster_matches[0])
+                    except Exception:
+                        pass
+                ax.set_title(f'Subtype Proportions vs {metric_name} Threshold', fontsize=12, fontweight='bold', pad=15)
+                ax.set_xlabel(f'{metric_name} Threshold', fontsize=10, fontweight='bold')
                 ax.set_ylabel('Subtype Proportion', fontsize=10, fontweight='bold')
                 ax.grid(True, alpha=0.3)
                 ax.legend(fontsize=9, loc='upper right')
@@ -399,7 +407,7 @@ class PySide6AnalysisPlotter:
             if not clustering_ok:
                 try:
                     from snid_sage.shared.utils.math_utils import get_best_metric_value
-                    threshold = float(getattr(result, 'hlap_ccc_threshold', 0.45))
+                    threshold = float(getattr(result, 'hlap_ccc_threshold', 0.5))
                     filtered_matches = [m for m in matches if float(get_best_metric_value(m)) >= threshold]
                 except Exception:
                     filtered_matches = matches

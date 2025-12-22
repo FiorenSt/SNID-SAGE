@@ -483,7 +483,7 @@ class UnifiedResultsFormatter:
                 if isinstance(winning_cluster.get('penalized_score', None), (int, float)):
                     penalized = float(winning_cluster.get('penalized_score'))
                 elif cluster_matches:
-                    from snid_sage.shared.utils.math_utils import get_best_metric_value, compute_cluster_weights
+                    from snid_sage.shared.utils.math_utils import get_best_metric_value
                     pairs = []
                     for m in cluster_matches:
                         metric = float(get_best_metric_value(m))
@@ -495,23 +495,18 @@ class UnifiedResultsFormatter:
                         top = pairs[:5]
                         top_metrics = np.asarray([p[0] for p in top], dtype=float)
                         top_sigmas = np.asarray([p[1] for p in top], dtype=float)
-                        valid = (np.isfinite(top_metrics) & np.isfinite(top_sigmas) & (top_sigmas > 0))
-                        if np.any(valid):
-                            weights = compute_cluster_weights(top_metrics[valid], top_sigmas[valid])
-                            sw = np.sum(weights)
-                            mean_top = float(np.sum(weights * top_metrics[valid]) / sw) if sw > 0 else float(np.mean(top_metrics))
-                        else:
-                            mean_top = float(np.mean(top_metrics))
+                        finite_top = np.isfinite(top_metrics)
+                        mean_top = float(np.mean(top_metrics[finite_top])) if np.any(finite_top) else 0.0
                         penalty = min(len(top_metrics) / 5.0, 1.0)
                         penalized = mean_top * penalty
                 if penalized is not None:
-                    if penalized > 2.5:
+                    if penalized > 2.0:
                         q_cat = 'High'
                         q_desc = f'Excellent match quality (HLAP-CCC: {penalized:.2f})'
                     elif penalized >= 1.0:
                         q_cat = 'Medium'
                         q_desc = f'Good match quality (HLAP-CCC: {penalized:.2f})'
-                    elif penalized >= 0.6:
+                    elif penalized >= 0.7:
                         q_cat = 'Low'
                         q_desc = f'Poor match quality (HLAP-CCC: {penalized:.2f})'
                     else:
@@ -526,7 +521,7 @@ class UnifiedResultsFormatter:
             # If no clustering, compute a type-level match quality from penalized top-5 best metric (HLAP-CCC preferred)
         if not winning_cluster and active_matches:
             try:
-                from snid_sage.shared.utils.math_utils import get_best_metric_value, compute_cluster_weights
+                from snid_sage.shared.utils.math_utils import get_best_metric_value
                 # Build (metric, sigma_z) for matches of the consensus type if available
                 consensus_type = summary.get('consensus_type', None)
                 matches_scope = active_matches
@@ -547,23 +542,18 @@ class UnifiedResultsFormatter:
                     top = pairs[:5]
                     top_metrics = np.asarray([p[0] for p in top], dtype=float)
                     top_sigmas = np.asarray([p[1] for p in top], dtype=float)
-                    valid = (np.isfinite(top_metrics) & np.isfinite(top_sigmas) & (top_sigmas > 0))
-                    if np.any(valid):
-                        weights = compute_cluster_weights(top_metrics[valid], top_sigmas[valid])
-                        sw = np.sum(weights)
-                        mean_top = float(np.sum(weights * top_metrics[valid]) / sw) if sw > 0 else float(np.mean(top_metrics))
-                    else:
-                        mean_top = float(np.mean(top_metrics))
+                    finite_top = np.isfinite(top_metrics)
+                    mean_top = float(np.mean(top_metrics[finite_top])) if np.any(finite_top) else 0.0
                     penalty = min(len(top_metrics) / 5.0, 1.0)
                     penalized = mean_top * penalty
                     # Map to quality
-                    if penalized > 2.5:
+                    if penalized > 2.0:
                         q_cat = 'High'
                         q_desc = f'Excellent match quality (HLAP-CCC: {penalized:.2f})'
                     elif penalized >= 1.0:
                         q_cat = 'Medium'
                         q_desc = f'Good match quality (HLAP-CCC: {penalized:.2f})'
-                    elif penalized >= 0.6:
+                    elif penalized >= 0.7:
                         q_cat = 'Low'
                         q_desc = f'Poor match quality (HLAP-CCC: {penalized:.2f})'
                     else:
@@ -868,26 +858,16 @@ class UnifiedResultsFormatter:
             except Exception:
                 pass
 
-            # Subtype ranking score must match selection logic: mean(top-5) × (n_top/5)
-            # - Use weights w = metric^2 / sigma_z^2 for the mean when sigma is available
+            # Subtype ranking score must match selection logic:
+            # mean(top-5 best metric values) × (n_top/5). No uncertainty weighting.
             metrics_arr = np.array(agg['metrics'], dtype=float)
             sigmas_arr = np.array([e if (e is not None and np.isfinite(e) and e > 0) else np.nan for e in agg['z_errs']], dtype=float)
             if metrics_arr.size:
                 top_idx = np.argsort(-metrics_arr)[:5]
                 top_metrics = metrics_arr[top_idx]
                 top_sigmas = sigmas_arr[top_idx]
-                # Compute weighted mean of top metrics if any finite sigmas > 0, else unweighted mean
-                valid_mask = np.isfinite(top_metrics) & np.isfinite(top_sigmas) & (top_sigmas > 0)
-                if np.any(valid_mask):
-                    try:
-                        from snid_sage.shared.utils.math_utils import compute_cluster_weights
-                        weights = compute_cluster_weights(top_metrics[valid_mask], top_sigmas[valid_mask])
-                        sum_w = np.sum(weights)
-                        mean_top = float(np.sum(weights * top_metrics[valid_mask]) / sum_w) if sum_w > 0 else float(np.mean(top_metrics))
-                    except Exception:
-                        mean_top = float(np.mean(top_metrics))
-                else:
-                    mean_top = float(np.mean(top_metrics))
+                finite_top = np.isfinite(top_metrics)
+                mean_top = float(np.mean(top_metrics[finite_top])) if np.any(finite_top) else 0.0
                 # Linear penalty for fewer than 5 templates (capped at 1.0)
                 penalty_factor = min(top_metrics.size / 5.0, 1.0)
                 rank_score = mean_top * penalty_factor

@@ -116,7 +116,7 @@ sage batch --list-csv input.csv --path-column "Spectrum Path" --redshift-column 
 | `--path-column NAME` | Column for paths in `--list-csv` (default: path) |
 | `--redshift-column NAME` | Column for redshift in `--list-csv` (default: redshift) |
 | `--lapmin FLOAT` | Minimum overlap fraction (default: 0.3) |
-| `--hlap-ccc-threshold FLOAT` | HLAP-CCC clustering threshold (HLAP/(1−CCC), default: 0.4) |
+| `--hlap-ccc-threshold FLOAT` | HLAP-CCC clustering threshold (HLAP/(1−CCC), default: 0.5) |
 | `--type-filter TYPE...` | Restrict templates to these types |
 | `--template-filter NAME...` | Only use specified template names |
 | `--exclude-templates NAME...` | Exclude specified template names |

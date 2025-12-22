@@ -195,6 +195,13 @@ class SNIDResult:
     best_matches: List[Dict[str, Any]] = field(default_factory=list)
     filtered_matches: List[Dict[str, Any]] = field(default_factory=list)  # GMM-filtered matches
     top_matches: List[Dict[str, Any]] = field(default_factory=list)  # Top N matches for output files
+    all_matches: List[Dict[str, Any]] = field(default_factory=list)  # All phase-1 matches (post phase-2 gating)
+
+    # Analysis bounds used (for GUI/CLI parity and reproducibility)
+    zmin_used: Optional[float] = None
+    zmax_used: Optional[float] = None
+    lapmin: Optional[float] = None
+    hlap_ccc_threshold: Optional[float] = None
     
     # Basic match parameters
     r: float = 0.0

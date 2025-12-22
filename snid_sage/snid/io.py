@@ -687,10 +687,6 @@ def write_detailed_result(result: Any, filename: str) -> None:
         f.write("### classification summary ###\n")
         f.write(f"# Consensus type: {result.consensus_type}\n")
         f.write(f"# Best subtype: {result.best_subtype}\n")
-    
-        
-        f.write(f"# Type confidence: {result.type_confidence:.2f}\n")
-        f.write(f"# Subtype confidence: {getattr(result, 'subtype_confidence', 0.0):.2f}\n")
         
         # Add clustering information if available
         if (hasattr(result, 'clustering_results') and result.clustering_results and 

@@ -2413,7 +2413,9 @@ def main(verbosity_args=None):
         if any(warning in message for warning in [
             "No Qt Window found for event",
             "WM_ACTIVATEAPP",
-            "QWindowsContext::windowsProc"
+            "QWindowsContext::windowsProc",
+            "Unhandled scheme",
+            "QWindowsNativeFileDialogBase::shellItem"
         ]):
             return  # Silently ignore these warnings
         

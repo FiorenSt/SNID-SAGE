@@ -687,8 +687,16 @@ Please check your analysis results and try again.
                 plotted_any = True
         
         if plotted_any:
-            ax.set_title('Subtype Proportions vs Metric Threshold', fontsize=12, fontweight='bold', pad=15)
-            ax.set_xlabel('Metric Threshold', fontsize=10, fontweight='bold')
+            # Get the actual metric name from the matches
+            metric_name = "HLAP"
+            if self.cluster_matches:
+                try:
+                    from snid_sage.shared.utils.math_utils import get_best_metric_name
+                    metric_name = get_best_metric_name(self.cluster_matches[0])
+                except Exception:
+                    pass
+            ax.set_title(f'Subtype Proportions vs {metric_name} Threshold', fontsize=12, fontweight='bold', pad=15)
+            ax.set_xlabel(f'{metric_name} Threshold', fontsize=10, fontweight='bold')
             ax.set_ylabel('Subtype Proportion', fontsize=10, fontweight='bold')
             ax.grid(True, alpha=0.3)
             ax.legend(fontsize=9, loc='upper right')
