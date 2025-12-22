@@ -1410,6 +1410,8 @@ def run_snid_analysis(
     progress_callback: Optional[Callable[[str, float], None]] = None,
     # Hidden/advanced: toggle weighted GMM (default False; surfaced via CLI flags)
     use_weighted_gmm: bool = False,
+    # Hidden/advanced: GMM component selection method ('bic' default, optional 'elbow')
+    gmm_model_selection: Optional[str] = None,
     # Profile selection (None -> resolve from config)
     profile_id: Optional[str] = None
 ) -> Tuple[SNIDResult, Dict[str, Any]]:
@@ -2187,6 +2189,7 @@ def run_snid_analysis(
                 verbose=verbose,
                 hlap_ccc_threshold=hlap_ccc_threshold,
                 use_weighted_gmm=bool(use_weighted_gmm),
+                model_selection_method=gmm_model_selection,
                 # Defensive: ensure clustering cannot see out-of-bounds redshifts
                 zmin=float(zmin),
                 zmax=float(zmax),
@@ -2737,6 +2740,7 @@ def run_snid(
     apodize_percent: float = 10.0,
     peak_window_size: int = 10,
     lapmin: float = 0.3,
+    hlap_ccc_threshold: float = 0.5,  # Best-metric threshold for clustering (HLAP-CCC preferred)
 
     # NEW: Forced redshift parameter
     forced_redshift: Optional[float] = None,
@@ -2759,7 +2763,9 @@ def run_snid(
     save_plots: bool = False,
     plot_dir: Optional[str | Path] = None,
     # Profile selection (None -> resolve to 'optical')
-    profile_id: Optional[str] = None
+    profile_id: Optional[str] = None,
+    # Hidden/advanced: GMM component selection method ('bic' default, optional 'elbow')
+    gmm_model_selection: Optional[str] = None
 ) -> Tuple[SNIDResult, Trace]:
     """Run SNID on a spectrum using modular preprocessing and analysis.
     
@@ -2955,7 +2961,8 @@ def run_snid(
         show_plots=show_plots,
         save_plots=save_plots,
         plot_dir=effective_plot_dir,
-        profile_id=profile_id
+        profile_id=profile_id,
+        gmm_model_selection=gmm_model_selection
     )
     
     full_trace['analysis'] = analysis_trace
@@ -3077,8 +3084,12 @@ def run_snid(
             pass
     
     else:
-        _LOG.error(f"[FAILED] NO GOOD MATCH FOUND")
-    _LOG.error(f"   Try lowering lapmin (overlap). If you expect z > 1, use the 'onir' profile (supports up to z≈2.5).")
+        # Not finding any acceptable matches is a normal outcome for some inputs.
+        # Keep it visible, but avoid treating it like an internal error.
+        _LOG.warning("[FAILED] NO GOOD MATCH FOUND")
+        _LOG.warning(
+            "   Try lowering lapmin (overlap). If you expect z > 1, use the 'onir' profile (supports up to z≈2.5)."
+        )
     
     _LOG.info(f"   Runtime: {result.runtime_sec:.2f} seconds")
     _LOG.info("="*80)

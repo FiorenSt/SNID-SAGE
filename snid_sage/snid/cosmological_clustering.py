@@ -227,6 +227,9 @@ def perform_direct_gmm_clustering(
     verbose: bool = False,
     hlap_ccc_threshold: float = 0.5,  # Best-metric threshold for clustering (HLAP-CCC)
     use_weighted_gmm: Optional[bool] = None,  # Hidden option: when True, use weighted GMM + weighted BIC
+    # Optional: model selection method for choosing the number of GMM components.
+    # Default is 'elbow'. Optional 'bic' chooses min(BIC).
+    model_selection_method: Optional[str] = None,
     # Optional progress reporting (message, percent). If provided, emit per-type updates.
     progress_callback: Optional[Callable[[str, float], None]] = None,
     progress_min: float = 90.0,
@@ -282,6 +285,18 @@ def perform_direct_gmm_clustering(
             use_weighted_gmm = env_val in ("1", "true", "yes", "on")
         except Exception:
             use_weighted_gmm = False
+
+    # Resolve model selection method (default: elbow)
+    if model_selection_method is None:
+        try:
+            import os
+            env_val = str(os.getenv("SNID_SAGE_GMM_MODEL_SELECTION", "elbow")).strip().lower()
+            model_selection_method = env_val
+        except Exception:
+            model_selection_method = "elbow"
+    model_selection_method = str(model_selection_method or "elbow").strip().lower()
+    if model_selection_method not in ("bic", "elbow"):
+        model_selection_method = "elbow"
     
     # Determine which metric to use - now using get_best_metric_value()
     # This automatically prioritizes HLAP-CCC > HLAP
@@ -385,7 +400,8 @@ def perform_direct_gmm_clustering(
         type_result = _perform_direct_gmm_clustering(
             type_matches, sn_type, max_clusters_per_type, 
             verbose, "best_metric",
-            use_weighted_gmm=use_weighted_gmm
+            use_weighted_gmm=use_weighted_gmm,
+            model_selection_method=model_selection_method
         )
         
         clustering_results[sn_type] = type_result
@@ -412,10 +428,12 @@ def perform_direct_gmm_clustering(
             # Note: winning_cluster_id is now determined by the new top-5 method at the end
             # We don't need this old selection here anymore
             
-            # Create cluster candidates using the exact reference approach
-            for cluster_id in range(type_result['optimal_n_clusters']):
-                cluster_info = next((c for c in type_result['clusters'] if c['id'] == cluster_id), None)
-                if cluster_info is None:
+            # Create cluster candidates using the exact reference approach.
+            # IMPORTANT: After contiguity/gap splitting, the number of output clusters can differ
+            # from the BIC-optimal number of mixture components. Always iterate over the
+            # returned cluster list rather than range(optimal_n_clusters).
+            for cluster_info in (type_result.get('clusters') or []):
+                if not isinstance(cluster_info, dict):
                     continue
                 
                 # Calculate mean metric value for this cluster
@@ -614,7 +632,8 @@ def _perform_direct_gmm_clustering(
     verbose: bool,
     metric_key: str = 'best_metric',  # Uses get_best_metric_value() automatically
     *,
-    use_weighted_gmm: bool = False
+    use_weighted_gmm: bool = False,
+    model_selection_method: str = "elbow",
 ) -> Dict[str, Any]:
     """
     Perform GMM clustering directly on redshift values using the same approach
@@ -644,16 +663,12 @@ def _perform_direct_gmm_clustering(
                 type_matches, sn_type, redshifts, "best_metric"
             )
         
-        # Build weights only when requested; default to unweighted GMM
+        # Build weights only when requested; default to unweighted GMM.
+        # Official weighting policy: w_i = (metric_i)^2 / sigma_z_i^2
         if use_weighted_gmm:
-            # Double weights: (metric)^2 / sigma^2
             raw_weights = calculate_combined_weights(metric_values, sigmas)
-            # Guard against degenerate sums
             sum_w = float(np.sum(raw_weights)) if raw_weights.size else 0.0
-            if sum_w > 0:
-                weights = raw_weights * (len(raw_weights) / sum_w)
-            else:
-                weights = np.ones_like(metric_values, dtype=float)
+            weights = raw_weights if (sum_w > 0 and np.isfinite(sum_w)) else np.ones_like(metric_values, dtype=float)
         else:
             weights = None
 
@@ -703,10 +718,63 @@ def _perform_direct_gmm_clustering(
             bic_scores.append(bic)
             models.append(gmm)
         
-        # Select optimal model (minimum BIC)
-        optimal_idx = np.argmin(bic_scores)
-        optimal_n_clusters = optimal_idx + 1
-        best_gmm = models[optimal_idx]
+        # ------------------------------------------------------------------
+        # Model selection: BIC (default) or elbow-knee heuristic on the BIC curve
+        # ------------------------------------------------------------------
+        requested_model_selection_method = None
+        try:
+            requested_model_selection_method = str(model_selection_method or "elbow").strip().lower()
+        except Exception:
+            requested_model_selection_method = "elbow"
+        if requested_model_selection_method not in ("bic", "elbow"):
+            requested_model_selection_method = "elbow"
+        effective_model_selection_method = requested_model_selection_method
+
+        bic_scores_arr = np.asarray(bic_scores, dtype=float)
+        bic_optimal_idx = int(np.argmin(bic_scores_arr)) if bic_scores_arr.size else 0
+        bic_optimal_n_clusters = bic_optimal_idx + 1
+
+        # Elbow: max-distance-to-chord on goodness = -BIC (higher is better)
+        def _elbow_max_distance_k(scores: np.ndarray) -> Optional[int]:
+            if scores.size < 3:
+                return None
+            x = np.arange(scores.size, dtype=float)
+            y = np.asarray(scores, dtype=float)
+            if not np.all(np.isfinite(y)):
+                return None
+            x0, y0 = float(x[0]), float(y[0])
+            x1, y1 = float(x[-1]), float(y[-1])
+            dx = x1 - x0
+            dy = y1 - y0
+            norm = float(np.hypot(dx, dy))
+            if norm <= 0:
+                return None
+            dist = np.abs(dy * x - dx * y + x1 * y0 - y1 * x0) / norm
+            idx = int(np.argmax(dist))
+            return idx + 1  # k (1-indexed)
+
+        elbow_n_clusters = _elbow_max_distance_k(-bic_scores_arr) if bic_scores_arr.size else None
+
+        # Safety: if BIC is monotone non-decreasing (min at k=1), treat elbow as k=1 too.
+        try:
+            if bic_scores_arr.size >= 2 and np.all(np.isfinite(bic_scores_arr)):
+                if (bic_optimal_idx == 0) and bool(np.all(np.diff(bic_scores_arr) >= 0)):
+                    elbow_n_clusters = 1
+        except Exception:
+            pass
+
+        if requested_model_selection_method == "elbow":
+            if isinstance(elbow_n_clusters, int) and 1 <= elbow_n_clusters <= len(models):
+                selected_idx = int(elbow_n_clusters - 1)
+            else:
+                # Fallback to BIC minimum if elbow is undefined/invalid for this curve.
+                selected_idx = int(bic_optimal_idx)
+                effective_model_selection_method = "bic"
+        else:
+            selected_idx = int(bic_optimal_idx)
+
+        best_gmm = models[selected_idx]
+        selected_n_components = int(getattr(best_gmm, "n_components", selected_idx + 1))
 
         # Get cluster assignments and responsibilities
         features = redshifts.reshape(-1, 1)
@@ -728,9 +796,9 @@ def _perform_direct_gmm_clustering(
 
         # Build contiguous segments per original label
         segments = []  # list of (orig_label, absolute_indices)
-        label_to_run_count = {k: 0 for k in range(optimal_n_clusters)}
+        label_to_run_count = {k: 0 for k in range(selected_n_components)}
         min_segment_size = 1  # keep even tiny side clusters; scoring penalizes later
-        for orig_label in range(optimal_n_clusters):
+        for orig_label in range(selected_n_components):
             run_spans = [(s, e) for lbl, s, e in runs if lbl == orig_label]
             label_to_run_count[orig_label] = len(run_spans)
             for (s, e) in run_spans:
@@ -741,8 +809,8 @@ def _perform_direct_gmm_clustering(
         split_applied = any(cnt > 1 for cnt in label_to_run_count.values())
 
         final_clusters = []
-        # Hard gap split: 0.025
-        MAX_GAP_Z = 0.025
+        # Hard gap split base (will be scaled by (1+z) for z>0).
+        BASE_MAX_GAP_Z = 0.025
 
         # Helper: split a sorted-by-z absolute index run by redshift gaps
         def _split_by_gap(abs_idx: np.ndarray, z: np.ndarray) -> List[np.ndarray]:
@@ -751,7 +819,13 @@ def _perform_direct_gmm_clustering(
             parts: List[np.ndarray] = []
             start = 0
             for r in range(1, abs_idx.size):
-                if abs(z[abs_idx[r]] - z[abs_idx[r-1]]) > MAX_GAP_Z:
+                z_prev = float(z[abs_idx[r - 1]])
+                z_cur = float(z[abs_idx[r]])
+                # Scale gap threshold by (1+z_mid) for z>0; keep base for z<=0.
+                z_mid = 0.5 * (z_prev + z_cur)
+                scale = 1.0 + max(0.0, float(z_mid))
+                thr = float(BASE_MAX_GAP_Z * scale)
+                if abs(z_cur - z_prev) > thr:
                     parts.append(abs_idx[start:r])
                     start = r
             parts.append(abs_idx[start:])
@@ -814,11 +888,11 @@ def _perform_direct_gmm_clustering(
                 if verbose:
                     _LOGGER.info(f"  Segment {new_id} (from label {orig_label}): z-span={redshift_span:.4f}")
 
-            # Replace optimal cluster count with the number of final segments
-            optimal_n_clusters = len(final_clusters)
+            # Keep BIC-optimal count separate from post-split count
+            pass
         else:
             # Create cluster info from original labels (already contiguous)
-            for cluster_id in range(optimal_n_clusters):
+            for cluster_id in range(bic_optimal_n_clusters):
                 cluster_mask = (labels == cluster_id)
                 cluster_indices = np.where(cluster_mask)[0]
 
@@ -864,7 +938,14 @@ def _perform_direct_gmm_clustering(
         return {
             'success': True,
             'type': sn_type,
-            'optimal_n_clusters': optimal_n_clusters,
+            # Selected number of mixture components (before contiguity/gap splitting)
+            'optimal_n_clusters': selected_n_components,
+            'selected_n_components': selected_n_components,
+            'requested_model_selection_method': requested_model_selection_method,
+            'effective_model_selection_method': effective_model_selection_method,
+            # Reference diagnostics
+            'bic_optimal_n_clusters': bic_optimal_n_clusters,
+            'elbow_n_clusters': elbow_n_clusters,
             'final_n_clusters': len(final_clusters),
             'bic_scores': bic_scores,
             'clusters': final_clusters,
