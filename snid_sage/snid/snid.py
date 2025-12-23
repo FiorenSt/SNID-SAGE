@@ -2033,7 +2033,6 @@ def run_snid_analysis(
             _LOG.info(f"🚀 Vectorized type-by-type correlation analysis found {len(matches)} total matches")
             _LOG.info(f"⚡ Performance: {vectorized_total_time:.2f}s total, {templates_per_second:.1f} templates/sec")
             _LOG.info(f"⚡ Average: {vectorized_total_time/len(templates)*1000:.1f}ms per template")
-            report_progress("✅ Correlation complete", 100)
 
         except Exception as e:
             _LOG.error(f"Vectorized FFT correlation failed (fatal): {e}")
@@ -2124,7 +2123,6 @@ def run_snid_analysis(
             )
 
             # 2) Compute HLAP-CCC score (HLAP/(1-CCCtrim)); scoring-only
-            report_progress("Computing HLAP-CCC match scores")
             matches = compute_hlap_ccc_metric(
                 matches,
                 processed_spectrum_for_metrics,
@@ -2133,7 +2131,6 @@ def run_snid_analysis(
             )
 
             # 3) Compute sigma_z = width * residual_noise_std (NaN when unavailable)
-            report_progress("Computing per-match sigma_z")
             matches = compute_sigma_z_metrics(matches)
 
             _LOG.info(f"Phase-2 metrics computed for {len(matches)} matches")

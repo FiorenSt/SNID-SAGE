@@ -2365,6 +2365,10 @@ def main(args: argparse.Namespace) -> int:
                 'emwidth': float(getattr(args, 'emwidth', 40.0)),
                 'wavelength_masks': parsed_wavelength_masks,
                 'apodize_percent': float(getattr(args, 'apodize_percent', 10.0)),
+                # --- Analysis parameters needed inside worker processes ---
+                'phase1_peak_min_height': float(getattr(args, 'phase1_peak_min_height', 0.3)),
+                'phase1_peak_min_distance': int(getattr(args, 'phase1_peak_min_distance', 3)),
+                'weighted_gmm': bool(getattr(args, 'weighted_gmm', False)),
             }
 
             # Submit all tasks at once; each task is ~30s so overhead is negligible

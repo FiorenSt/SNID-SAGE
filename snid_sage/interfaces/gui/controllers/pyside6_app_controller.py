@@ -262,32 +262,51 @@ class PySide6AppController(QtCore.QObject):
         """
         try:
             _LOGGER.info(f"🔄 Loading spectrum file: {file_path}")
+
+            # Helper: ensure a failed/aborted load does not leave the app thinking a spectrum exists.
+            # This prevents the GUI from prompting to "overwrite" an actually-empty plot/state.
+            def _clear_failed_load_state() -> None:
+                try:
+                    self.current_file_path = None
+                    self.original_wave = None
+                    self.original_flux = None
+                    self.flux_offset = 0.0
+                    # Best-effort: move back to INITIAL (do not assume caller reset state)
+                    try:
+                        self.update_workflow_state(WorkflowState.INITIAL)
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
             
             # Use the robust spectrum loader from shared utilities
             from snid_sage.shared.utils.data_io.spectrum_loader import load_spectrum
-            
-            self.original_wave, self.original_flux = load_spectrum(file_path)
+
+            # Store the file path early so profile-switch workflows can reload the same file.
+            # IMPORTANT: we will clear it again if *any* validation fails.
+            self.current_file_path = file_path
+
+            # Load into local variables first; do not commit to controller state until validated.
+            wave, flux = load_spectrum(file_path)
+
             # Ensure flux is strictly positive for downstream SNID preprocessing/continuum.
+            flux_offset = 0.0
             try:
-                shifted_flux, flux_offset = enforce_positive_flux(self.original_flux)
+                shifted_flux, flux_offset = enforce_positive_flux(flux)
+                flux = shifted_flux
             except Exception as e:
                 _LOGGER.warning(f"Positive-flux enforcement failed at load stage ({e}); proceeding with raw flux")
-                shifted_flux, flux_offset = self.original_flux, 0.0
-            self.original_flux = shifted_flux
-            self.flux_offset = float(flux_offset)
-            
-            # Store the file path
-            self.current_file_path = file_path
-            
-            _LOGGER.info(f"✅ Spectrum file loaded successfully: {file_path}")
-            _LOGGER.info(f"✅ Spectrum data: {len(self.original_wave)} points, "
-                        f"wavelength range {self.original_wave[0]:.1f}-{self.original_wave[-1]:.1f} Å")
-            _LOGGER.info(f"✅ Flux range: {np.min(self.original_flux):.2e} to {np.max(self.original_flux):.2e}")
-            if self.flux_offset != 0.0:
+                flux_offset = 0.0
+
+            _LOGGER.info(f"✅ Spectrum file parsed successfully: {file_path}")
+            _LOGGER.info(f"✅ Spectrum data: {len(wave)} points, "
+                        f"wavelength range {wave[0]:.1f}-{wave[-1]:.1f} Å")
+            _LOGGER.info(f"✅ Flux range: {np.min(flux):.2e} to {np.max(flux):.2e}")
+            if float(flux_offset) != 0.0:
                 _LOGGER.info(
                     "✅ Applied flux offset of %.6g at load stage to remove non-positive values "
                     "before any preprocessing or continuum fitting",
-                    self.flux_offset,
+                    float(flux_offset),
                 )
             
             # Early grid range check based on active profile (optical or onir)
@@ -306,8 +325,8 @@ class PySide6AppController(QtCore.QObject):
                 except Exception:
                     gmin, gmax = 2500.0, 10000.0
 
-                wmin = float(np.min(self.original_wave))
-                wmax = float(np.max(self.original_wave))
+                wmin = float(np.min(wave))
+                wmax = float(np.max(wave))
 
                 # Offer ONIR profile when using optical and spectrum extends well beyond optical
                 suppress_clip_info = False
@@ -335,6 +354,7 @@ class PySide6AppController(QtCore.QObject):
 
                             clicked = dlg.clickedButton()
                             if clicked is switch_btn:
+                                # Hand off to profile switching; it will reset/reload as needed.
                                 return self.switch_active_profile('onir', reload_current_file=True, show_notice=True)
                             elif clicked is clip_btn:
                                 # User explicitly requested clipping to the **optical** grid.
@@ -344,14 +364,14 @@ class PySide6AppController(QtCore.QObject):
                                 #   - All downstream normalization/log-rebin steps see only optical data
                                 try:
                                     import numpy as _np
-                                    w_arr = _np.asarray(self.original_wave, dtype=float)
-                                    f_arr = _np.asarray(self.original_flux, dtype=float)
+                                    w_arr = _np.asarray(wave, dtype=float)
+                                    f_arr = _np.asarray(flux, dtype=float)
                                     clip_mask = (w_arr >= gmin) & (w_arr <= gmax)
                                     if _np.any(clip_mask):
                                         w_clipped = w_arr[clip_mask]
                                         f_clipped = f_arr[clip_mask]
-                                        self.original_wave = w_clipped
-                                        self.original_flux = f_clipped
+                                        wave = w_clipped
+                                        flux = f_clipped
                                         # Recompute bounds for subsequent overlap checks and logging
                                         wmin = float(_np.min(w_clipped))
                                         wmax = float(_np.max(w_clipped))
@@ -370,6 +390,7 @@ class PySide6AppController(QtCore.QObject):
                                     _LOGGER.warning(f"Failed to clip spectrum to optical grid at load: {clip_err}")
                                 suppress_clip_info = True
                             else:
+                                _clear_failed_load_state()
                                 return False
                         except Exception:
                             # If dialog fails, continue with default behavior
@@ -387,6 +408,7 @@ class PySide6AppController(QtCore.QObject):
                             f"the active grid {gmin:.0f}-{gmax:.0f} Å (profile: {active_pid})."
                         ),
                     )
+                    _clear_failed_load_state()
                     return False
                 # Enforce minimum overlap of 2000 Å with active grid
                 overlap_angstrom = max(0.0, min(wmax, gmax) - max(wmin, gmin))
@@ -416,6 +438,7 @@ class PySide6AppController(QtCore.QObject):
                             f"which is insufficient (< 2000 Å)." + suggestion
                         ),
                     )
+                    _clear_failed_load_state()
                     return False
                 if (wmin < gmin) or (wmax > gmax):
                     if not suppress_clip_info:
@@ -430,6 +453,16 @@ class PySide6AppController(QtCore.QObject):
             except Exception:
                 pass
 
+            # Commit validated spectrum state
+            try:
+                self.original_wave = np.asarray(wave, dtype=float)
+                self.original_flux = np.asarray(flux, dtype=float)
+            except Exception:
+                # Fall back (should be rare; loader already returns arrays)
+                self.original_wave = wave
+                self.original_flux = flux
+            self.flux_offset = float(flux_offset)
+
             # Update workflow state
             self.update_workflow_state(WorkflowState.FILE_LOADED)
             
@@ -439,6 +472,18 @@ class PySide6AppController(QtCore.QObject):
             _LOGGER.error(f"❌ Error loading spectrum file: {e}")
             import traceback
             traceback.print_exc()
+            try:
+                # Never leave partial spectrum state on hard failure
+                self.current_file_path = None
+                self.original_wave = None
+                self.original_flux = None
+                self.flux_offset = 0.0
+                try:
+                    self.update_workflow_state(WorkflowState.INITIAL)
+                except Exception:
+                    pass
+            except Exception:
+                pass
             return False
     
     def get_spectrum_data(self) -> Tuple[Optional[np.ndarray], Optional[np.ndarray]]:

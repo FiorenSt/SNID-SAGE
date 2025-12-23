@@ -347,12 +347,47 @@ class PySide6EventHandlers(QtCore.QObject):
                 self.main_window.file_status_label.setStyleSheet("font-style: italic; color: #059669; font-size: 10px !important; font-weight: normal !important; font-family: 'Segoe UI', Arial, sans-serif !important; line-height: 1.0 !important;")
                 _LOGGER.info(f"Spectrum file loaded successfully: {file_path}")
             else:
+                # Load failed: ensure the application does NOT retain any "loaded spectrum" state.
+                # Otherwise the next load will incorrectly warn about overwriting an empty plot.
                 self.main_window.status_label.setText("Error loading file")
                 QtWidgets.QMessageBox.warning(
                     self.main_window,
                     "File Loading Error",
                     "Could not load spectrum file."
                 )
+
+                # Reset controller state back to initial/empty (best-effort)
+                try:
+                    if hasattr(self.app_controller, 'reset_to_initial_state'):
+                        self.app_controller.reset_to_initial_state()
+                except Exception:
+                    pass
+
+                # Ensure workflow/UI returns to INITIAL so buttons/menus reflect "no spectrum"
+                try:
+                    from snid_sage.interfaces.gui.controllers.pyside6_app_controller import WorkflowState
+                    if hasattr(self.main_window, '_update_workflow_state'):
+                        self.main_window._update_workflow_state(WorkflowState.INITIAL)
+                except Exception:
+                    pass
+
+                # Restore an empty plot view (welcome/empty canvas)
+                try:
+                    from snid_sage.interfaces.gui.components.plots.pyside6_plot_manager import PlotMode
+                    if hasattr(self.main_window, 'plot_manager') and self.main_window.plot_manager:
+                        if self.main_window.plot_manager.current_plot_mode != PlotMode.SPECTRUM:
+                            self.main_window.plot_manager.switch_to_plot_mode(PlotMode.SPECTRUM)
+                        self.main_window.plot_manager.plot_clean_welcome_message()
+                except Exception:
+                    pass
+
+                # Reset status labels to their *exact* initial startup text/styles
+                try:
+                    self.main_window.status_label.setText("No spectrum loaded")
+                    if hasattr(self, '_reset_all_status_labels_to_initial'):
+                        self._reset_all_status_labels_to_initial()
+                except Exception:
+                    pass
         except Exception as e:
             _LOGGER.error(f"Error handling open spectrum file: {e}")
     

@@ -1375,18 +1375,35 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                     self.config_status_label.setText("Inconclusive")
                     self.config_status_label.setStyleSheet("font-style: italic; color: #d97706; font-size: 10px !important; font-weight: normal !important; font-family: 'Arial', 'Helvetica', 'Segoe UI', 'Ubuntu', 'DejaVu Sans', sans-serif !important; line-height: 1.0 !important;")
 
-                    QtWidgets.QMessageBox.information(
-                        self,
-                        "No Good Matches Found",
-                        (
-                            "The analysis completed, but no reliable matches were found.\n\n"
-                            "Try the following to improve results:\n"
-                            "• Use Advanced Preprocessing (smoothing, wavelength masks, continuum).\n"
-                            "• Adjust the redshift search range or try a manual redshift estimate.\n"
-                            "• Mask strong sky/telluric features; increase S/N if possible.\n"
-                            "• Reduce spectrum–template overlap threshold (lapmin) to allow more partial matches."
-                        )
+                    # Offer the user next actions: rerun with looser thresholds or jump to advanced preprocessing
+                    msg = QtWidgets.QMessageBox(self)
+                    msg.setIcon(QtWidgets.QMessageBox.Information)
+                    msg.setWindowTitle("No Good Matches Found")
+                    msg.setText("The analysis completed, but no reliable matches were found.")
+                    msg.setInformativeText(
+                        "What would you like to do?\n\n"
+                        "Try the following to improve results:\n"
+                        "• Use Advanced Preprocessing (smoothing, wavelength masks, continuum).\n"
+                        "• Adjust the redshift search range or try a manual redshift estimate.\n"
+                        "• Mask strong sky/telluric features; increase S/N if possible.\n"
+                        "• Reduce spectrum–template overlap threshold (lapmin) to allow more partial matches."
                     )
+
+                    rerun_btn = msg.addButton("Rerun with looser parameters", QtWidgets.QMessageBox.AcceptRole)
+                    prep_btn = msg.addButton("Advanced preprocessing", QtWidgets.QMessageBox.ActionRole)
+                    cancel_btn = msg.addButton("Cancel", QtWidgets.QMessageBox.RejectRole)
+                    msg.setDefaultButton(rerun_btn)
+
+                    msg.exec()
+
+                    clicked = msg.clickedButton()
+                    if clicked == rerun_btn:
+                        self._rerun_with_looser_parameters()
+                    elif clicked == prep_btn:
+                        self.open_preprocessing_dialog()
+                    else:
+                        # Cancel / close: keep the UI in the inconclusive state
+                        _ = cancel_btn
                 else:
                     # Hard failure
                     self.status_label.setText("SNID-SAGE analysis failed")
@@ -1424,6 +1441,97 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                         )
         except Exception as e:
             _LOGGER.error(f"Error handling analysis completion: {e}")
+
+    def _rerun_with_looser_parameters(self) -> None:
+        """Rerun the last analysis with looser match thresholds (GUI helper).
+
+        Uses the last analysis kwargs when available; otherwise falls back to the
+        currently configured analysis parameters stored on the controller config.
+        """
+        try:
+            if not hasattr(self, 'app_controller') or self.app_controller is None:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "Rerun Not Available",
+                    "Cannot rerun because the analysis controller is not available."
+                )
+                return
+
+            base_kwargs: Dict[str, Any] = {}
+
+            # Preferred: reuse the exact kwargs used for the previous run (preserves z-range, filters, etc.)
+            last_kwargs = getattr(self.app_controller, 'last_analysis_kwargs', None)
+            if isinstance(last_kwargs, dict) and last_kwargs:
+                base_kwargs = dict(last_kwargs)
+            else:
+                # Fallback: use currently configured parameters from the controller config (if any)
+                current_cfg = getattr(self.app_controller, 'current_config', None)
+                if isinstance(current_cfg, dict):
+                    analysis_cfg = current_cfg.get('analysis', {})
+                    if isinstance(analysis_cfg, dict) and analysis_cfg:
+                        base_kwargs = dict(analysis_cfg)
+
+            if not base_kwargs:
+                QtWidgets.QMessageBox.information(
+                    self,
+                    "Rerun Not Available",
+                    "No previous analysis parameters were found.\n\n"
+                    "Please run an analysis first (or open the configuration dialog) and then try again."
+                )
+                return
+
+            # Looser thresholds (as requested)
+            base_kwargs['hlap_ccc_threshold'] = 0.4
+            base_kwargs['lapmin'] = 0.25
+
+            # Keep controller config in sync so subsequent opens show the looser values
+            try:
+                if hasattr(self.app_controller, 'current_config') and isinstance(self.app_controller.current_config, dict):
+                    if 'analysis' not in self.app_controller.current_config or not isinstance(self.app_controller.current_config.get('analysis'), dict):
+                        self.app_controller.current_config['analysis'] = {}
+                    self.app_controller.current_config['analysis'].update({
+                        'hlap_ccc_threshold': 0.4,
+                        'lapmin': 0.25,
+                    })
+            except Exception:
+                pass
+
+            try:
+                if hasattr(self, 'status_label'):
+                    self.status_label.setText("Rerunning analysis with looser parameters (HLAP-CCC ≥ 0.40, lapmin ≥ 0.25)...")
+                if hasattr(self, 'config_status_label'):
+                    self.config_status_label.setText("Rerun (looser parameters)")
+                    self.config_status_label.setStyleSheet(
+                        "font-style: italic; color: #2563eb; font-size: 10px !important; font-weight: normal !important; "
+                        "font-family: 'Segoe UI', Arial, sans-serif !important; line-height: 1.0 !important;"
+                    )
+            except Exception:
+                pass
+
+            started = False
+            try:
+                started = bool(self.app_controller.run_analysis(**base_kwargs))
+            except Exception as e:
+                _LOGGER.error(f"Error starting rerun with looser parameters: {e}")
+                started = False
+
+            if not started:
+                QtWidgets.QMessageBox.warning(
+                    self,
+                    "Rerun Failed",
+                    "Failed to start the rerun with looser parameters.\n\n"
+                    "Please check the logs for details."
+                )
+        except Exception as e:
+            _LOGGER.error(f"Unexpected error while rerunning analysis: {e}")
+            try:
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    "Rerun Error",
+                    f"An unexpected error occurred while trying to rerun analysis:\n{str(e)}"
+                )
+            except Exception:
+                pass
     
     def _on_preprocessing_completed(self, success: bool):
         """Handle preprocessing completion signal from app controller"""
