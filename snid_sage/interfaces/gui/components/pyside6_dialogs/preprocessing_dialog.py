@@ -58,11 +58,11 @@ except ImportError:
 # Import our custom components
 from snid_sage.interfaces.gui.features.preprocessing.pyside6_preview_calculator import PySide6PreviewCalculator
 from snid_sage.interfaces.gui.features.preprocessing.steps import (
-    create_step0_options, apply_step0, calculate_step0_preview,
-    create_step1_options, apply_step1, calculate_step1_preview,
-    create_step2_options, apply_step2, calculate_step2_preview,
-    create_step3_options, apply_step3, calculate_step3_preview,
-    create_step4_options, apply_step4, calculate_step4_preview,
+    create_step0_options, apply_step0,
+    create_step1_options, apply_step1,
+    create_step2_options, apply_step2,
+    create_step3_options, apply_step3,
+    create_step4_options, apply_step4,
     create_step5_options,
 )
 from snid_sage.interfaces.gui.components.widgets.pyside6_interactive_masking_widget import PySide6InteractiveMaskingWidget
@@ -113,6 +113,10 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
         
         # Processing parameters - Initialize with dialog defaults
         self.processing_params = self._get_default_params()
+        # Cache for canonical preprocessing (preprocess_spectrum) so previews stay consistent
+        self._canonical_cache_key = None
+        self._canonical_processed = None
+        self._canonical_trace = None
         # Internal guard to avoid preview updates while rebuilding options UI
         self._rebuilding_options = False
         
@@ -218,7 +222,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
                         auto_masks.append((wl_min, wl_max))
                     # Defer adding to widget until widgets are initialized
                     self._initial_auto_masks = auto_masks
-                    _LOGGER.info(f"Auto spike masking proposed {len(auto_masks)} regions for initial masking display")
+                    _LOGGER.debug(f"Auto spike masking proposed {len(auto_masks)} regions for initial masking display")
                 else:
                     self._initial_auto_masks = []
             except Exception as e:
@@ -240,6 +244,200 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
         if self.plot_manager:
             top_plot, bottom_plot = self.plot_manager.get_plot_widgets()
             _LOGGER.debug(f"Plot widgets available: top={top_plot is not None}, bottom={bottom_plot is not None}")
+
+    # ------------------------------------------------------------------
+    # Canonical preprocessing helpers (GUI parity with CLI)
+    # ------------------------------------------------------------------
+    def _collect_wizard_preprocessing_inputs(self) -> tuple[dict, str | None]:
+        """
+        Build preprocess_spectrum kwargs from the wizard state.
+        Returns (kwargs, spectrum_path_or_None).
+        """
+        # Manual masks (wavelength_masks in preprocess_spectrum)
+        user_masks = []
+        try:
+            if self.masking_widget is not None:
+                user_masks = self.masking_widget.get_mask_regions() or []
+        except Exception:
+            user_masks = []
+
+        pp = self.processing_params if isinstance(getattr(self, "processing_params", None), dict) else {}
+
+        # Step-0 toggles
+        try:
+            apply_aband = bool(pp.get("clip_aband", False))
+        except Exception:
+            apply_aband = False
+        try:
+            apply_sky = bool(pp.get("clip_sky_lines", False))
+        except Exception:
+            apply_sky = False
+        try:
+            sky_width = float(pp.get("sky_width", 40.0))
+        except Exception:
+            sky_width = 40.0
+
+        # Step-1 filtering (only "fixed" window exists)
+        try:
+            filter_type = str(pp.get("filter_type", "none") or "none").strip().lower()
+        except Exception:
+            filter_type = "none"
+        try:
+            savgol_window = int(pp.get("filter_window", 11) or 11)
+        except Exception:
+            savgol_window = 11
+        try:
+            savgol_order = int(pp.get("filter_order", 3) or 3)
+        except Exception:
+            savgol_order = 3
+        if filter_type != "fixed":
+            savgol_window = 0
+
+        # Step-4 apodization
+        try:
+            apply_apod = bool(pp.get("apply_apodization", True))
+        except Exception:
+            apply_apod = True
+        try:
+            apod_percent = float(pp.get("apod_percent", 10.0))
+        except Exception:
+            apod_percent = 10.0
+        apodize_percent = float(apod_percent) if apply_apod else 0.0
+
+        # Profile id
+        profile_id = "optical"
+        try:
+            if self.parent_gui and hasattr(self.parent_gui, "app_controller"):
+                profile_id = getattr(self.parent_gui.app_controller, "active_profile_id", "optical") or "optical"
+        except Exception:
+            profile_id = "optical"
+        profile_id = str(profile_id).strip().lower()
+
+        # Prefer file path (CLI parity) when available
+        spectrum_path = None
+        try:
+            if self.parent_gui and hasattr(self.parent_gui, "app_controller"):
+                spectrum_path = self.parent_gui.app_controller.get_current_file_path()
+        except Exception:
+            spectrum_path = None
+
+        kwargs = {
+            "profile_id": profile_id,
+            "clip_to_grid": True,
+            "spike_masking": True,
+            "savgol_window": int(savgol_window),
+            "savgol_order": int(savgol_order),
+            "aband_remove": bool(apply_aband),
+            "skyclip": bool(apply_sky),
+            "emclip_z": -1.0,
+            "emwidth": float(sky_width),
+            "wavelength_masks": list(user_masks or []),
+            "apodize_percent": float(apodize_percent),
+            "skip_steps": [],
+            "verbose": False,
+        }
+        return kwargs, (str(spectrum_path) if spectrum_path else None)
+
+    def _get_canonical_preprocessing(self) -> tuple[dict, dict]:
+        """
+        Run preprocess_spectrum() with wizard parameters and cache results.
+        Returns (processed_spectrum, trace).
+        """
+        from snid_sage.snid.snid import preprocess_spectrum as _preprocess_spectrum
+
+        kwargs, spectrum_path = self._collect_wizard_preprocessing_inputs()
+
+        # Cache key: hash the small param dict + masks count + spectrum path (if any)
+        try:
+            key = (
+                spectrum_path,
+                tuple(sorted((str(k), str(v)) for k, v in kwargs.items() if k != "wavelength_masks")),
+                tuple(tuple(map(float, r)) for r in (kwargs.get("wavelength_masks") or [])),
+            )
+        except Exception:
+            key = (spectrum_path, None)
+
+        if self._canonical_cache_key == key and self._canonical_processed is not None and self._canonical_trace is not None:
+            return self._canonical_processed, self._canonical_trace
+
+        if spectrum_path:
+            processed, trace = _preprocess_spectrum(spectrum_path=spectrum_path, **kwargs)
+        else:
+            processed, trace = _preprocess_spectrum(input_spectrum=(self.original_wave, self.original_flux), **kwargs)
+
+        self._canonical_cache_key = key
+        self._canonical_processed = processed
+        self._canonical_trace = trace
+        return processed, trace
+
+    def _canonical_stage(self, stage: str) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Map wizard steps to canonical preprocess_spectrum trace outputs.
+        stage:
+          - "raw": raw input (grid-clipped if available)
+          - "after_step0": after masking/clipping (linear wavelength)
+          - "after_step1": after SavGol filtering (linear wavelength)
+          - "after_step2": after log rebin (log grid, scaled flux)
+          - "after_step3": after continuum removal (flat)
+          - "after_step4": after apodization (tapered flat; correlation input)
+        """
+        processed, trace = self._get_canonical_preprocessing()
+
+        def _arr(x) -> np.ndarray:
+            return np.asarray(x, dtype=float) if x is not None else np.asarray([], dtype=float)
+
+        if stage == "raw":
+            w = trace.get("step0b_wave") if trace.get("step0b_wave") is not None else trace.get("step0_wave")
+            f = trace.get("step0b_flux") if trace.get("step0b_flux") is not None else trace.get("step0_flux")
+            return _arr(w), _arr(f)
+
+        if stage == "after_step0":
+            # Clipping happens in preprocess_spectrum Step 1 (linear wavelength); manual masks are queued for log grid.
+            return _arr(trace.get("step1_wave")), _arr(trace.get("step1_flux"))
+
+        if stage == "after_step1":
+            return _arr(trace.get("step2_wave")), _arr(trace.get("step2_flux"))
+
+        # From here on: log grid
+        log_w = _arr(trace.get("step3_wave")) if trace.get("step3_wave") is not None else _arr(processed.get("log_wave"))
+
+        if stage == "after_step2":
+            return log_w, (_arr(trace.get("step3_flux")) if trace.get("step3_flux") is not None else _arr(processed.get("log_flux")))
+
+        if stage == "after_step3":
+            return log_w, (_arr(trace.get("step4_flux")) if trace.get("step4_flux") is not None else _arr(processed.get("flat_flux")))
+
+        if stage == "after_step4":
+            return log_w, (_arr(trace.get("step6_flux")) if trace.get("step6_flux") is not None else _arr(processed.get("tapered_flux")))
+
+        return log_w, _arr(processed.get("tapered_flux"))
+
+    def _auto_rescale_both_plots(self) -> None:
+        """Force autorange on both preview plots (x and y)."""
+        try:
+            for attr in ("top_plot_widget", "bottom_plot_widget"):
+                w = getattr(self, attr, None)
+                if not w:
+                    continue
+                pi = w.getPlotItem()
+                if not pi:
+                    continue
+                try:
+                    pi.enableAutoRange(axis="x", enable=True)
+                    pi.enableAutoRange(axis="y", enable=True)
+                except Exception:
+                    try:
+                        pi.enableAutoRange()
+                    except Exception:
+                        pass
+                try:
+                    vb = pi.getViewBox()
+                    if vb:
+                        vb.autoRange()
+                except Exception:
+                    pass
+        except Exception:
+            pass
     
     def _get_theme_colors(self) -> Dict[str, str]:
         """Get theme colors from parent or defaults"""
@@ -662,7 +860,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
     def _setup_enhanced_buttons(self):
         """Setup enhanced button styling and animations"""
         if not ENHANCED_BUTTONS_AVAILABLE:
-            _LOGGER.info("Enhanced buttons not available, using standard styling")
+            _LOGGER.debug("Enhanced buttons not available, using standard styling")
             return
 
         try:
@@ -671,7 +869,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
                 self, 'preprocessing_dialog'
             )
 
-            _LOGGER.info("Enhanced buttons successfully applied to preprocessing dialog")
+            _LOGGER.debug("Enhanced buttons successfully applied to preprocessing dialog")
             
             # Setup masking toggle button if available
             self._setup_masking_toggle_button()
@@ -764,7 +962,19 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
     def _on_mask_updated(self):
         """Callback when mask regions are updated"""
         _LOGGER.debug("Mask regions updated, refreshing preview")
-        self._update_preview()
+        # Debounce to avoid re-running canonical preprocess_spectrum on every mouse move
+        try:
+            if hasattr(self, '_mask_update_timer') and self._mask_update_timer:
+                self._mask_update_timer.stop()
+        except Exception:
+            pass
+        try:
+            self._mask_update_timer = QtCore.QTimer()
+            self._mask_update_timer.setSingleShot(True)
+            self._mask_update_timer.timeout.connect(self._update_preview)
+            self._mask_update_timer.start(50)
+        except Exception:
+            self._update_preview()
     
     def _on_continuum_updated(self):
         """Callback when continuum is updated"""
@@ -912,6 +1122,14 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
                 apply_step3(self)
             elif step_to_apply == 4:
                 apply_step4(self)
+
+            # After applying settings, refresh canonical cache so previews stay "true"
+            try:
+                self._canonical_cache_key = None
+                self._canonical_processed = None
+                self._canonical_trace = None
+            except Exception:
+                pass
             
             # Immediately refresh plots to show the newly applied state in BOTH plots
             try:
@@ -992,34 +1210,154 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
         if not self.preview_calculator or not self.plot_manager:
             return
         try:
-            current_wave, current_flux = self.preview_calculator.get_current_state()
-            _LOGGER.info(f"_refresh_plots_with_current_state: Got {len(current_flux)} points from get_current_state()")
-            # Apply zero padding removal consistently on both
+            # Use canonical stages for both "current" and "preview" so the wizard never
+            # shows a lightweight spectrum that later changes at Finish.
+            # - On step k page: current = after steps <k; preview = after steps <=k
+            step = int(getattr(self, "current_step", 0) or 0)
+
+            # Current (top)
+            if step <= 0:
+                current_wave, current_flux = self._canonical_stage("raw")
+            elif step == 1:
+                current_wave, current_flux = self._canonical_stage("after_step0")
+            elif step == 2:
+                current_wave, current_flux = self._canonical_stage("after_step1")
+            elif step == 3:
+                current_wave, current_flux = self._canonical_stage("after_step2")
+            elif step == 4:
+                current_wave, current_flux = self._canonical_stage("after_step3")
+            else:
+                current_wave, current_flux = self._canonical_stage("after_step4")
+
+            # Preview (bottom)
+            if step == 0:
+                preview_wave, preview_flux = self._canonical_stage("after_step0")
+            elif step == 1:
+                preview_wave, preview_flux = self._canonical_stage("after_step1")
+            elif step == 2:
+                preview_wave, preview_flux = self._canonical_stage("after_step2")
+            elif step == 3:
+                # If interactive continuum is active, keep the interactive preview logic.
+                try:
+                    if self.continuum_widget and self.continuum_widget.is_interactive_mode() and not self._is_continuum_step_applied():
+                        continuum_points = self.continuum_widget.get_continuum_points()
+                        if continuum_points:
+                            preview_wave, preview_flux = self.continuum_widget.get_preview_data()
+                        else:
+                            preview_wave, preview_flux = self._canonical_stage("after_step3")
+                    else:
+                        preview_wave, preview_flux = self._canonical_stage("after_step3")
+                except Exception:
+                    preview_wave, preview_flux = self._canonical_stage("after_step3")
+            elif step == 4:
+                preview_wave, preview_flux = self._canonical_stage("after_step4")
+            else:
+                preview_wave, preview_flux = self._canonical_stage("after_step4")
+
             current_wave, current_flux = self._apply_zero_padding_removal(current_wave, current_flux)
-            
-            # Calculate preview for the current step (what would happen if we apply it)
-            preview_wave, preview_flux = self._calculate_current_step_preview()
             preview_wave, preview_flux = self._apply_zero_padding_removal(preview_wave, preview_flux)
             
-            # Mask regions only relevant on masking step (manual + auto telluric overlays)
-            mask_regions = []
-            if self.current_step == 0:
-                # Manual masks from interactive widget
+            # ------------------------------------------------------------------
+            # Mask visualization + propagation parity
+            #
+            # - Manual masks should behave like A-band masking: visible immediately and propagated.
+            # - Canonical pipeline applies masks on the log grid (mask_logbins). For display we:
+            #   * show gaps on linear-λ plots (remove points)
+            #   * show zeros on log-grid plots (zero mask_logbins)
+            # ------------------------------------------------------------------
+            mask_regions: list[tuple[float, float]] = []
+            try:
                 if self.masking_widget:
-                    try:
-                        mask_regions = self.masking_widget.get_mask_regions()
-                    except Exception:
-                        mask_regions = []
-                # Auto telluric overlays if checkbox enabled
+                    mask_regions = list(self.masking_widget.get_mask_regions() or [])
+            except Exception:
+                mask_regions = []
+
+            # Include A-band / sky toggles from stable processing_params
+            try:
+                if isinstance(getattr(self, "processing_params", None), dict) and bool(self.processing_params.get("clip_aband", False)):
+                    mask_regions.append((7550.0, 7700.0))
+            except Exception:
+                pass
+            try:
+                if isinstance(getattr(self, "processing_params", None), dict) and bool(self.processing_params.get("clip_sky_lines", False)):
+                    w = float(self.processing_params.get("sky_width", 40.0))
+                    for l in (5577.0, 6300.2, 6364.0):
+                        mask_regions.append((l - w, l + w))
+            except Exception:
+                pass
+
+            # Normalize masks
+            try:
+                cleaned: list[tuple[float, float]] = []
+                for a, b in mask_regions:
+                    lo = float(min(a, b))
+                    hi = float(max(a, b))
+                    if np.isfinite(lo) and np.isfinite(hi) and hi > lo:
+                        cleaned.append((lo, hi))
+                mask_regions = cleaned
+            except Exception:
+                pass
+
+            def _apply_gap(wave, flux):
                 try:
-                    if hasattr(self, 'aband_cb') and self.aband_cb is not None and bool(self.aband_cb.isChecked()):
-                        mask_regions = list(mask_regions) + [(7550.0, 7700.0)]
+                    if not mask_regions:
+                        return wave, flux
+                    wv = np.asarray(wave, dtype=float)
+                    fv = np.asarray(flux, dtype=float)
+                    if wv.size == 0 or fv.size == 0 or wv.size != fv.size:
+                        return wave, flux
+                    keep = np.ones_like(wv, dtype=bool)
+                    for lo, hi in mask_regions:
+                        keep &= ~((wv >= lo) & (wv <= hi))
+                    return wv[keep], fv[keep]
                 except Exception:
-                    pass
+                    return wave, flux
+
+            def _apply_logbin_zero(flux, mask_logbins):
+                try:
+                    if mask_logbins is None:
+                        return flux
+                    m = np.asarray(mask_logbins, dtype=bool)
+                    fv = np.asarray(flux, dtype=float).copy()
+                    if m.size == fv.size and np.any(m):
+                        fv[m] = 0.0
+                    return fv
+                except Exception:
+                    return flux
+
+            # Get canonical mask bins (for log-grid stages)
+            try:
+                _, _trace = self._get_canonical_preprocessing()
+                mask_logbins = _trace.get("mask_logbins")
+            except Exception:
+                mask_logbins = None
+
+            # Apply display masking by step and by plot (current vs preview)
+            if step == 0:
+                # Wizard "Step 1" (masking): show masked regions like A-band clipping (gap),
+                # not as a zero dip, so the preview already looks "nice".
+                preview_wave, preview_flux = _apply_gap(preview_wave, preview_flux)
+            elif step == 1:
+                # Step-1 is linear-λ: show masks like A-band clipping (gap, not zeros)
+                current_wave, current_flux = _apply_gap(current_wave, current_flux)
+                preview_wave, preview_flux = _apply_gap(preview_wave, preview_flux)
+            elif step == 2:
+                # Step-2 page: current is linear; preview is log-grid
+                current_wave, current_flux = _apply_gap(current_wave, current_flux)
+                preview_flux = _apply_logbin_zero(preview_flux, mask_logbins)
+            else:
+                # Log-grid stages: show masked bins as zeros on both plots
+                current_flux = _apply_logbin_zero(current_flux, mask_logbins)
+                preview_flux = _apply_logbin_zero(preview_flux, mask_logbins)
             # Update with current state in top plot and preview in bottom plot
             self.plot_manager.update_standard_preview(
                 current_wave, current_flux, preview_wave, preview_flux, mask_regions
             )
+            # Ensure plots auto-scale reliably after updates
+            try:
+                QtCore.QTimer.singleShot(10, self._auto_rescale_both_plots)
+            except Exception:
+                self._auto_rescale_both_plots()
         except Exception as e:
             _LOGGER.debug(f"Error during immediate plot refresh: {e}")
     
@@ -1058,347 +1396,149 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             except Exception:
                 pass
             
-            _LOGGER.info("Advanced preprocessing restarted to Step 1 (initial state)")
+            _LOGGER.debug("Advanced preprocessing restarted to Step 1 (initial state)")
         except Exception as e:
             _LOGGER.error(f"Failed to restart preprocessing: {e}")
             QtWidgets.QMessageBox.warning(self, "Restart Failed", "Could not restart preprocessing. Please try again.")
     
     def finish_preprocessing(self):
-        """Finish preprocessing and return results exactly like original"""
-        if self.preview_calculator:
-            # Get final processed spectrum directly from preview calculator
-            final_wave, final_flux = self.preview_calculator.get_current_state()
-            
+        """Finish advanced preprocessing.
 
-            # Get the continuum from step history rather than stored_continuum to avoid GUI-state corruption
-            continuum = None
-            applied_steps = self.preview_calculator.applied_steps
-            
-            # Look for the continuum step in applied steps and extract the continuum
-            for step in applied_steps:
-                if step['type'] == 'continuum_fit':
-                    # Re-run the continuum fitting to get the correct continuum
-                    try:
-                        method = step['kwargs'].get('method', 'spline')
-                        if method == 'spline':
-                            knotnum = step['kwargs'].get('knotnum', 13)
+        Default path: use canonical `preprocess_spectrum()` (CLI parity).
+        Interactive/manual continuum: use the edited continuum from the widget.
+        """
+        if not self.preview_calculator:
+            return
 
-                            
-                            # Reconstruct the flux before continuum fitting by replaying
-                            # all steps up to (but not including) the continuum step.
-                            from snid_sage.snid.preprocessing import fit_continuum
-                            
-                            temp_calc = type(self.preview_calculator)(self.original_wave, self.original_flux)
-                            
-                            # Replay steps up to (but not including) continuum fitting
-                            for i, step in enumerate(applied_steps):
-                                if step['type'] == 'continuum_fit':
-                                    break
-                                step_kwargs = step['kwargs'].copy()
-                                step_kwargs.pop('step_index', None)  # Remove step_index if present
-                                temp_calc.apply_step(step['type'], **step_kwargs)
-                            
-                            # Now get the flux before continuum removal
-                            _, flux_before_continuum = temp_calc.get_current_state()
-                            
-                            # Fit continuum to this flux
-                            flat_flux, continuum = fit_continuum(flux_before_continuum, method=method, knotnum=knotnum)
-                            
-                            break
-                        # Gaussian method removed; only spline and interactive are supported
-                                
-                    except Exception as e:
+        applied_steps = list(getattr(self.preview_calculator, "applied_steps", []) or [])
+        has_interactive_continuum = any((s or {}).get("type") == "interactive_continuum" for s in applied_steps)
 
-                        continuum = None
-                        break
-                        
-                elif step['type'] == 'interactive_continuum':
-                    # Handle manual continuum editing
-                    try:
+        # ------------------------------------------------------------------
+        # Interactive/manual continuum path (cannot be replayed by preprocess_spectrum)
+        # ------------------------------------------------------------------
+        if has_interactive_continuum:
+            from snid_sage.snid.preprocessing import apodize, compute_mask_on_loggrid, get_grid_params
 
-                        # Get the manual continuum from the step
-                        manual_continuum = step['kwargs'].get('manual_continuum', None)
-                        if manual_continuum is not None:
-                            continuum = manual_continuum.copy()
+            wave, flat = self.preview_calculator.get_current_state()
+            wave = np.asarray(wave, dtype=float)
+            flat = np.asarray(flat, dtype=float)
 
-                            break
-                        else:
-                            # Try to get it from the continuum widget
-                            if self.continuum_widget and hasattr(self.continuum_widget, 'get_manual_continuum_array'):
-                                _, manual_continuum = self.continuum_widget.get_manual_continuum_array()
-                                if len(manual_continuum) > 0:
-                                    continuum = manual_continuum.copy()
+            # Continuum for display reconstruction
+            _, cont = self.preview_calculator.get_continuum_from_fit()
+            cont = np.asarray(cont, dtype=float) if cont is not None else np.ones_like(flat)
 
-                                    break
-                    except Exception as e:
-
-                        continuum = None
-                        break
-            
-            # Fallback to stored continuum if recomputation failed
-            if continuum is None:
-                continuum_wave, stored_continuum = self.preview_calculator.get_continuum_from_fit()
-                continuum = stored_continuum
-
-            
-
-            
-            # Get edge information from preview calculator (will be recomputed below for parity)
-            left_edge, right_edge = self.preview_calculator.get_current_edges()
-
-            
-            # Determine what the final_flux actually represents based on the applied steps
-            has_continuum_step = any(step['type'] in ['continuum_fit', 'interactive_continuum'] 
-                                   for step in applied_steps)
-            # Also trust the calculator flag if available
+            # Apodize if needed (wizard setting)
             try:
-                if hasattr(self.preview_calculator, 'has_continuum') and self.preview_calculator.has_continuum:
-                    has_continuum_step = True
+                apply_apod = bool(self.processing_params.get("apply_apodization", True))
+            except Exception:
+                apply_apod = True
+            try:
+                apod_percent = float(self.processing_params.get("apod_percent", 10.0))
+            except Exception:
+                apod_percent = 10.0
+            tapered = flat.copy()
+            if apply_apod and apod_percent > 0:
+                idx = np.where((tapered != 0) & np.isfinite(tapered))[0]
+                if idx.size:
+                    tapered = apodize(tapered, int(idx[0]), int(idx[-1]), percent=float(apod_percent))
+
+            # Mask bins on log grid (manual + A-band + sky toggles)
+            masks = []
+            try:
+                if self.masking_widget is not None:
+                    masks = list(self.masking_widget.get_mask_regions() or [])
+            except Exception:
+                masks = []
+            try:
+                if bool(self.processing_params.get("clip_aband", False)):
+                    masks.append((7550.0, 7700.0))
             except Exception:
                 pass
-            
-
-            
-            # Preserve flux just before continuum removal for correct Flux view
-            # Recompute it once here by replaying until the continuum step
-            flux_before_continuum_cache = None
             try:
-                temp_calc = type(self.preview_calculator)(self.original_wave, self.original_flux)
-                for i, s in enumerate(applied_steps):
-                    if s['type'] == 'continuum_fit':
-                        break
-                    step_kwargs = s['kwargs'].copy()
-                    step_kwargs.pop('step_index', None)
-                    temp_calc.apply_step(s['type'], **step_kwargs)
-                _, flux_before_continuum_cache = temp_calc.get_current_state()
-            except Exception:
-                flux_before_continuum_cache = None
-
-            if has_continuum_step and continuum is not None:
-                # final_flux is the flattened (continuum-removed) spectrum after continuum step
-                flat_spectrum = final_flux.copy()  # This is already flat (continuum-removed)
-                
-                # For Gaussian method, the stored continuum may be zeroed outside the valid range.
-                # Reconstruct a non-zeroed continuum for display by extending edge values.
-                recon_continuum = continuum.copy()
-                try:
-                    nz = np.nonzero(recon_continuum > 0)[0]
-                    if nz.size:
-                        c0, c1 = nz[0], nz[-1]
-                        # Extend to edges with edge values
-                        if c0 > 0:
-                            recon_continuum[:c0] = recon_continuum[c0]
-                        if c1 < len(recon_continuum) - 1:
-                            recon_continuum[c1+1:] = recon_continuum[c1]
-                except Exception:
-                    # Fallback: use original continuum array
-                    recon_continuum = continuum
-                
-                # Generate display versions using the correct logic
-                # display_flux: Reconstruct flux using (flat + 1) * (non-zeroed) continuum
-                display_flux = (flat_spectrum + 1.0) * recon_continuum
-                display_flat = flat_spectrum  # Already flattened
-                
-                # For log_flux, use the flux before continuum removal (rebinned & scaled)
-                # This is the natural flux to show in Flux view
-                if flux_before_continuum_cache is not None:
-                    log_flux = flux_before_continuum_cache.copy()
-                else:
-                    log_flux = display_flux.copy()
-                
-            else:
-                # No continuum step applied - final_flux represents the scaled flux after log rebinning
-                # This happens when only log rebinning + scaling steps are applied
-                log_flux = final_flux.copy()  # This is the scaled flux on log grid
-                flat_spectrum = np.zeros_like(final_flux)  # No actual flattening occurred
-                continuum = np.ones_like(final_flux)  # Unity continuum (no continuum removal)
-                
-                # For display versions when no continuum removal
-                display_flux = final_flux.copy()  # Scaled flux
-                display_flat = final_flux.copy()  # Same data (no actual flattening occurred)
-            
-            # Recompute edges exactly like CLI: based on log_flux (scaled) not flat
-            try:
-                valid_mask_cli = (log_flux != 0) & np.isfinite(log_flux)
-                if np.any(valid_mask_cli):
-                    left_edge = int(np.argmax(valid_mask_cli))
-                    right_edge = int(len(log_flux) - 1 - np.argmax(valid_mask_cli[::-1]))
-                else:
-                    left_edge, right_edge = 0, int(len(log_flux) - 1)
-            except Exception:
-                left_edge, right_edge = 0, int(len(log_flux) - 1)
-
-            
-        # Determine if apodization was already applied and which percent to use
-        apodize_already_applied = any(s.get('type') == 'apodization' for s in applied_steps)
-        # Use user-selected percent if available in UI; else check applied step; else default 10
-        selected_percent = None
-        try:
-            if hasattr(self, 'apod_percent_spin') and self.apod_percent_spin is not None:
-                selected_percent = float(self.apod_percent_spin.value())
-        except Exception:
-            selected_percent = None
-        if selected_percent is None:
-            try:
-                for s in applied_steps:
-                    if s.get('type') == 'apodization':
-                        selected_percent = float(s.get('kwargs', {}).get('percent', 10.0))
-                        break
-            except Exception:
-                selected_percent = None
-        if selected_percent is None:
-            selected_percent = 10.0
-
-        # Compute tapered_flux only if not already applied; otherwise keep flat_spectrum as-is
-        if not apodize_already_applied:
-            nz = np.nonzero(flat_spectrum)[0]
-            if nz.size:
-                l1, l2 = int(nz[0]), int(nz[-1])
-            else:
-                l1, l2 = 0, len(flat_spectrum) - 1
-            tapered_flux = apodize(flat_spectrum, l1, l2, percent=selected_percent)
-        else:
-            tapered_flux = flat_spectrum.copy()
-
-        # Derive mask bins on the log grid and zero them in flattened/apodized series (CLI parity)
-        mask_logbins = None
-        try:
-            # Prefer mask bins from preview calculator if available
-            if hasattr(self.preview_calculator, 'current_mask_logbins') and self.preview_calculator.current_mask_logbins is not None:
-                m = self.preview_calculator.current_mask_logbins
-                if len(m) == len(tapered_flux):
-                    mask_logbins = m.astype(bool)
-            # Fallback: compute from current mask regions against final_wave
-            if mask_logbins is None:
-                mask_regions = []
-                try:
-                    if hasattr(self, 'masking_widget') and self.masking_widget is not None:
-                        mask_regions = self.masking_widget.get_mask_regions() or []
-                except Exception:
-                    mask_regions = []
-                # Include A-band / sky using stable processing_params
-                try:
-                    apply_aband = bool(self.processing_params.get('clip_aband', False))
-                except Exception:
-                    apply_aband = False
-                try:
-                    apply_sky = bool(self.processing_params.get('clip_sky_lines', False))
-                except Exception:
-                    apply_sky = False
-                try:
-                    sky_width = float(self.processing_params.get('sky_width', 40.0))
-                except Exception:
-                    sky_width = 40.0
-                if apply_aband:
-                    mask_regions = list(mask_regions) + [(7550.0, 7700.0)]
-                if apply_sky:
+                if bool(self.processing_params.get("clip_sky_lines", False)):
+                    w = float(self.processing_params.get("sky_width", 40.0))
                     for l in (5577.0, 6300.2, 6364.0):
-                        mask_regions.append((l - sky_width, l + sky_width))
-                if mask_regions:
-                    try:
-                        from snid_sage.snid.preprocessing import compute_mask_on_loggrid
-                        mask_logbins = compute_mask_on_loggrid(final_wave, mask_regions)
-                    except Exception:
-                        mask_logbins = None
-            # Apply zeroing to flattened/apodized flux
-            if mask_logbins is not None and len(mask_logbins) == len(tapered_flux):
-                try:
-                    tapered_flux[mask_logbins] = 0.0
-                    # Keep flat_spectrum consistent with tapered_flux for downstream display logic
-                    flat_spectrum = tapered_flux.copy()
-                except Exception:
-                    pass
+                        masks.append((l - w, l + w))
+            except Exception:
+                pass
+            mask_logbins = compute_mask_on_loggrid(wave, masks)
+            if mask_logbins.size == tapered.size:
+                tapered[mask_logbins] = 0.0
+
+            # Edges (same convention as CLI: based on fluxed/log space, not flat sign)
+            flux_view = (tapered + 1.0) * cont
+            valid = (flux_view != 0) & np.isfinite(flux_view)
+            if np.any(valid):
+                left_edge = int(np.argmax(valid))
+                right_edge = int(len(flux_view) - 1 - np.argmax(valid[::-1]))
+            else:
+                left_edge, right_edge = 0, int(len(flux_view) - 1)
+
+            try:
+                NW_grid, W0, W1, DWLOG_grid = get_grid_params()
+            except Exception:
+                NW_grid, W0, W1, DWLOG_grid = (len(wave), float(np.nanmin(wave)), float(np.nanmax(wave)), 0.0)
+
+            ps = {
+                "log_wave": wave,
+                "log_flux": flux_view,
+                "flat_flux": tapered,
+                "tapered_flux": tapered,
+                "continuum": cont,
+                "mask_logbins": mask_logbins,
+                "left_edge": left_edge,
+                "right_edge": right_edge,
+                "nonzero_mask": slice(left_edge, right_edge + 1),
+                "advanced_preprocessing": True,
+                "preprocessing_type": "advanced",
+                "has_continuum": True,
+                "display_flat": tapered,
+                "display_flux": flux_view,
+                "flat_view": tapered,
+                "flux_view": flux_view,
+                "grid_params": {"NW": NW_grid, "W0": W0, "W1": W1, "DWLOG": DWLOG_grid},
+            }
+            if hasattr(self.parent(), "app_controller"):
+                self.parent().app_controller.set_processed_spectrum(ps)
+            self.result = {"processed_wave": wave, "processed_flux": flux_view, "flux_view": flux_view, "flat_view": tapered, "success": True}
+            self.accept()
+            return
+
+        # ------------------------------------------------------------------
+        # Default path: canonical pipeline (CLI parity)
+        # ------------------------------------------------------------------
+        ps, _trace = self._get_canonical_preprocessing()
+        try:
+            tapered = np.asarray(ps.get("tapered_flux", ps.get("flat_flux")), dtype=float)
+            cont = np.asarray(ps.get("continuum", np.ones_like(tapered)), dtype=float)
+            recon_cont = cont.copy()
+            nz = np.nonzero(np.isfinite(recon_cont) & (recon_cont > 0))[0]
+            if nz.size:
+                c0, c1 = int(nz[0]), int(nz[-1])
+                if c0 > 0:
+                    recon_cont[:c0] = recon_cont[c0]
+                if c1 < recon_cont.size - 1:
+                    recon_cont[c1 + 1 :] = recon_cont[c1]
+            ps["has_continuum"] = True
+            ps["display_flat"] = tapered
+            ps["display_flux"] = (tapered + 1.0) * recon_cont
+            ps["flat_view"] = ps["display_flat"]
+            ps["flux_view"] = ps["display_flux"]
         except Exception:
             pass
+        ps["advanced_preprocessing"] = True
+        ps["preprocessing_type"] = "advanced"
 
-        # Always define flat and flux view consistently regardless of continuum method
-        display_flat = tapered_flux  # apodized flat
-        # Reconstruct flux from apodized flat; if no continuum (no continuum step), use unity continuum
-        recon_for_display = recon_continuum if (has_continuum_step and continuum is not None) else np.ones_like(tapered_flux)
-        display_flux = (tapered_flux + 1.0) * recon_for_display
+        if hasattr(self.parent(), "app_controller"):
+            self.parent().app_controller.set_processed_spectrum(ps)
 
-        # Create processed spectrum dictionary like old GUI with proper display versions
-        # Ensure continuum stored is the extended, strictly-positive version used for reconstruction
-        try:
-            import numpy as _np
-            safe_continuum = _np.asarray(recon_continuum if (has_continuum_step and continuum is not None) else continuum, dtype=float).copy()
-            # Clip to small positive to avoid negative or zero continuum due to numeric issues
-            safe_continuum = _np.where(_np.isfinite(safe_continuum), safe_continuum, 0.0)
-            safe_continuum[safe_continuum <= 0] = 1e-12
-        except Exception:
-            safe_continuum = recon_continuum if (has_continuum_step and continuum is not None) else continuum
-
-        # Read real grid parameters instead of hard-coding
-        try:
-            NW_grid, W0, W1, DWLOG_grid = get_grid_params() if SNID_AVAILABLE else (1024, 2500.0, 10000.0, np.log(10000.0/2500.0)/1024)
-        except Exception:
-            NW_grid, W0, W1, DWLOG_grid = (1024, 2500.0, 10000.0, np.log(10000.0/2500.0)/1024)
-
-        processed_spectrum = {
-            'log_wave': final_wave,
-            'log_flux': log_flux,  # Scaled flux on log grid (or reconstructed if continuum was applied)
-            'flat_flux': flat_spectrum,  # Continuum-removed version (or zeros if no continuum)
-            'nonzero_mask': slice(left_edge, right_edge + 1),
-            'display_flux': display_flux,
-            'display_flat': display_flat,
-            'flux_view': display_flux,
-            'flat_view': display_flat,
-            'advanced_preprocessing': True,
-            'preprocessing_type': 'advanced',
-            'left_edge': left_edge,
-            'right_edge': right_edge,
-            'input_spectrum': {'wave': self.original_wave, 'flux': self.original_flux},
-            'grid_params': {
-                'NW': NW_grid,
-                'W0': W0,
-                'W1': W1,
-                'DWLOG': DWLOG_grid
-            },
-            'mask_logbins': mask_logbins.copy() if isinstance(mask_logbins, np.ndarray) else (mask_logbins if mask_logbins is None else np.asarray(mask_logbins, dtype=bool)),
-            'has_continuum': bool(has_continuum_step and continuum is not None)
-        }
-        # Only include continuum-dependent keys when continuum fitting actually occurred
-        if bool(has_continuum_step and continuum is not None):
-            processed_spectrum['tapered_flux'] = tapered_flux
-            processed_spectrum['continuum'] = safe_continuum
-            
-        # Store in parent GUI's app controller
-        if hasattr(self.parent(), 'app_controller'):
-            self.parent().app_controller.set_processed_spectrum(processed_spectrum)
-            _LOGGER.info("Processed spectrum stored in app controller")
-        
-        # Build a minimal result payload for GUI controller
-        flux_view = None
-        flat_view = None
-        try:
-            # Prefer proper flux/flat if continuum was applied
-            if hasattr(self.preview_calculator, 'has_continuum') and self.preview_calculator.has_continuum:
-                # Use final flattened spectrum as flat view
-                flat_view = final_flux.copy()
-                # Reconstruct flux from continuum if available
-                _, cont = self.preview_calculator.get_continuum_from_fit()
-                cont = np.asarray(cont, dtype=float)
-                if cont.shape == flat_view.shape and np.any(cont > 0):
-                    flux_view = (flat_view + 1.0) * cont
-                else:
-                    flux_view = flat_view.copy()
-            else:
-                # No continuum removal: flux and flat are the same
-                flux_view = final_flux.copy()
-                flat_view = np.zeros_like(final_flux)
-        except Exception:
-            flux_view = final_flux.copy()
-            flat_view = final_flux.copy()
-
-        # Pass both views forward; controller will select the right one
         self.result = {
-            'processed_wave': final_wave,
-            'processed_flux': final_flux,
-            'flux_view': flux_view,
-            'flat_view': flat_view,
-            'success': True
+            "processed_wave": ps.get("log_wave"),
+            "processed_flux": ps.get("flux_view", ps.get("display_flux", ps.get("log_flux"))),
+            "flux_view": ps.get("flux_view", ps.get("display_flux", ps.get("log_flux"))),
+            "flat_view": ps.get("flat_view", ps.get("display_flat", ps.get("flat_flux"))),
+            "success": True,
         }
-        
         self.accept()
     
     # Step application methods matching original exactly
@@ -1532,6 +1672,10 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             return
         
         try:
+            # Use canonical pipeline for all steps (current+preview).
+            self._refresh_plots_with_current_state()
+            return
+
             # Get current state (what's already applied)
             current_wave, current_flux = self.preview_calculator.get_current_state()
             
@@ -1690,19 +1834,19 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             return wave, flux
     
     def _calculate_current_step_preview(self):
-        """Calculate preview for current step using PreviewCalculator exactly like original"""
-        # Delegate to modular calculators
-        if self.current_step == 0:
-            return calculate_step0_preview(self)
-        elif self.current_step == 1:
-            return calculate_step1_preview(self)
-        elif self.current_step == 2:
-            return calculate_step2_preview(self)
-        elif self.current_step == 3:
-            return calculate_step3_preview(self)
-        elif self.current_step == 4:
-            return calculate_step4_preview(self)
-        return self.preview_calculator.get_current_state()
+        """Return the canonical preview for the active step."""
+        step = int(getattr(self, "current_step", 0) or 0)
+        if step == 0:
+            return self._canonical_stage("after_step0")
+        if step == 1:
+            return self._canonical_stage("after_step1")
+        if step == 2:
+            return self._canonical_stage("after_step2")
+        if step == 3:
+            return self._canonical_stage("after_step3")
+        if step >= 4:
+            return self._canonical_stage("after_step4")
+        return self._canonical_stage("raw")
     
     def _is_continuum_step_applied(self):
         """Check if the continuum step has been applied"""

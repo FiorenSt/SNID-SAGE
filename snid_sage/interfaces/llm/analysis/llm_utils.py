@@ -697,9 +697,9 @@ def _assess_classification_confidence(templates: List[Dict], cluster_confidence_
     redshift_consistency = _check_redshift_consistency(templates)
     
     # Fallback heuristic (not the official quality category - that comes from cluster)
-    if float(metric) > 2.0 and type_consistency and redshift_consistency.get('consistent', False):
+    if float(metric) > 2.5 and type_consistency and redshift_consistency.get('consistent', False):
         return 'High'
-    elif float(metric) >= 1.0 and type_consistency:
+    elif float(metric) >= 1.2 and type_consistency:
         return 'Moderate'
     elif float(metric) >= 0.7:
         return 'Low'

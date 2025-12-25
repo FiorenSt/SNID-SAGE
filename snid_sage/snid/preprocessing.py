@@ -369,6 +369,35 @@ def log_rebin_maskaware(
             if clipped_b > clipped_a:
                 clipped_masks.append((clipped_a, clipped_b))
 
+    # Ensure mask edges exist as samples so integration doesn't "bridge" big gaps
+    # created when upstream clipping physically removes masked regions.
+    if clipped_masks and w.size >= 2:
+        try:
+            boundary_points: list[float] = []
+            w0 = float(w[0])
+            w1 = float(w[-1])
+            for a, b in clipped_masks:
+                for x in (float(a), float(b)):
+                    if np.isfinite(x) and (w0 < x < w1):
+                        boundary_points.append(x)
+            if boundary_points:
+                # Deduplicate while keeping numeric stability
+                bp = np.array(sorted(set(boundary_points)), dtype=float)
+                if bp.size:
+                    fb = np.interp(bp, w, f)
+                    w = np.concatenate([w, bp])
+                    f = np.concatenate([f, fb])
+                    order = np.argsort(w)
+                    w = w[order]
+                    f = f[order]
+                    # drop duplicates again (boundary might coincide with existing samples)
+                    uniq = np.concatenate([[True], np.diff(w) > 0])
+                    w = w[uniq]
+                    f = f[uniq]
+        except Exception:
+            # Safe fallback: proceed without boundary insertion
+            pass
+
     # Build weight samples from masks: 1 outside, 0 inside
     weight = np.ones_like(w, float)
     if clipped_masks:

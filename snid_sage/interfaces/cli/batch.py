@@ -108,6 +108,12 @@ def _format_winning_cli_fields(summary: dict) -> dict:
     flags_str = f" MatchQual={match_quality} TypeConf={type_conf} SubtypeConf={subtype_conf}"
 
     z_txt = _fmt_val_pm(z_val, z_err, val_fmt="{:.6f}", err_fmt="{:.6f}")
+    # Make forced-redshift usage obvious in batch one-liners (common source of "wrong z" confusion).
+    try:
+        if bool(summary.get('redshift_fixed', False)):
+            z_txt = f"{z_txt} (forced)"
+    except Exception:
+        pass
     age_txt = _fmt_val_pm(age_val, age_err, val_fmt="{:.1f}", err_fmt="{:.1f}") if _is_finite_number(age_val) else "nan"
 
     return {
@@ -460,6 +466,14 @@ def process_single_spectrum_optimized(
 
             processed_spectrum, _ = preprocess_spectrum(
                 spectrum_path=spectrum_path,
+                spike_masking=getattr(args, 'spike_masking', True),
+                spike_floor_z=getattr(args, 'spike_floor_z', 50.0),
+                spike_baseline_window=getattr(args, 'spike_baseline_window', 501),
+                spike_baseline_width=getattr(args, 'spike_baseline_width', None),
+                spike_rel_edge_ratio=getattr(args, 'spike_rel_edge_ratio', 2.0),
+                spike_min_separation=getattr(args, 'spike_min_separation', 2),
+                spike_max_removals=getattr(args, 'spike_max_removals', None),
+                spike_min_abs_resid=getattr(args, 'spike_min_abs_resid', None),
                 savgol_window=getattr(args, 'savgol_window', 0),
                 savgol_order=getattr(args, 'savgol_order', 3),
                 aband_remove=getattr(args, 'aband_remove', False),
@@ -497,10 +511,13 @@ def process_single_spectrum_optimized(
         age_max = getattr(args, 'age_max', None)
         age_range = None
         if (age_min is not None) or (age_max is not None):
-            age_range = (
-                float(age_min) if age_min is not None else float(-1e9),
-                float(age_max) if age_max is not None else float(1e9)
-            )
+            try:
+                age_range = (
+                    float(age_min) if age_min is not None else float('-inf'),
+                    float(age_max) if age_max is not None else float('inf')
+                )
+            except Exception:
+                age_range = None
 
         filtered_templates = template_manager.get_filtered_templates(
             type_filter=args.type_filter,
@@ -535,11 +552,14 @@ def process_single_spectrum_optimized(
             type_filter=getattr(args, 'type_filter', None),
             template_filter=getattr(args, 'template_filter', None),
             exclude_templates=getattr(args, 'exclude_templates', None),
+            peak_window_size=int(getattr(args, 'peak_window_size', 10)),
             lapmin=getattr(args, 'lapmin', 0.3),
             hlap_ccc_threshold=getattr(args, 'hlap_ccc_threshold', 0.5),
             phase1_peak_min_height=getattr(args, "phase1_peak_min_height", 0.3),
             phase1_peak_min_distance=getattr(args, "phase1_peak_min_distance", 3),
             forced_redshift=used_forced_redshift,
+            reject_forced_fwhm_fallback=bool(getattr(args, "reject_forced_fwhm_fallback", True)),
+            max_output_templates=int(getattr(args, 'max_output_templates', 10)),
             verbose=False,
             show_plots=False,
             save_plots=False,
@@ -1069,10 +1089,10 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 penalty = min(mets.size / 5.0, 1.0) if mets.size else 0.0
                 penalized = mean_top * penalty
                 summary['cluster_penalized_score'] = penalized
-                if penalized > 2.0:
+                if penalized > 2.5:
                     summary['cluster_quality_category'] = 'High'
                     summary['cluster_quality_description'] = f'Excellent match quality (HLAP-CCC: {penalized:.2f})'
-                elif penalized >= 1.0:
+                elif penalized >= 1.2:
                     summary['cluster_quality_category'] = 'Medium'
                     summary['cluster_quality_description'] = f'Good match quality (HLAP-CCC: {penalized:.2f})'
                 elif penalized >= 0.7:
@@ -1410,9 +1430,38 @@ Examples:
         help="Phase-1 peak finding: minimum distance between peaks in bins (default: 3)"
     )
     analysis_group.add_argument(
+        "--peak-window-size",
+        dest="peak_window_size",
+        type=int,
+        default=10,
+        help="Peak detection window size (phase-2 peak refinement search radius; default: 10)"
+    )
+    analysis_group.add_argument(
+        "--max-output-templates",
+        dest="max_output_templates",
+        type=int,
+        default=10,
+        help="Maximum number of templates to expose in outputs (default: 10)"
+    )
+    analysis_group.add_argument(
         "--forced-redshift", 
         type=float, 
         help="Force analysis to this specific redshift for all spectra"
+    )
+    # Forced-redshift behavior: by default we reject fallback-width peaks.
+    # Use --keep-forced-fwhm-fallback to opt out for debugging.
+    analysis_group.add_argument(
+        "--keep-forced-fwhm-fallback",
+        dest="reject_forced_fwhm_fallback",
+        action="store_false",
+        help="Forced-redshift only: keep template matches even when half-height FWHM width measurement failed (fallback width used)."
+    )
+    # Backwards-compatible alias (default already rejects; kept for existing scripts)
+    analysis_group.add_argument(
+        "--reject-forced-fwhm-fallback",
+        dest="reject_forced_fwhm_fallback",
+        action="store_true",
+        help=argparse.SUPPRESS,
     )
     analysis_group.add_argument(
         "--profile",
@@ -1456,6 +1505,55 @@ Examples:
     # Display options
     # Preprocessing options
     preproc_group = parser.add_argument_group("Preprocessing Options")
+    # Early spike masking (enabled by default; can be disabled)
+    preproc_group.add_argument(
+        "--no-spike-masking",
+        dest="spike_masking",
+        action="store_false",
+        help="Disable early spike masking step (enabled by default)"
+    )
+    preproc_group.add_argument(
+        "--spike-floor-z",
+        type=float,
+        default=50.0,
+        help="Minimum floor-relative robust z for outlier detection (default: 50.0)"
+    )
+    preproc_group.add_argument(
+        "--spike-baseline-window",
+        type=int,
+        default=501,
+        help="Running median window size in pixels (odd, large; default: 501)"
+    )
+    preproc_group.add_argument(
+        "--spike-baseline-width",
+        type=float,
+        default=None,
+        help="Baseline width in wavelength units; overrides pixel window when set"
+    )
+    preproc_group.add_argument(
+        "--spike-rel-edge-ratio",
+        type=float,
+        default=2.0,
+        help="Require center residual to exceed neighbors by this factor (default: 2.0)"
+    )
+    preproc_group.add_argument(
+        "--spike-min-separation",
+        type=int,
+        default=2,
+        help="Minimum pixel separation between removed spikes (default: 2)"
+    )
+    preproc_group.add_argument(
+        "--spike-max-removals",
+        type=int,
+        default=None,
+        help="Optional cap on number of removed spikes per spectrum"
+    )
+    preproc_group.add_argument(
+        "--spike-min-abs-resid",
+        type=float,
+        default=None,
+        help="Minimum absolute residual amplitude (flux units) to consider a spike"
+    )
     preproc_group.add_argument(
         "--savgol-window",
         type=int,
@@ -2211,6 +2309,16 @@ def main(args: argparse.Namespace) -> int:
                             except Exception:
                                 redshift_val = None
                         items.append({"path": path_str, "redshift": redshift_val})
+                # Helpful diagnostics: show which columns were actually resolved and how many rows will be forced.
+                try:
+                    n_forced = sum(1 for it in items if it.get("redshift") is not None)
+                except Exception:
+                    n_forced = 0
+                if (not is_quiet) and (not brief_mode):
+                    print(
+                        f"[INFO] CSV columns resolved: path='{actual_path_key}', redshift='{actual_redshift_key}'. "
+                        f"{n_forced}/{len(items)} rows have finite redshift and will run in forced-redshift mode."
+                    )
             except FileNotFoundError:
                 print(f"[ERROR] CSV file not found: {args.list_csv}", file=sys.stderr)
                 return 1
@@ -2349,6 +2457,7 @@ def main(args: argparse.Namespace) -> int:
                 'lapmin': float(getattr(args, 'lapmin', 0.3)),
                 'hlap_ccc_threshold': float(getattr(args, 'hlap_ccc_threshold', 0.5)),
                 'forced_redshift': getattr(args, 'forced_redshift', None),
+                'reject_forced_fwhm_fallback': bool(getattr(args, 'reject_forced_fwhm_fallback', True)),
                 'type_filter': getattr(args, 'type_filter', None),
                 'template_filter': getattr(args, 'template_filter', None),
                 'exclude_templates': getattr(args, 'exclude_templates', None),
@@ -2365,9 +2474,20 @@ def main(args: argparse.Namespace) -> int:
                 'emwidth': float(getattr(args, 'emwidth', 40.0)),
                 'wavelength_masks': parsed_wavelength_masks,
                 'apodize_percent': float(getattr(args, 'apodize_percent', 10.0)),
+                # --- Spike masking controls (parity with identify/GUI) ---
+                'spike_masking': bool(getattr(args, 'spike_masking', True)),
+                'spike_floor_z': float(getattr(args, 'spike_floor_z', 50.0)),
+                'spike_baseline_window': int(getattr(args, 'spike_baseline_window', 501)),
+                'spike_baseline_width': getattr(args, 'spike_baseline_width', None),
+                'spike_rel_edge_ratio': float(getattr(args, 'spike_rel_edge_ratio', 2.0)),
+                'spike_min_separation': int(getattr(args, 'spike_min_separation', 2)),
+                'spike_max_removals': getattr(args, 'spike_max_removals', None),
+                'spike_min_abs_resid': getattr(args, 'spike_min_abs_resid', None),
                 # --- Analysis parameters needed inside worker processes ---
                 'phase1_peak_min_height': float(getattr(args, 'phase1_peak_min_height', 0.3)),
                 'phase1_peak_min_distance': int(getattr(args, 'phase1_peak_min_distance', 3)),
+                'peak_window_size': int(getattr(args, 'peak_window_size', 10)),
+                'max_output_templates': int(getattr(args, 'max_output_templates', 10)),
                 'weighted_gmm': bool(getattr(args, 'weighted_gmm', False)),
             }
 

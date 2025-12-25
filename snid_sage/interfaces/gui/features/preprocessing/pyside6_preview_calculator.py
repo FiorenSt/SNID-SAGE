@@ -34,6 +34,8 @@ try:
         clip_sky_lines,
         log_rebin,
         log_rebin_maskaware,
+        enforce_positive_flux,
+        get_grid_params,
         fit_continuum,
         fit_continuum_spline,
         apodize,
@@ -114,11 +116,36 @@ class PySide6PreviewCalculator(QtCore.QObject):
         base_wave = self.original_wave.copy()
         base_flux = self.original_flux.copy()
 
-        # Apply the same early spike masking operator used by the core
-        # preprocess_spectrum() pipeline so that quick and advanced
-        # preprocessing see an identical de-spiked spectrum.
+        # Canonical start-state parity with preprocess_spectrum():
+        # - clip to active log-grid bounds (W0..W1)
+        # - enforce positive flux for continuum fitter (may be a no-op)
+        # - apply spike masking
         if SNID_AVAILABLE:
             try:
+                # Step 0b: clip to active grid bounds (profile-specific)
+                try:
+                    _, w0, w1, _ = get_grid_params()
+                    gmin = float(w0)
+                    gmax = float(w1)
+                except Exception:
+                    gmin = float(MINW)
+                    gmax = float(MAXW)
+                try:
+                    clip_mask = (base_wave >= gmin) & (base_wave <= gmax)
+                    if np.any(clip_mask):
+                        base_wave = base_wave[clip_mask]
+                        base_flux = base_flux[clip_mask]
+                except Exception:
+                    pass
+
+                # Step 0c: enforce positive flux for spline continuum fitting
+                try:
+                    base_flux, flux_offset = enforce_positive_flux(base_flux)
+                    self.flux_offset = float(flux_offset)
+                except Exception:
+                    self.flux_offset = 0.0
+
+                # Step 0a: spike masking (same defaults as preprocess_spectrum)
                 cleaned_wave, cleaned_flux, spike_info = apply_spike_mask(
                     base_wave,
                     base_flux,
@@ -263,10 +290,8 @@ class PySide6PreviewCalculator(QtCore.QObject):
         
         # Apply the step
         preview_wave, preview_flux = self.preview_step(step_type, **kwargs)
-        _LOGGER.info(f"apply_step: {step_type} - Before: {len(self.current_flux)} points, After: {len(preview_flux)} points")
         self.current_wave = preview_wave
         self.current_flux = preview_flux
-        _LOGGER.info(f"apply_step: {step_type} - State updated to {len(self.current_flux)} points")
         
         # Track applied steps so the finalization logic can accurately reconstruct state
         try:
@@ -325,8 +350,6 @@ class PySide6PreviewCalculator(QtCore.QObject):
                 window_int = int(value)
             except Exception:
                 window_int = 11
-            _LOGGER.info(f"_preview_savgol_filter: Input {len(temp_flux)} points, filter_type={filter_type}, value={window_int if filter_type=='fixed' else value}, polyorder={polyorder_int}")
-            
             if filter_type == "fixed" and window_int >= 3:
                 if SNID_AVAILABLE:
                     filtered_flux = savgol_filter_fixed(temp_flux, window_int, polyorder_int)
@@ -338,12 +361,9 @@ class PySide6PreviewCalculator(QtCore.QObject):
                         filtered_flux = _sg(temp_flux, w, min(polyorder_int, w - 1))
                     except Exception:
                         return temp_wave, temp_flux
-                _LOGGER.info(f"_preview_savgol_filter: Fixed filter applied, output {len(filtered_flux)} points")
             else:
-                _LOGGER.info(f"_preview_savgol_filter: No filtering applied (filter_type={filter_type})")
                 return temp_wave, temp_flux
             
-            _LOGGER.info(f"_preview_savgol_filter: Returning {len(filtered_flux)} points")
             return temp_wave, filtered_flux
             
         except Exception as e:
@@ -540,43 +560,32 @@ class PySide6PreviewCalculator(QtCore.QObject):
             temp_wave = self.current_wave.copy()
             temp_flux = self.current_flux.copy()
             
-            # Find the valid data range for apodization
-            # For continuum-removed spectra, we need to find where we have significant data
-            has_negative = np.any(temp_flux < 0)
-            
-            if has_negative:
-                # For continuum-removed spectra, find the range where we have "significant" data
-                abs_flux = np.abs(temp_flux)
-                threshold = np.max(abs_flux) * 0.01 if np.max(abs_flux) > 0 else 0
-                nz = np.nonzero(abs_flux > threshold)[0]
-            else:
-                # For non-continuum-removed spectra, use positive values only
-                nz = np.nonzero(temp_flux > 0)[0]
+            # Match preprocess_spectrum(): apodize over the valid non-zero finite region.
+            nz = np.where((temp_flux != 0) & np.isfinite(temp_flux))[0]
             
             if nz.size > 0:
                 n1, n2 = nz[0], nz[-1]
-                # Ensure we have enough points for meaningful apodization
-                if n2 - n1 >= 10:
-                    if SNID_AVAILABLE:
-                        apodized_flux = apodize(temp_flux, n1, n2, percent=percent)
-                    else:
-                        # Fallback: simple raised-cosine taper
-                        out = temp_flux.copy()
-                        valid_len = (n2 - n1 + 1)
-                        ns = int(round(valid_len * max(0.0, min(100.0, float(percent))) / 100.0))
-                        ns = max(0, min(ns, valid_len // 2))
-                        if ns > 1:
-                            ramp = 0.5 * (1 - np.cos(np.pi * np.arange(ns) / (ns - 1.0)))
-                            out[n1:n1+ns] *= ramp
-                            out[n2-ns+1:n2+1] *= ramp[::-1]
-                        apodized_flux = out
-                    # After apodization, zero-out masked bins (to match CLI visuals)
-                    try:
-                        if getattr(self, 'current_mask_logbins', None) is not None and len(self.current_mask_logbins) == len(apodized_flux):
-                            apodized_flux[self.current_mask_logbins.astype(bool)] = 0.0
-                    except Exception:
-                        pass
-                    return temp_wave, apodized_flux
+                if SNID_AVAILABLE:
+                    apodized_flux = apodize(temp_flux, int(n1), int(n2), percent=float(percent))
+                else:
+                    # Fallback: simple raised-cosine taper
+                    out = temp_flux.copy()
+                    valid_len = (int(n2) - int(n1) + 1)
+                    ns = int(round(valid_len * max(0.0, min(100.0, float(percent))) / 100.0))
+                    ns = max(0, min(ns, valid_len // 2))
+                    if ns > 1:
+                        ramp = 0.5 * (1 - np.cos(np.pi * np.arange(ns) / (ns - 1.0)))
+                        out[int(n1) : int(n1) + ns] *= ramp
+                        out[int(n2) - ns + 1 : int(n2) + 1] *= ramp[::-1]
+                    apodized_flux = out
+
+                # After apodization, zero-out masked bins (to match CLI visuals)
+                try:
+                    if getattr(self, 'current_mask_logbins', None) is not None and len(self.current_mask_logbins) == len(apodized_flux):
+                        apodized_flux[self.current_mask_logbins.astype(bool)] = 0.0
+                except Exception:
+                    pass
+                return temp_wave, apodized_flux
             
             # If we can't find a valid range, return unchanged
             return temp_wave, temp_flux

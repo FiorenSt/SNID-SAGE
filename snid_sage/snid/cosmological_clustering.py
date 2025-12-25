@@ -1454,13 +1454,13 @@ def _calculate_absolute_quality(winning_cluster_info: Dict[str, Any], metric_nam
     
     # Quality categories based on penalized top-5 HLAP-CCC score (global rule)
     #  - Very Low: < 0.7
-    #  - Low: 0.7 to < 1.0
-    #  - Medium: 1.0 to ≤ 2.0
-    #  - High: > 2.0
-    if penalized_score > 2.0:
+    #  - Low: 0.7 to < 1.2
+    #  - Medium: 1.2 to ≤ 2.5
+    #  - High: > 2.5
+    if penalized_score > 2.5:
         quality_category = 'High'
         quality_description = f'Excellent match quality (HLAP-CCC: {penalized_score:.2f})'
-    elif penalized_score >= 1.0:
+    elif penalized_score >= 1.2:
         quality_category = 'Medium'
         quality_description = f'Good match quality (HLAP-CCC: {penalized_score:.2f})'
     elif penalized_score >= 0.7:

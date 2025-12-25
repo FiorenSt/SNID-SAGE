@@ -589,6 +589,13 @@ class PySide6AppController(QtCore.QObject):
         """Set processed spectrum data"""
         self.processed_spectrum = processed_spectrum
         _LOGGER.debug("Processed spectrum data stored")
+        # Keep a best-effort record of the preprocessing parameters that produced this spectrum.
+        # This is used by the analysis-thread fallback path when preprocessing wasn't explicitly run.
+        try:
+            if not hasattr(self, "last_preprocessing_kwargs") or self.last_preprocessing_kwargs is None:
+                self.last_preprocessing_kwargs = {}
+        except Exception:
+            self.last_preprocessing_kwargs = {}
     
     def _apply_zero_padding_filter(self, wave, flux, processed_spectrum=None):
         """Filter out zero-padded regions from spectrum data
@@ -921,12 +928,58 @@ class PySide6AppController(QtCore.QObject):
                 progress_callback("Running preprocessing as part of analysis...")
                 _LOGGER.info("Running preprocessing as part of analysis...")
                 from snid_sage.snid.snid import preprocess_spectrum
-                
-                # Basic preprocessing with default parameters
+
+                # Use last-used GUI preprocessing parameters when available; fall back to safe defaults.
+                try:
+                    pp = getattr(self, "last_preprocessing_kwargs", None) or {}
+                except Exception:
+                    pp = {}
+                try:
+                    savgol_window = int(pp.get("savgol_window", 0) or 0)
+                except Exception:
+                    savgol_window = 0
+                try:
+                    savgol_order = int(pp.get("savgol_order", 3) or 3)
+                except Exception:
+                    savgol_order = 3
+                try:
+                    aband_remove = bool(pp.get("aband_remove", False))
+                except Exception:
+                    aband_remove = False
+                try:
+                    skyclip = bool(pp.get("skyclip", False))
+                except Exception:
+                    skyclip = False
+                try:
+                    emclip_z = float(pp.get("emclip_z", -1.0))
+                except Exception:
+                    emclip_z = -1.0
+                try:
+                    emwidth = float(pp.get("emwidth", 40.0))
+                except Exception:
+                    emwidth = 40.0
+                try:
+                    wavelength_masks = pp.get("wavelength_masks", []) or []
+                except Exception:
+                    wavelength_masks = []
+                try:
+                    apodize_percent = float(pp.get("apodize_percent", 10.0))
+                except Exception:
+                    apodize_percent = 10.0
+
                 self.processed_spectrum, preprocessing_trace = preprocess_spectrum(
                     input_spectrum=(self.original_wave, self.original_flux),
+                    savgol_window=savgol_window,
+                    savgol_order=savgol_order,
+                    aband_remove=aband_remove,
+                    skyclip=skyclip,
+                    emclip_z=emclip_z,
+                    emwidth=emwidth,
+                    wavelength_masks=wavelength_masks,
+                    apodize_percent=apodize_percent,
                     skip_steps=[],  # Include all preprocessing steps
                     verbose=False,
+                    clip_to_grid=True,
                     profile_id=self.active_profile_id
                 )
                 progress_callback("Preprocessing completed", 10)

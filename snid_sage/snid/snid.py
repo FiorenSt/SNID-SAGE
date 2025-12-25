@@ -1325,6 +1325,10 @@ def _process_forced_redshift_match(
                 "hlap": hlap,
                 "peak_height": hgt_p,
                 "peak_width": width,
+                # Diagnostics: whether peak width measurement fell back to a conservative default.
+                # This is particularly useful in forced-redshift mode where the central (zero-lag)
+                # "peak" may be broad/flat/noisy and not a well-localized maximum.
+                "width_fwhm_used_fallback": bool(used_fallback),
                 "processed_flux": tpl_shifted[left_edge:right_edge+1],
                 "correlation": {
                     "z_axis_full": np.array([forced_redshift]),
@@ -1398,6 +1402,10 @@ def run_snid_analysis(
     hlap_ccc_threshold: float = 0.5,  # Best-metric threshold for clustering
     # NEW: Forced redshift parameter
     forced_redshift: Optional[float] = None,
+    # Forced-redshift hygiene: optionally reject matches where peak width had to use fallback.
+    # Default True: in forced-redshift mode a non-measurable half-height FWHM is a strong
+    # indicator the central (zero-lag) "peak" is not well-localized.
+    reject_forced_fwhm_fallback: bool = True,
     # Output options
     max_output_templates: int = 5,
     verbose: bool = False,
@@ -1445,6 +1453,9 @@ def run_snid_analysis(
         If provided, bypass redshift search and force all templates to this redshift.
         When set, all templates will be shifted to this exact redshift value,
         skipping the initial correlation-based redshift determination.
+    reject_forced_fwhm_fallback : bool
+        Forced-redshift only: if True, drop template matches where the half-height
+        FWHM width could not be measured and a conservative fallback width was used.
     max_output_templates : int
         Maximum number of best templates to include in results
     verbose : bool
@@ -1778,6 +1789,20 @@ def run_snid_analysis(
             )
 
             _LOG.info(f"Phase 1 complete: Forced redshift analysis found {len(matches)} matches")
+
+            # Optional: remove forced-redshift matches whose phase-2 peak width could not be
+            # measured (half-height crossings not found), i.e. width used a fallback.
+            if bool(reject_forced_fwhm_fallback) and matches:
+                before = int(len(matches))
+                matches = [m for m in matches if not bool(m.get("width_fwhm_used_fallback", False))]
+                removed = int(before - len(matches))
+                analysis_trace["forced_fwhm_fallback_removed"] = removed
+                if removed:
+                    _LOG.info(
+                        "Forced redshift: removed %d/%d matches with fallback FWHM width (reject_forced_fwhm_fallback=True)",
+                        removed,
+                        before,
+                    )
 
         except Exception as e:
             _LOG.error(f"Error in forced redshift analysis: {e}")
