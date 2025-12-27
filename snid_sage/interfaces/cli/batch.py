@@ -333,6 +333,8 @@ def _mp_worker_initializer(templates_dir: str,
                            profile_id: Optional[str]) -> None:
     """Per-process initializer: load all templates once for this worker process."""
     global _WORKER_TM, _WORKER_ARGS_CACHE
+
+    effective_profile_id = (profile_id or 'optical')
     try:
         # Avoid BLAS over-subscription inside processes
         os.environ.setdefault('OMP_NUM_THREADS', '1')
@@ -348,7 +350,7 @@ def _mp_worker_initializer(templates_dir: str,
         pass
 
     # Build a per-process template manager and pre-load templates (all relevant HDF5 files)
-    _WORKER_TM = BatchTemplateManager(templates_dir, verbose=False, profile_id=profile_id)
+    _WORKER_TM = BatchTemplateManager(templates_dir, verbose=False, profile_id=effective_profile_id)
     _WORKER_TM.load_templates_once()
 
     # Pre-warm unified storage path so subsequent analysis calls are fast
@@ -358,7 +360,7 @@ def _mp_worker_initializer(templates_dir: str,
             templates_dir,
             type_filter=type_filter,
             template_names=template_filter,
-            profile_id=profile_id
+            profile_id=effective_profile_id
         )
     except Exception:
         # Non-fatal; run_snid_analysis will still load via unified storage
@@ -368,7 +370,7 @@ def _mp_worker_initializer(templates_dir: str,
         'type_filter': type_filter,
         'template_filter': template_filter,
         'templates_dir': templates_dir,
-        'profile_id': profile_id,
+        'profile_id': effective_profile_id,
     }
 
 
@@ -2384,6 +2386,14 @@ def main(args: argparse.Namespace) -> int:
                 max_workers = os.cpu_count() or 1
             except Exception:
                 max_workers = 1
+        # Avoid spawning a huge number of processes for tiny jobs; it slows startup,
+        # increases filesystem pressure (HDF5/index reads), and can change behavior on
+        # some HPC/NFS setups.
+        if use_parallel:
+            try:
+                max_workers = max(1, min(int(max_workers), int(len(items))))
+            except Exception:
+                max_workers = max(1, int(max_workers) if max_workers else 1)
         
         # ============================================================================
         # OPTIMIZATION: Load templates ONCE for the entire batch

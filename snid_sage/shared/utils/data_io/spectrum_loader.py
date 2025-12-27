@@ -291,20 +291,39 @@ def load_text_spectrum(filename: str, **kwargs) -> Tuple[np.ndarray, np.ndarray]
     try:
         with open(filename, 'r') as f:
             first_line = f.readline().strip()
-            # Check if first line contains obvious header keywords
-            header_keywords = ['WAVE', 'FLUX', 'WAVELENGTH', 'SPECTRUM', 'LAMBDA', 'COUNTS']
-            has_header = any(keyword.upper() in first_line.upper() for keyword in header_keywords)
+            # Detect delimiter (comma, tab, semicolon, or whitespace)
+            delimiter = ',' if ',' in first_line else ('\t' if '\t' in first_line else (';' if ';' in first_line else None))
+            # Split by detected delimiter (or whitespace if none)
+            parts = first_line.split(delimiter) if delimiter else first_line.split()
             
-            # If first line has text that looks like a header, try skipping it
-            if has_header:
+            # Check if first line contains obvious header keywords (case-insensitive)
+            header_keywords = ['wave', 'flux', 'wavelength', 'spectrum', 'lambda', 'counts', 'err', 'error']
+            first_line_lower = first_line.lower()
+            has_header = any(keyword in first_line_lower for keyword in header_keywords)
+            
+            # Also check if first line doesn't look like numbers
+            looks_like_numbers = False
+            if len(parts) >= 2:
+                try:
+                    float(parts[0])
+                    float(parts[1])
+                    looks_like_numbers = True
+                except (ValueError, IndexError):
+                    looks_like_numbers = False
+            
+            # If first line has text that looks like a header, try header-aware loader first
+            if has_header or not looks_like_numbers:
                 # Use robust header-aware loader first (handles CSV headers like 'wave,flux,flux_err')
                 try:
                     return _try_header_aware_loading(filename)
                 except Exception:
                     pass
-                # Fallback: try naive skip of the first row with whitespace delimiter
+                # Fallback: try naive skip of the first row with detected delimiter
                 try:
-                    data = np.loadtxt(filename, comments='#', skiprows=1, **kwargs)
+                    if delimiter:
+                        data = np.loadtxt(filename, comments='#', skiprows=1, delimiter=delimiter, **kwargs)
+                    else:
+                        data = np.loadtxt(filename, comments='#', skiprows=1, **kwargs)
                     if data.ndim == 2 and data.shape[1] >= 2:
                         wavelength = data[:, 0]
                         flux = data[:, 1]
@@ -313,27 +332,6 @@ def load_text_spectrum(filename: str, **kwargs) -> Tuple[np.ndarray, np.ndarray]
                         return wavelength, flux
                 except Exception:
                     pass  # Fall through to other methods
-            
-            # Also check if the first line doesn't look like numbers
-            parts = first_line.split()
-            if len(parts) >= 2:
-                try:
-                    float(parts[0])
-                    float(parts[1])
-                    # First line looks like numbers, don't skip
-                except ValueError:
-                    # First line doesn't look like numbers, try skipping
-                    try:
-                        data = np.loadtxt(filename, comments='#', skiprows=1, **kwargs)
-                        if data.ndim == 2 and data.shape[1] >= 2:
-                            wavelength = data[:, 0]
-                            flux = data[:, 1]
-                            # Validate the data
-                            wavelength, flux = _validate_and_clean_arrays(wavelength, flux)
-                            _LOGGER.info(f"✅ Text spectrum loaded (non-numeric header skipped): {len(wavelength)} points")
-                            return wavelength, flux
-                    except Exception:
-                        pass  # Fall through to other methods
     except:
         pass  # Fall through to standard loading
     

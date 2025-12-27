@@ -916,22 +916,24 @@ def main(args: argparse.Namespace) -> int:
             processed_spectrum, preprocessing_trace = preprocess_spectrum(
                 args.spectrum_path,
                 spike_masking=getattr(args, 'spike_masking', True),
-                spike_floor_z=getattr(args, 'spike_floor_z', 20.0),
+                spike_floor_z=getattr(args, 'spike_floor_z', 50.0),
                 spike_baseline_window=getattr(args, 'spike_baseline_window', 501),
                 spike_baseline_width=getattr(args, 'spike_baseline_width', None),
-                spike_rel_edge_ratio=getattr(args, 'spike_rel_edge_ratio', 1.5),
+                spike_rel_edge_ratio=getattr(args, 'spike_rel_edge_ratio', 2.0),
                 spike_min_separation=getattr(args, 'spike_min_separation', 2),
                 spike_max_removals=getattr(args, 'spike_max_removals', None),
                 spike_min_abs_resid=getattr(args, 'spike_min_abs_resid', None),
                 savgol_window=savgol_window,
-                savgol_order=args.savgol_order,
-                aband_remove=args.aband_remove,
-                skyclip=args.skyclip,
+                savgol_order=getattr(args, 'savgol_order', 3),
+                aband_remove=getattr(args, 'aband_remove', False),
+                skyclip=getattr(args, 'skyclip', False),
                 emclip_z=effective_emclip_z,
-                emwidth=args.emwidth,
+                emwidth=getattr(args, 'emwidth', 40.0),
                 wavelength_masks=wavelength_masks,
-                apodize_percent=args.apodize_percent,
-                verbose=args.verbose,
+                apodize_percent=getattr(args, 'apodize_percent', 10.0),
+                # Keep preprocessing numerically identical between CLI commands:
+                # avoid extra output and any potential side-effects from verbose mode.
+                verbose=False,
                 clip_to_grid=True,
                 profile_id=active_profile_id
             )

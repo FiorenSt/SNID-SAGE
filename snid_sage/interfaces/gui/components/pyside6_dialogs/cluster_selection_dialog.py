@@ -101,17 +101,6 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         
         # Sort candidates by score
         self._sort_candidates()
-
-        # Special case: if ONLY Very Low clusters exist, show them by default
-        # (otherwise the user would see an empty 3D plot on open).
-        try:
-            has_any = bool(self.all_candidates)
-            has_non_very_low = any((not self._is_very_low(c)) for c in self.all_candidates)
-            has_very_low = any(self._is_very_low(c) for c in self.all_candidates)
-            if has_any and has_very_low and (not has_non_very_low):
-                self.show_very_low = True
-        except Exception:
-            pass
         
         # UI components
         self.cluster_dropdown = None
@@ -135,6 +124,17 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self._very_low_checkbox: Optional[QtWidgets.QCheckBox] = None
         self._dropdown_index_to_candidate_index: List[Optional[int]] = []
         self._candidate_index_to_dropdown_index: Dict[int, int] = {}
+
+        # Special case: if ONLY Very Low clusters exist, show them by default
+        # (otherwise the user would see an empty 3D plot on open).
+        try:
+            has_any = bool(self.all_candidates)
+            has_non_very_low = any((not self._is_very_low(c)) for c in self.all_candidates)
+            has_very_low = any(self._is_very_low(c) for c in self.all_candidates)
+            if has_any and has_very_low and (not has_non_very_low):
+                self.show_very_low = True
+        except Exception:
+            pass
         
         # Validate matplotlib availability
         if not MATPLOTLIB_AVAILABLE:
