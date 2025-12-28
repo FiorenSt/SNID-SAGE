@@ -117,7 +117,7 @@ class EmissionLineOverlayController:
             len(self.gui.original_wave) > 0 and len(self.gui.original_flux) > 0):
             return True
         
-        # Legacy spectrum data formats (for backward compatibility)
+        # Spectrum data formats (backward compatibility)
         if hasattr(self.gui, 'current_spectrum_data') and self.gui.current_spectrum_data:
             return True
         

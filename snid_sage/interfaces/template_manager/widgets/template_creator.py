@@ -639,7 +639,7 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
             self._update_actions_enabled()
             
     def _save_template(self, template_info: Dict[str, Any], spectrum_data: Dict[str, np.ndarray]) -> bool:
-        """Deprecated: LNW saving removed. Use TemplateService instead."""
+        """Deprecated: Use TemplateService instead."""
         _LOGGER.error("_save_template fallback path invoked; this method is not supported in HDF5-only mode.")
         return False
             
@@ -700,7 +700,6 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
         except ImportError:
             raise ImportError("astropy required for FITS files: pip install astropy")
             
-    # LNW loading removed
         
     def _load_ascii_spectrum(self, file_path: str) -> Tuple[np.ndarray, np.ndarray]:
         """Load spectrum from ASCII file"""

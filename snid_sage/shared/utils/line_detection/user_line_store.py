@@ -93,7 +93,7 @@ def save_user_lines(lines: List[Dict[str, Any]]) -> bool:
                     if k != "lines" and k not in merged_payload:
                         merged_payload[k] = v
             else:
-                # Legacy fallback for editable installs during transition
+                # Fallback for editable installs
                 repo_default = Path("config") / "lines" / "line_database.json"
                 if repo_default.exists():
                     with repo_default.open("r", encoding="utf-8") as rf:

@@ -188,7 +188,6 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             except Exception:
                 pass
             
-            # Stage memory no longer used for UI controls (revert removed)
             # Auto-run spike detection and add to masks for Step 0 visualization
             try:
                 from snid_sage.snid.preprocessing import find_spike_indices
@@ -482,7 +481,6 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             'filter_type': 'none',  # none, fixed
             'filter_window': 11,
             'filter_order': 3,
-            # removed wavelength/FWHM option
             
             # Step 2: Log-wavelength rebinning (always applied)
             'log_rebin': True,  # Always true - required for SNID
@@ -680,7 +678,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
     def _configure_plot_widget(self, plot_widget):
         """Configure a plot widget with proper theme and settings"""
         try:
-            # Note: Global PyQtGraph configuration is already set at module level
+            # Global PyQtGraph configuration is already set at module level
             # Set background color
             plot_widget.setBackground('white')
             
@@ -809,7 +807,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             _LOGGER.error(f"Error updating interactive preview: {e}")
     
     def _create_buttons(self, layout):
-        """Create action buttons in a compact layout (removed navigation buttons)"""
+        """Create action buttons in a compact layout"""
         button_frame = QtWidgets.QFrame()
         button_layout = QtWidgets.QVBoxLayout(button_frame)
         button_layout.setSpacing(6)  # Reduced spacing
@@ -1078,7 +1076,6 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
 
     # Step-1 params change handled in steps.step1_filtering
 
-    # (Removed wavelength-based filter handler)
     
     # Step-2 UI handled in steps.step2_rebinning
 
@@ -1094,7 +1091,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
     
     # Step-3 spline knots change handled in steps.step3_continuum
     
-    # Gaussian option removed; spline is the only automatic method
+    # Spline is the only automatic method
     
     # Step-3 UI handled in steps.step3_continuum
     
@@ -1108,7 +1105,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
     
     # Step-5 UI handled in steps.step5_review
     
-    # Note: Previous/Next navigation methods removed - steps only advance via Apply button
+    # Steps only advance via Apply button
     
     def apply_current_step(self):
         """Apply the current step's configuration exactly like original"""
@@ -1757,7 +1754,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
                     
                     # Apply zero padding removal for clean spectrum display
                     preview_wave, preview_flux = self._apply_zero_padding_removal(preview_wave, preview_flux)
-                    # FIXED: Also apply zero padding removal to current state (top plot)
+                    # Also apply zero padding removal to current state (top plot)
                     current_wave, current_flux = self._apply_zero_padding_removal(current_wave, current_flux)
                     
                     interactive_mode = self.continuum_widget.is_interactive_mode()
@@ -1784,7 +1781,7 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             
             # Apply zero padding removal for ALL steps to ensure clean spectrum display
             preview_wave, preview_flux = self._apply_zero_padding_removal(preview_wave, preview_flux)
-            # FIXED: Also apply zero padding removal to current state (top plot) for ALL steps
+            # Also apply zero padding removal to current state (top plot) for ALL steps
             current_wave, current_flux = self._apply_zero_padding_removal(current_wave, current_flux)
             
             # Get mask regions for visualization - ONLY in step 0 (manual + auto telluric overlays)
@@ -1922,7 +1919,6 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
     
     # Step-5 summary handled in steps.step5_review
     
-    # Export functionality removed
     
     def _cleanup_resources(self):
         """Clean up PyQtGraph widgets and interactive components"""

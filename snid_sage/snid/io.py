@@ -693,12 +693,11 @@ def write_detailed_result(result: Any, filename: str) -> None:
             result.clustering_results.get('success')):
             best_cluster = result.clustering_results.get('best_cluster', {})
             f.write(f"# Clustering method: {result.clustering_results.get('method', 'unknown')}\n")
-            # Cluster redshift-quality taxonomy removed; keep placeholder for backward compatibility.
+            # Placeholder for backward compatibility.
             f.write("# Cluster quality: \n")
             f.write(f"# Cluster size: {best_cluster.get('size', 0)}\n")
             f.write(f"# Top-5 mean score: {best_cluster.get('top_5_mean', 0):.2f}\n")
         
-        # Legacy compatibility (deprecated)
         
         
         # Match statistics

@@ -23,7 +23,7 @@ OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
 
 # Default free model if nothing else works (must remain a free variant).
-# NOTE: OpenRouter model IDs change over time; do not rely on this always existing.
+# OpenRouter model IDs change over time; do not rely on this always existing.
 DEFAULT_MODEL = "deepseek/deepseek-chat-v3-0324:free"
 
 
@@ -591,7 +591,7 @@ def call_openrouter_api(prompt, max_tokens=2000):
     except Exception:
         api_key = None
     if not api_key:
-        api_key = config.get('api_key')  # backward compatibility if key was stored previously
+        api_key = config.get('api_key')  # backward compatibility
 
     model_id = config.get('model_id')
     
@@ -630,7 +630,7 @@ def call_openrouter_api(prompt, max_tokens=2000):
     }
     
     # Set up the API request parameters
-    # Important: do NOT fall back to a paid non-free model. When a free model is selected, keep routing within that model only.
+    # Do NOT fall back to a paid non-free model. When a free model is selected, keep routing within that model only.
     data = {
         "model": model_id,
         # Keep provider fallbacks for the chosen model, but do not change models implicitly

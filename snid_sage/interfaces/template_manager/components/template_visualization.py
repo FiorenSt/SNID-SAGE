@@ -904,7 +904,7 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
             
     def _create_placeholder_plot(self):
         """Create a placeholder plot until template loading is implemented"""
-        # This method is kept for compatibility but now handled by _plot_template_spectrum
+        # Compatibility method; handled by _plot_template_spectrum
         pass
     
     def clear_plot(self):

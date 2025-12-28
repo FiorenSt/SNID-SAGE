@@ -400,7 +400,7 @@ class UnifiedResultsFormatter:
             'full_cluster_age_err': full_cluster_age_err,
             
             
-            # Legacy compatibility flags  
+            # Compatibility flags  
             'using_subtype_redshift': (subtype_redshift is not None and not np.isnan(subtype_redshift) and subtype_template_count > 0),
             'using_subtype_age': (subtype_age is not None and not np.isnan(subtype_age) and subtype_age_template_count > 0),
             
@@ -969,7 +969,7 @@ class UnifiedResultsFormatter:
             except Exception:
                 # Gracefully skip if anything goes wrong
                 pass
-            # No per-subtype detail table (removed per updated requirements)
+            # No per-subtype detail table
             lines.append("")
         
         

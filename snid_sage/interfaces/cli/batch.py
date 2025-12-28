@@ -39,7 +39,7 @@ from snid_sage.shared.utils.logging import VerbosityLevel
 from snid_sage.shared.utils.cli_parsing import parse_wavelength_mask_args
 
 # ---------------------------------------------------------------------------
-# CLI formatting helpers (used to keep sequential and --workers output identical)
+# CLI formatting helpers
 # ---------------------------------------------------------------------------
 
 def _is_finite_number(x: object) -> bool:
@@ -553,8 +553,7 @@ def process_single_spectrum_optimized(
             }
         
         # STEP 3: Run SNID analysis using first-class API with preloaded templates
-        # NOTE: run_snid_analysis currently manages template loading internally.
-        # We do not pass preloaded templates here to avoid interface mismatch.
+        # run_snid_analysis manages template loading internally
         # Determine if a forced redshift is being used for this spectrum
         used_forced_redshift = (
             forced_redshift_override
@@ -669,7 +668,7 @@ def process_single_spectrum_optimized(
             except Exception:
                 summary['redshift_fixed'] = False
                 summary['redshift_fixed_value'] = None
-            # Deprecated: weak match flag removed (quality is evaluated uniformly)
+            # Quality is evaluated uniformly
 
             return spectrum_name, True, "Success", summary
         else:
@@ -1078,7 +1077,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
             sorted_subtypes = sorted(subtype_fractions.items(), key=lambda x: x[1], reverse=True)
             summary['cluster_subtypes'] = sorted_subtypes[:5]  # Top 5 subtypes
     
-    # Fallback to old approach only if no clustering available
+    # Fallback approach only if no clustering available
     else:
         summary['cluster_method'] = 'No clustering'
         # Compute a type-level match quality from Q
@@ -1413,7 +1412,7 @@ Examples:
         default=-0.01,
         help="Minimum redshift to consider"
     )
-    # NOTE: zmax default is resolved after parsing so it can depend on the selected profile.
+    # zmax default is resolved after parsing so it can depend on the selected profile.
     # When omitted, we use 2.5 for ONIR and 1.0 for optical (or other profiles).
     analysis_group.add_argument(
         "--zmax",
@@ -1718,7 +1717,6 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
         )
         report.append(header)
         report.append("-" * len(header))
-        # Legend removed per request
         
         # Sort results by penalized winning-subtype score when available, otherwise best metric
         from snid_sage.shared.utils.math_utils import get_best_metric_value

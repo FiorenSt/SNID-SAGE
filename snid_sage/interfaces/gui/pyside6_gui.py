@@ -649,7 +649,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
         self.flat_btn.setChecked(False)
         self.flat_btn.setToolTip("Flat view requires preprocessing\nLoad a spectrum and run preprocessing first")
         
-        # Note: Keyboard shortcuts now handled by event handlers
+        # Keyboard shortcuts handled by event handlers
         
         _LOGGER.debug("Variables and state initialized")
     
@@ -1811,7 +1811,6 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
         except Exception as e:
             _LOGGER.error(f"❌ Error navigating to next template: {e}")
     
-    # Removed: show_previous_age, show_next_age, move_template_up, move_template_down
     # Users can switch between Flux and Flat using the dedicated Flux/Flat buttons
     
         # Analysis workflow methods

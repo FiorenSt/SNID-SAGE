@@ -596,7 +596,7 @@ def plot_type_fractions(result: Any, figsize: Tuple[int, int] = (10, 8),
     if fig is None:
         fig = plt.figure(figsize=figsize, constrained_layout=True)
     
-    # Deprecated: retain a minimal placeholder to avoid import breakages in older code paths
+    # Retain a minimal placeholder to avoid import breakages
     # Create a simple message figure and return
     ax = fig.add_subplot(111)
     ax.text(0.5, 0.5, "Deprecated: use cluster-aware subtype plots instead", ha='center', va='center')
@@ -901,7 +901,7 @@ def plot_correlation_function(result: Any, figsize: Tuple[int, int] = (8, 6),
     Returns:
         matplotlib.figure.Figure: The figure object
     """
-    # NOTE: This function now prioritizes correlation data from the match object
+    # Prioritizes correlation data from the match object
     # and falls back to result.correlation only if match data is unavailable
     
     # Use provided figure or create a new one
@@ -1252,7 +1252,7 @@ def plot_redshift_age(result: Any, figsize: Tuple[int, int] = (8, 6),
     
     # Format plot correctly (no title per user requirement)
     # Always use standardized font sizes, regardless of GUI styling
-    # Note: Plot is now colored by subtype instead of type (legend will show subtypes)
+    # Plot is colored by subtype instead of type (legend will show subtypes)
     ax.set_xlabel('Redshift', fontsize=PLOT_AXIS_LABEL_FONTSIZE)  # X-axis: redshift
     ax.set_ylabel('Age (days)', fontsize=PLOT_AXIS_LABEL_FONTSIZE)  # Y-axis: age
     ax.set_title('Redshift vs Age Distribution (by Subtype)', fontsize=PLOT_TITLE_FONTSIZE)
@@ -1390,7 +1390,7 @@ def plot_flux_comparison(match: Dict[str, Any], result: Any,
                 input_flux = (np.asarray(ps['flat_flux']) + 1.0) * np.asarray(result.input_continuum['flux'])
             except Exception:
                 input_flux = ps.get('log_flux')
-        # Legacy fallback: if continuum is bundled inside ps
+        # Fallback: if continuum is bundled inside ps
         elif 'log_flux' in ps and 'continuum' in ps:
             input_flux = (ps['log_flux'] + 1.0) * ps['continuum']
         else:

@@ -438,7 +438,6 @@ class ConfigurationManager:
             warnings=warnings
         )
 
-    # Removed: config-schema migration helpers and other backwards-compat cruft.
     
     def _deep_merge_configs(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
         """Deep merge two configuration dictionaries"""

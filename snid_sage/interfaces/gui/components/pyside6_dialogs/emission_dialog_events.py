@@ -286,7 +286,7 @@ class EmissionDialogEventHandlers:
         except Exception as e:
             _LOGGER.error(f"Error applying other preset '{text}': {e}")
 
-    # Legacy event handlers for backward compatibility
+    # Event handlers for backward compatibility
     def on_sn_type_selected(self, sn_type):
         """Handle SN type selection from old dropdown (compatibility)"""
         if not sn_type or sn_type in ["Select SN Type...", "Select..."]:

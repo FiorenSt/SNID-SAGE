@@ -229,7 +229,7 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
         """Create left control panel using UI builder (without quick presets)"""
         self.left_panel = QtWidgets.QFrame()
         self.left_panel.setFrameStyle(QtWidgets.QFrame.StyledPanel)
-        self.left_panel.setFixedWidth(280)  # Even narrower since presets moved to toolbar
+        self.left_panel.setFixedWidth(280)
         
         left_layout = QtWidgets.QVBoxLayout(self.left_panel)
         left_layout.setContentsMargins(15, 15, 15, 15)
@@ -243,11 +243,9 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
         # Add info section at the top
         self.ui_builder.create_info_section(left_layout)
         
-        # Use UI builder for components (excluding quick presets and line tracker)
+        # Use UI builder for components
         self.ui_builder.create_redshift_controls(left_layout)
         self.ui_builder.create_mode_selection(left_layout) 
-        # NOTE: Removed quick presets from here - now in toolbar above plot
-        # NOTE: Removed line tracker - too many lines to track effectively
         self.ui_builder.create_status_display(left_layout)
         
         # Stretch to push buttons to bottom
@@ -384,7 +382,6 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
         """Delegate to event handler"""
         self.event_handlers.on_other_preset_selected(text)
     
-    # Legacy compatibility methods
     def _on_sn_type_selected(self, text):
         """Legacy compatibility - delegate to event handler"""
         self.event_handlers.on_sn_type_selected(text)
@@ -428,7 +425,7 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
     def _update_redshift_displays(self):
         """Update redshift display labels"""
         try:
-            # No need to update displays since we removed the effective redshift display
+            # No need to update displays
             # Just log the calculation for debugging if needed
             c_km_s = 299792.458  # Speed of light in km/s
             velocity_redshift_shift = self.velocity_shift / c_km_s
@@ -526,12 +523,10 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
         self.sn_lines.clear()
         self.galaxy_lines.clear()
         self._update_plot()
-        self._update_status_display()  # Update status after clearing lines
-        # Line tracker removed - no need to clear it
+        self._update_status_display()
     
     def _remove_selected_lines(self):
-        """Remove selected lines from tracker - method no longer needed"""
-        # This method is no longer functional since we removed the line tracker
+        """Remove selected lines from tracker"""
         pass
     
     def _update_plot(self):
@@ -582,14 +577,6 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
                 except Exception:
                     pass
             
-            # Plot SN lines
-            for line_name, (obs_wavelength, line_data) in self.sn_lines.items():
-                self._add_line_marker(obs_wavelength, line_name, 'red', 'SN')
-            
-            # Plot galaxy lines
-            for line_name, (obs_wavelength, line_data) in self.galaxy_lines.items():
-                self._add_line_marker(obs_wavelength, line_name, 'blue', 'Galaxy')
-
             # Ensure the save button is visible (always on in this dialog)
             try:
                 if hasattr(self.plot_widget, 'show_save_button'):
@@ -611,6 +598,13 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
                     self.plot_item.setYRange(y_range_before[0], y_range_before[1], padding=0)
             except Exception:
                 pass
+
+            # Plot line markers after restoring view range so label placement uses final y-range
+            for line_name, (obs_wavelength, line_data) in self.sn_lines.items():
+                self._add_line_marker(obs_wavelength, line_name, 'red', 'SN')
+
+            for line_name, (obs_wavelength, line_data) in self.galaxy_lines.items():
+                self._add_line_marker(obs_wavelength, line_name, 'blue', 'Galaxy')
                 
         except Exception as e:
             _LOGGER.error(f"Error updating plot: {e}")
@@ -634,16 +628,19 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
             line = pg.InfiniteLine(pos=wavelength, angle=90, pen=pen_style)
             self.plot_item.addItem(line)
             
-            # Add text label perpendicular to the line (rotated 90 degrees) - MOVED CLOSER TO LINE
-            text = pg.TextItem(name, color=line_colors, fill=(255, 255, 255, 120))
+            text = pg.TextItem(
+                name,
+                color=line_colors,
+                fill=(255, 255, 255, 120),
+                anchor=(0, 1),
+            )
             
             # Get plot range for positioning (use relative position within current y-range)
             y_min, y_max = self.plot_item.viewRange()[1]
             # Position at 95% of the current visible range height
             y_pos = y_min + (y_max - y_min) * 0.95
             
-            # Set position and rotation - slightly offset from the line for better readability
-            text.setPos(wavelength + 2, y_pos)  # Small horizontal offset for readability
+            text.setPos(wavelength, y_pos)
             text.setRotation(90)  # Rotate 90 degrees to make text perpendicular
             
             self.plot_item.addItem(text)
@@ -718,33 +715,11 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
                     target_dict[line_name] = (obs_wavelength, metadata)
             
             self._update_plot()
-            self._update_status_display()  # Update status after adding lines
-            # Removed line tracker update since we no longer have a line tracker
+            self._update_status_display()
             
         except Exception as e:
             _LOGGER.error(f"Error adding lines to plot: {e}")
-    
-    # def _update_line_tracker(self): # Line tracker removed
-    #     """Update the line tracker list"""
-    #     if not hasattr(self, 'line_list'):
-    #         return
-            
-    #     try:
-    #         self.line_list.clear()
-            
-    #         for line_name in self.sn_lines.keys():
-    #             item = QtWidgets.QListWidgetItem(f"SN: {line_name}")
-    #             item.setForeground(QtGui.QColor('red'))
-    #             self.line_list.addItem(item)
-            
-    #         for line_name in self.galaxy_lines.keys():
-    #             item = QtWidgets.QListWidgetItem(f"Galaxy: {line_name}")
-    #             item.setForeground(QtGui.QColor('blue'))
-    #             self.line_list.addItem(item)
-                
-    #     except Exception as e:
-    #         _LOGGER.error(f"Error updating line tracker: {e}")
-    
+        
     def _update_all_lines(self):
         """Update all line positions when redshift or velocity changes."""
         try:
@@ -1005,11 +980,11 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
             if self.left_panel:
                 self.left_panel.hide()
             
-            # Create new left panel for step 2 (simplified - key controls moved to toolbar)
+            # Create new left panel for step 2
             main_layout = self.layout()
             self.step2_left_panel = QtWidgets.QFrame()
             self.step2_left_panel.setFrameStyle(QtWidgets.QFrame.StyledPanel)
-            self.step2_left_panel.setFixedWidth(280)  # Keep original width since controls moved out
+            self.step2_left_panel.setFixedWidth(280)
             
             step2_layout = QtWidgets.QVBoxLayout(self.step2_left_panel)
             step2_layout.setContentsMargins(15, 15, 15, 15)
@@ -1020,7 +995,7 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
             step_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #2563eb; margin-bottom: 10px;")
             step2_layout.addWidget(step_label)
             
-            # Create simplified step 2 interface (main controls moved to toolbar)
+            # Create simplified step 2 interface
             self._create_simplified_step2_interface(step2_layout)
             
             # Add bottom control buttons (Help and Back to Step 1)
@@ -1127,7 +1102,7 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
             _LOGGER.error(f"Error switching to step 1 toolbar: {e}")
     
     def _create_simplified_step2_interface(self, layout):
-        """Create simplified step 2 interface with main controls moved to toolbar"""
+        """Create simplified step 2 interface"""
 
         # Quick interaction info (static multi-line info label like Step 1)
         platform_config = get_platform_config()
@@ -1143,7 +1118,6 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
         info_label.setStyleSheet("font-weight: normal; color: #2563eb; font-size: 10px;")
         layout.addWidget(info_label)
 
-        # Manual point controls removed: Clear Points now lives in the top toolbar
 
         # Single minimal summary panel
         summary_group = QtWidgets.QGroupBox("📋 Line Summary")
@@ -1223,7 +1197,7 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
                 
             # Update panel control references
             if hasattr(self, 'step2_panel_controls'):
-                # current_result_text removed; keep only summary
+                # Keep only summary
                 self.step2_analysis.summary_text = self.step2_panel_controls['summary_text']
                 
             # Initialize step 2 data

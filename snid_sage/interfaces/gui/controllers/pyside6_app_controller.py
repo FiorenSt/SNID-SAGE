@@ -283,7 +283,7 @@ class PySide6AppController(QtCore.QObject):
             from snid_sage.shared.utils.data_io.spectrum_loader import load_spectrum
 
             # Store the file path early so profile-switch workflows can reload the same file.
-            # IMPORTANT: we will clear it again if *any* validation fails.
+            # We will clear it again if *any* validation fails.
             self.current_file_path = file_path
 
             # Load into local variables first; do not commit to controller state until validated.
@@ -1063,7 +1063,7 @@ class PySide6AppController(QtCore.QObject):
             
             # Fallback to manual_redshift if no mode config
             elif hasattr(self, 'manual_redshift') and self.manual_redshift:
-                # Legacy behavior: manual_redshift is treated as forced
+                # manual_redshift is treated as forced
                 forced_redshift = self.manual_redshift
                 progress_callback(f"Using MANUAL REDSHIFT: z = {forced_redshift:.6f}", 45)
             
@@ -1378,7 +1378,6 @@ class PySide6AppController(QtCore.QObject):
             return True
         return False
     
-    # Duplicate next_template removed
     
     # Masking operations
     def add_mask_region(self, min_wave: float, max_wave: float):
@@ -1544,7 +1543,7 @@ class PySide6AppController(QtCore.QObject):
         self.max_templates = 0
         self.mask_regions.clear()
         
-        # Clear persistent settings that were previously missed
+        # Clear persistent settings
         if hasattr(self, 'redshift_mode_config'):
             self.redshift_mode_config = None
             

@@ -76,7 +76,7 @@ class PySide6EventHandlers(QtCore.QObject):
             # Quick workflow (combined preprocessing + analysis)
             CPW.create_shortcut(self.main_window, "Ctrl+Return", self.on_run_quick_workflow, context=QtCore.Qt.ApplicationShortcut)
             CPW.create_shortcut(self.main_window, "Ctrl+Enter", self.on_run_quick_workflow, context=QtCore.Qt.ApplicationShortcut)
-            # Note: separate extended variants are registered below
+            # Separate extended variants are registered below
 
             # Extended quick workflow (preprocessing + analysis + auto cluster selection)
             CPW.create_shortcut(self.main_window, "Ctrl+Shift+Return", self.on_run_quick_workflow_with_auto_cluster, context=QtCore.Qt.ApplicationShortcut)
@@ -972,7 +972,7 @@ class PySide6EventHandlers(QtCore.QObject):
                 self.main_window.workflow_integrator._workflow_update_button_states()
                 _LOGGER.debug("  ✅ Button states updated via workflow integrator")
             else:
-                # Fallback for older pattern
+                # Fallback pattern
                 if hasattr(self.app_controller, 'update_button_states'):
                     self.app_controller.update_button_states()
                 elif hasattr(self.main_window, 'app_controller') and hasattr(self.main_window.app_controller, 'update_button_states'):

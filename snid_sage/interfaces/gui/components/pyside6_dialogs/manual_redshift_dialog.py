@@ -191,7 +191,7 @@ class InteractiveRedshiftPlotWidget(QtWidgets.QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         
         # Create enhanced PyQtGraph plot widget with save functionality
-        # Note: Global PyQtGraph configuration is already set at module level
+        # Global PyQtGraph configuration is already set at module level
         self.plot_widget = EnhancedPlotWidget()
         
         self.plot_widget.setBackground('w')
@@ -662,7 +662,7 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
         # Precision mode toggle - styling handled by enhanced button system
         self.precision_button = QtWidgets.QPushButton("Sensitivity: Normal")
         self.precision_button.setObjectName("precision_button")
-        # Note: click handler will be overridden by enhanced button system
+        # Click handler will be overridden by enhanced button system
         group_layout.addWidget(self.precision_button)
         
         layout.addWidget(group)

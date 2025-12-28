@@ -250,7 +250,7 @@ class EmissionDialogUIBuilder:
     
     def create_legacy_dropdowns(self, layout):
         """Create dropdown interface for compatibility"""
-        # This creates the old dropdown structure for backward compatibility
+        # Creates dropdown structure for backward compatibility
         
         # SN Line Presets
         sn_group = QtWidgets.QGroupBox("🌟 SN Line Presets")

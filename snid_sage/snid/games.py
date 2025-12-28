@@ -1691,7 +1691,7 @@ def run_debris_game(use_deluxe_background: bool = True):
 
     pygame.quit()
 
-# Keep the old asteroids function for backward compatibility, but redirect to debris
+# Backward compatibility: redirect asteroids to debris
 def run_asteroids_game():
     """
     Backward compatibility wrapper - now runs the Space Debris game

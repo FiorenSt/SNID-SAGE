@@ -365,7 +365,7 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
         self.widgets['age_min'] = create_flexible_double_input(min_val=-9999, max_val=9999, default=-9999, suffix=" days")
         # Show a friendly label for sentinel value
         if hasattr(self.widgets['age_min'], 'setSpecialValueDisplay'):
-            # Important: display should not include the suffix
+            # Display should not include the suffix
             self.widgets['age_min'].setSpecialValueDisplay(-9999.0, "No Minimum")
         self.widgets['age_min'].setValue(-9999)
         self.widgets['age_min'].setToolTip("Minimum age in days (negative = before maximum light). Use -9999 to disable filtering.")
@@ -399,7 +399,6 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
         )
         correlation_layout.addRow("HLAP-CCC Clustering Threshold:", self.widgets['hlap_ccc_threshold'])
         
-        # Removed Peak Window Size option from configuration UI
         
         layout.addWidget(correlation_group)
         
@@ -594,7 +593,7 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
         
         layout.addWidget(general_group)
         
-        # Output Limits (moved from Template Filtering tab)
+        # Output Limits
         limits_group = QtWidgets.QGroupBox("📊 Output Limits")
         limits_layout = QtWidgets.QFormLayout(limits_group)
         
@@ -873,7 +872,6 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
             if key in params and key in self.widgets:
                 self.widgets[key].setChecked(bool(params[key]))
         
-        # Removed output directory UI; no longer loading this field here
         
         # Load type selection
         if 'type_filter' in params and params['type_filter']:
@@ -916,7 +914,6 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
             result['lapmin'] = self.widgets['lapmin'].value()
             result['hlap_ccc_threshold'] = self.widgets['hlap_ccc_threshold'].value()
             result['max_output_templates'] = self.widgets['max_output_templates'].value()
-            # Peak Window Size option removed; no longer captured
             
             # Age range
             age_min = self.widgets['age_min'].value()
@@ -948,7 +945,6 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
             # Options
             result['verbose'] = self.widgets['verbose'].isChecked()
             
-            # Removed output directory UI; no longer collecting this field here
             
             # Validate parameters
             if result['zmin'] >= result['zmax']:
@@ -971,7 +967,7 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
                     # Close dialog first
                     self.accept()
                     
-                    # Add small delay to allow proper cleanup of any previously opened dialogs
+                    # Add small delay to allow proper cleanup of opened dialogs
                     # This prevents crashes when PyQtGraph widgets are still being cleaned up
                     QtCore.QTimer.singleShot(500, lambda: self._delayed_analysis_start(result))
                     self.analysis_started = True  # Set flag to indicate analysis will be started

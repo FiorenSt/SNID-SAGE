@@ -10,7 +10,7 @@ import os
 import sys
 import platform
 
-# NOTE: Only set environment variables here (launcher) to avoid side effects on import.
+# Only set environment variables here (launcher) to avoid side effects on import.
 # Ensure PySide6 backend flag is present before any GUI imports happen
 os.environ['SNID_SAGE_GUI_BACKEND'] = 'PySide6'
 

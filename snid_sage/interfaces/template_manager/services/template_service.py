@@ -12,8 +12,7 @@ Responsibilities:
 - Provide a small API for the GUI (creator, browser, manager)
 
 Notes:
-- Legacy .lnw support is intentionally removed. All new templates are written
-  directly to HDF5 and indexed.
+- All new templates are written directly to HDF5 and indexed.
 """
 
 from __future__ import annotations
@@ -761,7 +760,6 @@ class TemplateService:
             return summary
         return summary
 
-    # Cleanup helpers were removed after one-time migration
 
     def rename(self, old_name: str, new_name: str) -> bool:
         """Renaming/duplication is disabled for built-in or user templates by policy."""
@@ -1097,7 +1095,7 @@ class TemplateService:
             p_new = root / "templates" / "template_index_onir.json"
             if p_new.exists():
                 return p_new
-            # Legacy layout inside package tree (kept for backwards compatibility)
+            # Legacy layout inside package tree (backwards compatibility)
             p_legacy = root / "snid_sage" / "templates" / "template_index_onir.json"
             return p_legacy if p_legacy.exists() else None
         except Exception:

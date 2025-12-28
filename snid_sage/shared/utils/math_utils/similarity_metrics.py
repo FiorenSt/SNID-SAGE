@@ -165,7 +165,7 @@ def _common_checks(spec1: np.ndarray, spec2: np.ndarray) -> Tuple[np.ndarray, np
     return a / a_norm, b / b_norm
 
 
-# Cosine similarity removed - using CCC (Concordance Correlation Coefficient) exclusively
+# Using CCC (Concordance Correlation Coefficient) exclusively
 
 
 def concordance_correlation_coefficient(spec1: np.ndarray, spec2: np.ndarray) -> float:
@@ -575,7 +575,7 @@ def compute_hlap_ccc_metric(
     return enhanced_matches
 
 
-# Cosine-based metric removed - using CCC exclusively
+# Using CCC exclusively
 
 
 def _extract_template_flux_exact(match: Dict[str, Any]) -> Optional[np.ndarray]:
@@ -751,7 +751,6 @@ def get_metric_display_values(match: Dict[str, Any]) -> Dict[str, float]:
         values['ccc_similarity_trimmed_capped'] = match.get('ccc_similarity_trimmed_capped', match.get('ccc_similarity_capped', 0.0))
         values['residual_noise_std'] = match.get('residual_noise_std', float('nan'))
 
-    # Legacy fields intentionally not exposed.
     
     return values 
 

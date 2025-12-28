@@ -35,7 +35,7 @@ from .multi_step_emission_dialog import PySide6MultiStepEmissionAnalysisDialog, 
 # Dialog manager
 from .dialog_manager import DialogManager
 
-# NOTE: The following dialogs use matplotlib and should be imported only when needed:
+# The following dialogs use matplotlib and should be imported only when needed:
 # - cluster_selection_dialog (uses matplotlib for 3D plots)
 # - redshift_age_dialog (uses matplotlib for scatter plots)
 # - subtype_proportions_dialog (uses matplotlib for pie charts)

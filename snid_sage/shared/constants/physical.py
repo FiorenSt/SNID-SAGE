@@ -18,7 +18,7 @@ SPEED_OF_LIGHT_KMS      = 299_792.458        # km s⁻¹
 
 # ---------------------------------------------------------------------------
 # Handy top-level constants for a few "classics"
-# (kept for backwards compatibility with older scripts)
+# Backwards compatibility with older scripts
 # ---------------------------------------------------------------------------
 # Balmer
 HYDROGEN_ALPHA          = 6562.80   # air wavelength

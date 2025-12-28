@@ -640,7 +640,7 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
     
     def _populate_cluster_table(self):
         """Populate the cluster details table"""
-        # Table removed; no-op
+        # No-op
         return
         
     def _create_overlay_plot(self):

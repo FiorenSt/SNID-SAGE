@@ -205,7 +205,7 @@ class PySide6RedshiftAgeDialog(QtWidgets.QDialog):
     
     def _create_bottom_buttons(self, layout):
         """Create bottom button panel"""
-        # Note: We'll add buttons to the right panel instead of bottom
+        # Buttons added to the right panel instead of bottom
         # to maintain the two-column layout
         
         # Add export and close buttons to info panel
@@ -469,7 +469,7 @@ Please check your analysis results and try again.
             # Clear previous plot
             self.ax.clear()
             
-            # Import the custom color palette from old GUI
+            # Import the custom color palette
             try:
                 from snid_sage.snid.plotting import get_custom_color_palette
                 custom_palette = get_custom_color_palette()

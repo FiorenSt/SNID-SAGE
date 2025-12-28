@@ -190,7 +190,7 @@ def savgol_filter_fixed(data: NDArray[np.floating], window_length: int = 11, pol
         return data.copy()
 
 
-# Legacy function names for backward compatibility
+# Backward compatibility aliases
 def medfilt(data: NDArray[np.floating], medlen: int) -> NDArray[np.floating]:
     """
     Legacy wrapper for savgol_filter_fixed.
@@ -201,7 +201,7 @@ def medfilt(data: NDArray[np.floating], medlen: int) -> NDArray[np.floating]:
     return savgol_filter_fixed(data, window_length, polyorder=3)
 
 
-# medwfilt removed (wavelength-based filtering no longer supported)
+# Wavelength-based filtering no longer supported
 
 # --- clipping helpers --------------------------------------------------------
 def clip_aband(
@@ -997,7 +997,7 @@ def fit_continuum_spline(
     return flat, cont
 
 
-# hybrid method removed per request; strengthened gaussian edge handling is now default
+# Strengthened gaussian edge handling is default
 
 def unflatten_on_loggrid(flat_tpl: np.ndarray,
                          cont: np.ndarray) -> np.ndarray:
@@ -1056,8 +1056,8 @@ def flatten_spectrum(wave: np.ndarray, flux: np.ndarray,
         wave: Wavelength array
         flux: Flux array
         apodize_percent: Percentage of spectrum ends to apodize
-        median_filter_type: Type of smoothing filter ("none", "pixel", "angstrom") 
-                           Note: Now uses Savitzky-Golay filtering instead of median
+        median_filter_type: Type of smoothing filter ("none", "pixel", "angstrom")
+                           Uses Savitzky-Golay filtering
         median_filter_value: Value for smoothing filter (window size or FWHM)
         num_points: Number of points in log grid
         

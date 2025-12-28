@@ -543,7 +543,7 @@ class TemplateFFTStorage:
     
     def _load_all_templates_with_rebinning(self) -> List[TemplateEntry]:
         """Load all templates from the template directory and rebin them to standard grid."""
-        # Legacy import removed: we no longer build storage from .lnw files
+        # We no longer build storage from .lnw files
         from snid_sage.snid.preprocessing import log_rebin, init_wavelength_grid
         
         templates = []
@@ -706,7 +706,7 @@ class TemplateFFTStorage:
                 template_group.attrs['age'] = template.age
                 template_group.attrs['redshift'] = template.redshift
                 template_group.attrs['epochs'] = template.epochs
-                # removed file_path attribute (no LNW provenance in HDF5)
+                # No file_path attribute (no LNW provenance in HDF5)
                 template_group.attrs['rebinned'] = True  # Flag for rebinned data
                 
                 # Store epoch data if multi-epoch
@@ -953,7 +953,7 @@ class TemplateFFTStorage:
                         raise RuntimeError("Storage file DWLOG mismatch with active profile")
                     if hProf is not None:
                         # If file declares a profile, require exact match
-                        # Note: we do not have self.profile_id attribute; infer from grid equivalence above if missing
+                        # We do not have self.profile_id attribute; infer from grid equivalence above if missing
                         pass
                 except RuntimeError:
                     raise

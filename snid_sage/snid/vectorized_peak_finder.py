@@ -80,8 +80,8 @@ class VectorizedPeakFinder:
         except Exception:
             self.r_scale = 1.0
 
-        # Phase-1 peak detection knobs (previously hard-coded).
-        # Note: these apply to the *normalized* phase-1 correlation (Rz) passed to find_peaks.
+        # Phase-1 peak detection knobs.
+        # These apply to the *normalized* phase-1 correlation (Rz) passed to find_peaks.
         try:
             self.phase1_peak_min_distance = int(phase1_peak_min_distance)
         except Exception:

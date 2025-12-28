@@ -203,7 +203,7 @@ Examples:
         default=-0.01,
         help="Minimum redshift to consider"
     )
-    # NOTE: zmax default is resolved after parsing so it can depend on the selected profile.
+    # zmax default is resolved after parsing so it can depend on the selected profile.
     # When omitted, we use 2.5 for ONIR and 1.0 for optical (or other profiles).
     analysis_group.add_argument(
         "--zmax",
@@ -567,7 +567,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 summary['cluster_age_weighted'] = np.nan
                 summary['cluster_age_err_weighted'] = np.nan
             
-            # Legacy field removed: cluster mean is already available via best-metric-derived stats
+            # Cluster mean is already available via best-metric-derived stats
             
             # Subtype composition within cluster (GUI-style)
             from collections import Counter
@@ -588,7 +588,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
             sorted_subtypes = sorted(subtype_fractions.items(), key=lambda x: x[1], reverse=True)
             summary['cluster_subtypes'] = sorted_subtypes[:5]  # Top 5 subtypes
     
-    # Fallback to old approach only if no clustering available
+    # Fallback approach only if no clustering available
     else:
         summary['cluster_method'] = 'No clustering'
         # Use type/subtype fractions as fallback

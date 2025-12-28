@@ -103,7 +103,6 @@ class PySide6PreviewCalculator(QtCore.QObject):
         # Track mask bins on the log grid (from mask-aware rebin)
         self.current_mask_logbins: Optional[np.ndarray] = None
         
-        # Stage memory removed in simplified flow
         # Track edge information properly through preprocessing steps
         self.current_left_edge = None
         self.current_right_edge = None
@@ -244,13 +243,11 @@ class PySide6PreviewCalculator(QtCore.QObject):
         self.manual_continuum_active = False  # Reset manual continuum flag
         self.has_continuum = False
         
-        # Stage memory removed in simplified flow
         # Reset edge tracking
         self.current_left_edge = None
         self.current_right_edge = None
         # No stage memory bookkeeping
     
-    # Stage memory and navigation helpers removed for simplified flow
     
     def get_current_state(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get current wavelength and flux arrays"""
@@ -332,8 +329,7 @@ class PySide6PreviewCalculator(QtCore.QObject):
                 self.current_right_edge = len(self.current_flux) - 1
                 
             _LOGGER.debug(f"Updated edges after {step_type}: left={self.current_left_edge}, right={self.current_right_edge}")
-        # Note: For other steps like savgol_filter, continuum_fit, and apodization, 
-        # we don't need to update edges as they preserve the data structure
+        # Other steps like savgol_filter, continuum_fit, and apodization preserve the data structure
     
     def get_current_edges(self) -> Tuple[int, int]:
         """Get current left and right edge indices"""

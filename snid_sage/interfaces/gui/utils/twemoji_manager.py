@@ -59,7 +59,7 @@ class TwemojiManager:
     TWEMOJI_CDN_BASE = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/"
     
     # Common emojis used in SNID SAGE with their Unicode codepoints
-    # Note: Some emojis don't use variation selectors in Twemoji filenames
+    # Some emojis don't use variation selectors in Twemoji filenames
     EMOJI_MAPPING = {
         # Main export/data buttons
         "📊": "1f4ca",          # Bar Chart/Export Data/Charts
@@ -503,7 +503,7 @@ class TwemojiManager:
         Returns:
             Number of icons successfully preloaded
         """
-        # IMPORTANT: avoid doing GUI work off the main thread. This preload method
+        # Avoid doing GUI work off the main thread. This preload method
         # only ensures the SVG files are resolvable (packaged or cached), but does
         # not create QIcon objects. Actual QIcon creation happens on demand in the
         # UI thread via get_icon().
@@ -568,7 +568,7 @@ def _get_pixmap_for_emoji(emoji: str, size: int) -> Optional['QtGui.QPixmap']:
     return _icon_to_pixmap(icon, size)
 
 # Backward/compat convenience for other modules expecting a pixmap-like object
-# Note: This returns a QIcon, which is what Qt's setTabIcon expects.
+# Returns a QIcon, which is what Qt's setTabIcon expects.
 def get_emoji_pixmap(emoji: str, size: int = 16) -> Optional['QtGui.QIcon']:
     """
     Return a QIcon representing the provided emoji using packaged Twemoji assets

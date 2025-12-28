@@ -26,8 +26,7 @@ from collections import defaultdict
 _LOGGER = logging.getLogger(__name__)
 
 
-# Note: find_winning_cluster_exact_match has been replaced by find_winning_cluster_top5_method
-# The new method uses top-5 best metric values (HLAP-CCC preferred; fallback to HLAP) with penalties for small clusters
+# Uses top-5 best metric values (HLAP-CCC preferred; fallback to HLAP) with penalties for small clusters
 
 
 
@@ -70,7 +69,7 @@ def calculate_joint_subtype_estimates_from_cluster(
             total_subtype_count += 1
             age = template.get('age', 0.0)
             # Only include templates with both redshift and finite age for joint estimation
-            # Note: Negative ages are acceptable (pre-maximum light)
+            # Negative ages are acceptable (pre-maximum light)
             if 'redshift' in match and np.isfinite(age):
                 subtype_matches.append(match)
     
@@ -425,11 +424,10 @@ def perform_direct_gmm_clustering(
             else:
                 labels = np.zeros(len(type_matches), dtype=int)
             
-            # Note: winning_cluster_id is now determined by the new top-5 method at the end
-            # We don't need this old selection here anymore
+            # winning_cluster_id is determined by the top-5 method at the end
             
             # Create cluster candidates using the exact reference approach.
-            # IMPORTANT: After contiguity/gap splitting, the number of output clusters can differ
+            # After contiguity/gap splitting, the number of output clusters can differ
             # from the BIC-optimal number of mixture components. Always iterate over the
             # returned cluster list rather than range(optimal_n_clusters).
             for cluster_info in (type_result.get('clusters') or []):
@@ -449,10 +447,10 @@ def perform_direct_gmm_clustering(
                     'metric_name': metric_name,  # NEW: Name of metric used
                     'redshift_span': cluster_info['redshift_span'],
                     'cluster_method': 'direct_gmm',
-                    'quality_score': 0, # This will be updated by the new method
-                    'composite_score': 0, # This will be updated by the new method
-                    'is_winning_cluster': False  # Will be determined by new method
-                    # Note: enhanced_redshift and other joint estimates will be added below
+                    'quality_score': 0,  # Updated by method
+                    'composite_score': 0,  # Updated by method
+                    'is_winning_cluster': False  # Determined by method
+                    # enhanced_redshift and other joint estimates will be added below
                 }
                 
                 # Calculate subtype information for this cluster
@@ -976,7 +974,7 @@ def _create_single_cluster_result(
     from snid_sage.shared.utils.math_utils import get_best_metric_value
     metric_values = np.array([get_best_metric_value(m) for m in type_matches])
     
-    # No redshift-quality classification (taxonomy removed).
+    # No redshift-quality classification.
     
     # Calculate enhanced redshift statistics using joint estimation (just extract redshift)
     weighted_mean_redshift, _, weighted_redshift_sd, _, _ = _compute_weighted_cluster_stats(type_matches)
@@ -1121,7 +1119,7 @@ def choose_subtype_weighted_voting(
     sorted_scores = sorted(subtype_scores.values(), reverse=True)
     margin_over_second = sorted_scores[0] - (sorted_scores[1] if len(sorted_scores) > 1 else 0)
     
-    # Confidence calculation removed - only using top-5 mean and relative margin
+    # Using top-5 mean and relative margin
     confidence = 0.0
     
     # Calculate relative margin as percentage (more intuitive for display)
@@ -1182,7 +1180,7 @@ def create_3d_visualization_data(clustering_results: Dict[str, Any]) -> Dict[str
                 matches.append(match)
     
     else:
-        # Fallback: old structure with type_clustering_results
+        # Fallback: structure with type_clustering_results
         for type_result in clustering_results.get('type_clustering_results', {}).values():
             if not type_result.get('success', False):
                 continue
@@ -1257,7 +1255,7 @@ def find_winning_cluster_top5_method(
     # Standardize metric naming; do not imply comparison phrasing.
     metric_name = 'HLAP-CCC'
     
-    # NOTE: We intentionally do NOT "gate" / discard clusters based on Q_cluster.
+    # We intentionally do NOT "gate" / discard clusters based on Q_cluster.
     # We still compute the penalized top-5 score (a.k.a. Q_cluster) for ranking/reporting.
 
     # Calculate top-5 means for each cluster

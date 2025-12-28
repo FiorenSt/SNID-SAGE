@@ -105,7 +105,7 @@ FLAT_TO_MAIN_TYPE = {
     # NEW: AGN subtypes → AGN main type
     'AGN': 'AGN', 'AGN-type1': 'AGN', 'QSO': 'AGN',
     
-    # NotSN subtypes (LEGACY - for backward compatibility)
+    # NotSN subtypes (backward compatibility)
     'Afterglow': 'GAP', 'Nova': 'GAP', 'CV': 'Star',
     
     # Special cases found in your templates

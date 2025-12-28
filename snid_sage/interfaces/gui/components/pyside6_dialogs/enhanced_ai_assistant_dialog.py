@@ -1117,7 +1117,7 @@ class PySide6EnhancedAIAssistantDialog(QtWidgets.QDialog):
             try:
                 from snid_sage.interfaces.llm.openrouter.openrouter_llm import call_openrouter_api, save_openrouter_config
                 
-                # Temporarily save this model for testing
+                # Save this model for testing
                 save_openrouter_config(api_key, model_id, model_name, False)
                 
                 # Test with a simple prompt
@@ -1220,7 +1220,6 @@ class PySide6EnhancedAIAssistantDialog(QtWidgets.QDialog):
             if search_text and search_text not in model['name'].lower() and search_text not in model.get('provider', '').lower():
                 continue
             
-            # Note: free and reasoning filters removed per request
             
             filtered_models.append(model)
         
@@ -1488,7 +1487,7 @@ class PySide6EnhancedAIAssistantDialog(QtWidgets.QDialog):
         clipboard = QtWidgets.QApplication.clipboard()
         clipboard.setText(self.summary_text.toPlainText())
         
-        # Show temporary status
+        # Show status
         original_text = self.status_label.text()
         self.status_label.setText("Copied to Clipboard")
         QtCore.QTimer.singleShot(2000, lambda: self.status_label.setText(original_text))

@@ -11,7 +11,6 @@ def apply_savgol_filter(wave, flux, window_length=11, polyorder=3):
     """
     Apply Savitzky-Golay filter to spectrum data.
     
-    Note: This function has been moved to snid.preprocessing.savgol_filter_fixed
     This wrapper is kept for backward compatibility.
     """
     from snid_sage.snid.preprocessing import savgol_filter_fixed

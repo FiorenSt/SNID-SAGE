@@ -317,7 +317,7 @@ class PySide6InteractiveContinuumWidget(QtCore.QObject):
             return
         
         # Find first and last VALID data bins in the SPECTRUM (not continuum) to define the editable region.
-        # IMPORTANT: use non-zero finite, not "flux > 0" — filtering/log steps can produce negative values.
+        # Use non-zero finite, not "flux > 0" — filtering/log steps can produce negative values.
         spectrum_valid_mask = (current_flux != 0) & np.isfinite(current_flux)
         if not np.any(spectrum_valid_mask):
             return

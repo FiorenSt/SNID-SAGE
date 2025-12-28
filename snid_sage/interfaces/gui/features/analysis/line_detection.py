@@ -57,8 +57,7 @@ class LineDetectionController:
                                            "Line Detection Error", f"Failed to run line detection: {str(e)}")
     
     def search_nist_for_lines(self):
-        """Search NIST database for spectral lines (removed in new GUI)"""
-        # Functionality removed in the new GUI
+        """Search NIST database for spectral lines"""
         return
     
     def clear_line_markers(self):
@@ -150,7 +149,7 @@ class LineDetectionController:
             )
 
             if result_redshift is not None:
-                # Handle both old float format and new dict format
+                # Handle both float format and dict format
                 if isinstance(result_redshift, dict):
                     # New format with mode information
                     redshift_value = result_redshift['redshift']
@@ -176,7 +175,7 @@ class LineDetectionController:
 
                     self._apply_manual_redshift(redshift_value, result_redshift)
                 else:
-                    # Old format - just a float redshift value (backward compatibility)
+                    # Float redshift value (backward compatibility)
                     self._apply_manual_redshift(result_redshift)
                     _LOGGER.info(f"Manual redshift applied: z = {result_redshift:.6f}")
             else:

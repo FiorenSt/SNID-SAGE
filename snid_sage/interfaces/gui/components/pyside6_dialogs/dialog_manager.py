@@ -476,7 +476,7 @@ class DialogManager:
             except Exception:
                 pass
         else:
-            # Old format (backward compatibility)
+            # Backward compatibility format
             redshift_value = float(result)
             self.main_window.redshift_status_label.setText(f"z = {redshift_value:.6f} (manual)")
             self._update_status("redshift", None, success_style=True)
