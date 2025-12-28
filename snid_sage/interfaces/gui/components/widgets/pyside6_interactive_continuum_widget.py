@@ -68,6 +68,9 @@ class PySide6InteractiveContinuumWidget(QtCore.QObject):
         
         # PolyLineROI for interactive editing
         self.roi = None
+
+        # Editable region on the full grid (set when ROI is created)
+        self._editable_slice: Optional[slice] = None
         
         # Additional state
         self._current_method: str = "spline"  # Only spline supported
@@ -215,6 +218,12 @@ class PySide6InteractiveContinuumWidget(QtCore.QObject):
             return
         
         self.interactive_mode = True
+
+        # Tell the preview calculator we are in manual continuum mode (prevents accidental overwrites)
+        try:
+            setattr(self.preview_calculator, "manual_continuum_active", True)
+        except Exception:
+            pass
         
         # Update button appearance
         self.toggle_button.setText("Stop Editing")
@@ -261,6 +270,12 @@ class PySide6InteractiveContinuumWidget(QtCore.QObject):
     def disable_interactive_mode(self):
         """Disable interactive continuum editing"""
         self.interactive_mode = False
+
+        # Release manual-continuum lock on the preview calculator
+        try:
+            setattr(self.preview_calculator, "manual_continuum_active", False)
+        except Exception:
+            pass
         
         # Update button appearance
         self.toggle_button.setText("Enable Editing")
@@ -301,18 +316,22 @@ class PySide6InteractiveContinuumWidget(QtCore.QObject):
         if current_wave is None or current_flux is None:
             return
         
-        # Find first and last nonzero points in the SPECTRUM (not continuum) to define the editable region
-        spectrum_nonzero_mask = current_flux > 0
-        if not np.any(spectrum_nonzero_mask):
+        # Find first and last VALID data bins in the SPECTRUM (not continuum) to define the editable region.
+        # IMPORTANT: use non-zero finite, not "flux > 0" — filtering/log steps can produce negative values.
+        spectrum_valid_mask = (current_flux != 0) & np.isfinite(current_flux)
+        if not np.any(spectrum_valid_mask):
             return
         
-        spectrum_nonzero_indices = np.where(spectrum_nonzero_mask)[0]
-        first_nonzero = spectrum_nonzero_indices[0]
-        last_nonzero = spectrum_nonzero_indices[-1]
+        spectrum_valid_indices = np.where(spectrum_valid_mask)[0]
+        first_nonzero = int(spectrum_valid_indices[0])
+        last_nonzero = int(spectrum_valid_indices[-1])
+
+        # Store for later interpolation so we keep 0-continuum outside the observed region
+        self._editable_slice = slice(first_nonzero, last_nonzero + 1)
         
         # Use the spectrum nonzero region for ROI (from first to last nonzero point)
-        wave_roi = self.wave_grid[first_nonzero:last_nonzero+1]
-        continuum_roi = self.manual_continuum[first_nonzero:last_nonzero+1]
+        wave_roi = self.wave_grid[self._editable_slice]
+        continuum_roi = self.manual_continuum[self._editable_slice]
         
         if len(wave_roi) < 2:
             return  # Not enough points
@@ -408,9 +427,48 @@ class PySide6InteractiveContinuumWidget(QtCore.QObject):
             # Extract x and y coordinates
             roi_x = np.array([pt[0] for pt in pts])
             roi_y = np.array([pt[1] for pt in pts])
-            
-            # Interpolate to full wavelength grid for calculations (keep all 1024 points)
-            self.manual_continuum = np.interp(self.wave_grid, roi_x, roi_y)
+
+            # Drop non-finite points and sort by wavelength (np.interp requires increasing x)
+            finite = np.isfinite(roi_x) & np.isfinite(roi_y)
+            roi_x = roi_x[finite]
+            roi_y = roi_y[finite]
+            if roi_x.size < 2:
+                return
+            order = np.argsort(roi_x)
+            roi_x = roi_x[order]
+            roi_y = roi_y[order]
+
+            # Merge duplicate x values (can happen if handles overlap)
+            xs: list[float] = []
+            ys_groups: list[list[float]] = []
+            for x, y in zip(roi_x.tolist(), roi_y.tolist()):
+                if not xs or x != xs[-1]:
+                    xs.append(float(x))
+                    ys_groups.append([float(y)])
+                else:
+                    ys_groups[-1].append(float(y))
+            roi_x_u = np.asarray(xs, dtype=float)
+            roi_y_u = np.asarray([float(np.mean(g)) for g in ys_groups], dtype=float)
+            if roi_x_u.size < 2:
+                return
+
+            # Interpolate ONLY over the editable region; keep continuum=0 outside observed data.
+            editable = self._editable_slice if self._editable_slice is not None else slice(None)
+            cont = np.zeros_like(self.wave_grid, dtype=float)
+            wv = np.asarray(self.wave_grid[editable], dtype=float)
+            interp = np.interp(wv, roi_x_u, roi_y_u, left=float(roi_y_u[0]), right=float(roi_y_u[-1]))
+            # Continuum must stay positive to be meaningful; floor tiny values.
+            eps = 1e-30
+            interp = np.where(np.isfinite(interp), interp, 0.0)
+            interp = np.maximum(interp, eps)
+            cont[editable] = interp
+            self.manual_continuum = cont
+
+            # Keep preview calculator's continuum in sync so finishing/reconstruction uses the manual continuum.
+            try:
+                self.preview_calculator.stored_continuum = cont.copy()
+            except Exception:
+                pass
             
             # Mark that we have manual changes
             self._has_manual_changes = True
@@ -561,14 +619,14 @@ class PySide6InteractiveContinuumWidget(QtCore.QObject):
         if current_wave is None or current_flux is None:
             return []
         
-        # Find nonzero region in the SPECTRUM (not continuum)
-        spectrum_nonzero_mask = current_flux > 0
-        if not np.any(spectrum_nonzero_mask):
+        # Find valid observed region in the SPECTRUM (not continuum)
+        spectrum_valid_mask = (current_flux != 0) & np.isfinite(current_flux)
+        if not np.any(spectrum_valid_mask):
             return []
         
-        spectrum_nonzero_indices = np.where(spectrum_nonzero_mask)[0]
-        first_nonzero = spectrum_nonzero_indices[0]
-        last_nonzero = spectrum_nonzero_indices[-1]
+        spectrum_valid_indices = np.where(spectrum_valid_mask)[0]
+        first_nonzero = int(spectrum_valid_indices[0])
+        last_nonzero = int(spectrum_valid_indices[-1])
         
         # Use the spectrum nonzero region (from first to last nonzero point)
         wave_plot = self.wave_grid[first_nonzero:last_nonzero+1]
@@ -597,6 +655,23 @@ class PySide6InteractiveContinuumWidget(QtCore.QObject):
             self.wave_grid = wave_grid.copy()
             self.manual_continuum = manual_continuum.copy()
             self._has_manual_changes = True
+
+            # Best-effort: infer editable slice from current spectrum validity
+            try:
+                current_wave, current_flux = self.preview_calculator.get_current_state()
+                if current_flux is not None and len(current_flux) == len(self.wave_grid):
+                    valid = (np.asarray(current_flux) != 0) & np.isfinite(np.asarray(current_flux))
+                    if np.any(valid):
+                        idx = np.where(valid)[0]
+                        self._editable_slice = slice(int(idx[0]), int(idx[-1]) + 1)
+            except Exception:
+                pass
+
+            # Keep preview calculator continuum in sync (finish/reconstruction path uses stored_continuum)
+            try:
+                self.preview_calculator.stored_continuum = self.manual_continuum.copy()
+            except Exception:
+                pass
             
             # Update ROI if in interactive mode
             if self.interactive_mode:

@@ -178,6 +178,15 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             self.preview_calculator = PySide6PreviewCalculator(
                 self.original_wave, self.original_flux
             )
+            # Make the preview calculator strictly match the canonical preprocessing pipeline
+            # (CLI/quick-GUI parity). Manual continuum editing is the only allowed divergence.
+            try:
+                self.preview_calculator.set_canonical_providers(
+                    stage_fn=self._canonical_stage,
+                    get_processed_trace_fn=self._get_canonical_preprocessing,
+                )
+            except Exception:
+                pass
             
             # Stage memory no longer used for UI controls (revert removed)
             # Auto-run spike detection and add to masks for Step 0 visualization
@@ -1210,13 +1219,28 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
         if not self.preview_calculator or not self.plot_manager:
             return
         try:
+            # If the user applied an interactive/manual continuum, the wizard cannot rely on the
+            # canonical preprocess_spectrum stages anymore (they can't replay the manual continuum).
+            # In that case, use the preview_calculator state for plots from step>=4 onward.
+            applied_steps = list(getattr(self.preview_calculator, "applied_steps", []) or [])
+            has_interactive_continuum = any((s or {}).get("type") == "interactive_continuum" for s in applied_steps)
+
             # Use canonical stages for both "current" and "preview" so the wizard never
             # shows a lightweight spectrum that later changes at Finish.
             # - On step k page: current = after steps <k; preview = after steps <=k
             step = int(getattr(self, "current_step", 0) or 0)
 
             # Current (top)
-            if step <= 0:
+            if has_interactive_continuum and step >= 4:
+                # After interactive continuum has been applied, "current" is whatever the calculator has applied.
+                current_wave, current_flux = self.preview_calculator.get_current_state()
+            elif step == 3 and self.continuum_widget and self.continuum_widget.is_interactive_mode() and not self._is_continuum_step_applied():
+                # While actively editing the continuum, always use the preview_calculator state for the
+                # top plot. The editable ROI is defined in preview_calculator coordinates; the canonical
+                # pipeline can have slightly different scaling/offset behavior (especially with negatives),
+                # which otherwise makes the continuum line appear vertically "shifted".
+                current_wave, current_flux = self.preview_calculator.get_current_state()
+            elif step <= 0:
                 current_wave, current_flux = self._canonical_stage("raw")
             elif step == 1:
                 current_wave, current_flux = self._canonical_stage("after_step0")
@@ -1230,7 +1254,26 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
                 current_wave, current_flux = self._canonical_stage("after_step4")
 
             # Preview (bottom)
-            if step == 0:
+            if has_interactive_continuum and step >= 4:
+                # For interactive continuum workflows, preview the next step using the calculator.
+                if step == 4:
+                    # Step-4 page (apodization preview)
+                    try:
+                        apply_apod = bool(self.processing_params.get("apply_apodization", True))
+                    except Exception:
+                        apply_apod = True
+                    try:
+                        apod_percent = float(self.processing_params.get("apod_percent", 10.0))
+                    except Exception:
+                        apod_percent = 10.0
+                    if apply_apod and apod_percent > 0:
+                        preview_wave, preview_flux = self.preview_calculator.preview_step("apodization", percent=apod_percent)
+                    else:
+                        preview_wave, preview_flux = self.preview_calculator.get_current_state()
+                else:
+                    # Review / later pages: show current state
+                    preview_wave, preview_flux = self.preview_calculator.get_current_state()
+            elif step == 0:
                 preview_wave, preview_flux = self._canonical_stage("after_step0")
             elif step == 1:
                 preview_wave, preview_flux = self._canonical_stage("after_step1")
@@ -1464,15 +1507,30 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             mask_logbins = compute_mask_on_loggrid(wave, masks)
             if mask_logbins.size == tapered.size:
                 tapered[mask_logbins] = 0.0
+            # Keep flat spectrum masked as well (CLI parity)
+            if mask_logbins.size == flat.size:
+                flat[mask_logbins] = 0.0
 
             # Edges (same convention as CLI: based on fluxed/log space, not flat sign)
+            # CLI meanings:
+            # - log_flux: scaled flux on log grid (before continuum removal / apodization)
+            # - flat_flux: continuum-removed (before apodization)
+            # - tapered_flux: apodized flat (correlation input)
+            log_flux = (flat + 1.0) * cont
             flux_view = (tapered + 1.0) * cont
-            valid = (flux_view != 0) & np.isfinite(flux_view)
+            # Zero masked bins for display + edge finding
+            if mask_logbins.size == log_flux.size:
+                log_flux = log_flux.copy()
+                log_flux[mask_logbins] = 0.0
+            if mask_logbins.size == flux_view.size:
+                flux_view = flux_view.copy()
+                flux_view[mask_logbins] = 0.0
+            valid = (log_flux != 0) & np.isfinite(log_flux)
             if np.any(valid):
                 left_edge = int(np.argmax(valid))
-                right_edge = int(len(flux_view) - 1 - np.argmax(valid[::-1]))
+                right_edge = int(len(log_flux) - 1 - np.argmax(valid[::-1]))
             else:
-                left_edge, right_edge = 0, int(len(flux_view) - 1)
+                left_edge, right_edge = 0, int(len(log_flux) - 1)
 
             try:
                 NW_grid, W0, W1, DWLOG_grid = get_grid_params()
@@ -1480,9 +1538,11 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
                 NW_grid, W0, W1, DWLOG_grid = (len(wave), float(np.nanmin(wave)), float(np.nanmax(wave)), 0.0)
 
             ps = {
+                # CLI parity: keep original input for plotting / downstream components
+                "input_spectrum": {"wave": np.asarray(self.original_wave, dtype=float), "flux": np.asarray(self.original_flux, dtype=float)},
                 "log_wave": wave,
-                "log_flux": flux_view,
-                "flat_flux": tapered,
+                "log_flux": log_flux,
+                "flat_flux": flat,
                 "tapered_flux": tapered,
                 "continuum": cont,
                 "mask_logbins": mask_logbins,

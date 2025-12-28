@@ -23,7 +23,7 @@ Supported Step Types:
 
 import numpy as np
 import logging
-from typing import Tuple, List, Dict, Any, Optional
+from typing import Tuple, List, Dict, Any, Optional, Callable
 from PySide6 import QtCore
 
 # Import SNID preprocessing functions
@@ -107,11 +107,72 @@ class PySide6PreviewCalculator(QtCore.QObject):
         # Track edge information properly through preprocessing steps
         self.current_left_edge = None
         self.current_right_edge = None
+
+        # Optional: delegate non-interactive previews to the canonical pipeline (CLI parity).
+        # These are provided by the preprocessing dialog (which already caches preprocess_spectrum()).
+        self._canonical_stage_fn: Optional[Callable[[str], Tuple[np.ndarray, np.ndarray]]] = None
+        self._canonical_get_fn: Optional[Callable[[], Tuple[Dict[str, Any], Dict[str, Any]]]] = None
         
         self.reset()
+
+    def set_canonical_providers(
+        self,
+        *,
+        stage_fn: Callable[[str], Tuple[np.ndarray, np.ndarray]],
+        get_processed_trace_fn: Callable[[], Tuple[Dict[str, Any], Dict[str, Any]]],
+    ) -> None:
+        """
+        Configure canonical pipeline providers.
+
+        When set, the calculator delegates all NON-interactive steps to the canonical
+        preprocess_spectrum() outputs (via the dialog's cache), ensuring CLI/quick-GUI parity.
+        The only intentional divergence is interactive/manual continuum editing.
+        """
+        self._canonical_stage_fn = stage_fn
+        self._canonical_get_fn = get_processed_trace_fn
+        # Sync state immediately
+        try:
+            self.reset()
+        except Exception:
+            pass
     
     def reset(self):
         """Reset calculator to original spectrum state"""
+        # If canonical providers are available, reset to the canonical "raw" stage and
+        # cache canonical metadata (continuum, mask bins) for downstream display.
+        if callable(getattr(self, "_canonical_stage_fn", None)) and callable(getattr(self, "_canonical_get_fn", None)):
+            try:
+                self.current_wave, self.current_flux = self._canonical_stage_fn("raw")  # type: ignore[misc]
+                processed, trace = self._canonical_get_fn()  # type: ignore[misc]
+                # Continuum for overlay (even before continuum is applied)
+                try:
+                    cont = trace.get("step4_cont")
+                    if cont is None:
+                        cont = processed.get("continuum")
+                    self.stored_continuum = np.asarray(cont, dtype=float).copy() if cont is not None else None
+                except Exception:
+                    self.stored_continuum = None
+                # Mask bins on log grid (if available)
+                try:
+                    mlb = trace.get("mask_logbins")
+                    self.current_mask_logbins = np.asarray(mlb, dtype=bool).copy() if mlb is not None else None
+                except Exception:
+                    self.current_mask_logbins = None
+                # Optional flux offset (for debugging/parity)
+                try:
+                    self.flux_offset = float(trace.get("flux_offset", 0.0) or 0.0)
+                except Exception:
+                    self.flux_offset = 0.0
+                self.applied_steps = []
+                self.manual_continuum_active = False
+                self.has_continuum = False
+                self.current_left_edge = None
+                self.current_right_edge = None
+                return
+            except Exception:
+                # Fall back to local reset logic below
+                pass
+
         # Start from original spectrum
         base_wave = self.original_wave.copy()
         base_flux = self.original_flux.copy()
@@ -193,6 +254,52 @@ class PySide6PreviewCalculator(QtCore.QObject):
     
     def get_current_state(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get current wavelength and flux arrays"""
+        # If manual/interactive continuum has been applied, the internal state is authoritative.
+        try:
+            has_interactive = any((s or {}).get("type") == "interactive_continuum" for s in (self.applied_steps or []))
+        except Exception:
+            has_interactive = False
+        if has_interactive:
+            return self.current_wave.copy(), self.current_flux.copy()
+
+        # If canonical providers are available, derive state from applied steps via canonical stages.
+        if callable(getattr(self, "_canonical_stage_fn", None)):
+            try:
+                stage = "raw"
+                types = [str((s or {}).get("type", "")) for s in (self.applied_steps or [])]
+                if any(t == "apodization" for t in types):
+                    stage = "after_step4"
+                elif any(t == "continuum_fit" for t in types):
+                    stage = "after_step3"
+                elif any(t == "log_rebin" for t in types):
+                    stage = "after_step2"
+                elif any(t == "savgol_filter" for t in types):
+                    stage = "after_step1"
+                elif any(t in ("masking", "clipping") for t in types):
+                    stage = "after_step0"
+
+                w, f = self._canonical_stage_fn(stage)  # type: ignore[misc]
+                self.current_wave = np.asarray(w, dtype=float)
+                self.current_flux = np.asarray(f, dtype=float)
+
+                # Keep canonical metadata in sync (continuum + mask bins)
+                if callable(getattr(self, "_canonical_get_fn", None)):
+                    try:
+                        processed, trace = self._canonical_get_fn()  # type: ignore[misc]
+                        mlb = trace.get("mask_logbins")
+                        self.current_mask_logbins = np.asarray(mlb, dtype=bool).copy() if mlb is not None else None
+                        cont = trace.get("step4_cont")
+                        if cont is None:
+                            cont = processed.get("continuum")
+                        if cont is not None:
+                            self.stored_continuum = np.asarray(cont, dtype=float).copy()
+                    except Exception:
+                        pass
+
+                return self.current_wave.copy(), self.current_flux.copy()
+            except Exception:
+                pass
+
         return self.current_wave.copy(), self.current_flux.copy()
     
     def _update_edge_info_after_step(self, step_type: str):
@@ -249,6 +356,37 @@ class PySide6PreviewCalculator(QtCore.QObject):
             # Remove step_index from kwargs if present (it's only used for tracking)
             preview_kwargs = kwargs.copy()
             preview_kwargs.pop('step_index', None)
+
+            # Canonical delegation for strict CLI parity (except manual/interactive continuum).
+            # If interactive continuum has already been applied, we must keep using internal state.
+            try:
+                has_interactive = any((s or {}).get("type") == "interactive_continuum" for s in (self.applied_steps or []))
+            except Exception:
+                has_interactive = False
+            if (not has_interactive) and callable(getattr(self, "_canonical_stage_fn", None)):
+                stage_map = {
+                    "masking": "after_step0",
+                    "clipping": "after_step0",
+                    "savgol_filter": "after_step1",
+                    "log_rebin": "after_step2",
+                    "continuum_fit": "after_step3",
+                    "apodization": "after_step4",
+                }
+                if step_type in stage_map:
+                    w, f = self._canonical_stage_fn(stage_map[step_type])  # type: ignore[misc]
+                    # Keep canonical continuum available for reconstruction/overlay
+                    if step_type in ("continuum_fit", "apodization") and callable(getattr(self, "_canonical_get_fn", None)):
+                        try:
+                            processed, trace = self._canonical_get_fn()  # type: ignore[misc]
+                            cont = trace.get("step4_cont")
+                            if cont is None:
+                                cont = processed.get("continuum")
+                            if cont is not None:
+                                self.stored_continuum = np.asarray(cont, dtype=float).copy()
+                                self.has_continuum = True
+                        except Exception:
+                            pass
+                    return np.asarray(w, dtype=float), np.asarray(f, dtype=float)
             
             if step_type == "masking":
                 return self._preview_masking(**preview_kwargs)
@@ -292,6 +430,28 @@ class PySide6PreviewCalculator(QtCore.QObject):
         preview_wave, preview_flux = self.preview_step(step_type, **kwargs)
         self.current_wave = preview_wave
         self.current_flux = preview_flux
+
+        # If interactive continuum was applied, persist the manual continuum for later reconstruction
+        # (Finish path asks get_continuum_from_fit()).
+        if step_type == "interactive_continuum":
+            try:
+                mc_in = kwargs.get("manual_continuum", None)
+                wg_in = kwargs.get("wave_grid", None)
+                if mc_in is not None:
+                    mc = np.asarray(mc_in, dtype=float)
+                    if mc.size == self.current_wave.size:
+                        self.stored_continuum = mc.copy()
+                        self.manual_continuum_active = True
+                    elif wg_in is not None:
+                        wg = np.asarray(wg_in, dtype=float)
+                        if wg.size == mc.size and wg.size >= 2:
+                            order = np.argsort(wg)
+                            wg = wg[order]
+                            mc = mc[order]
+                            self.stored_continuum = np.interp(self.current_wave, wg, mc, left=0.0, right=0.0)
+                            self.manual_continuum_active = True
+            except Exception:
+                pass
         
         # Track applied steps so the finalization logic can accurately reconstruct state
         try:
@@ -545,8 +705,34 @@ class PySide6PreviewCalculator(QtCore.QObject):
     def _preview_interactive_continuum(self, continuum_points: List[Tuple[float, float]] = None, manual_continuum: np.ndarray = None, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
         """Preview interactive continuum fitting and removal"""
         # Handle new manual continuum approach (full array)
-        if manual_continuum is not None and len(manual_continuum) == len(self.current_wave):
-            return self._calculate_manual_continuum_preview(manual_continuum)
+        if manual_continuum is not None:
+            try:
+                mc = np.asarray(manual_continuum, dtype=float)
+            except Exception:
+                mc = None
+
+            if mc is not None and mc.size == self.current_wave.size:
+                # Keep continuum stored so the GUI can reconstruct fluxed spectra at Finish
+                try:
+                    self.stored_continuum = mc.copy()
+                    self.manual_continuum_active = True
+                except Exception:
+                    pass
+                return self._calculate_manual_continuum_preview(mc)
+
+            # Best-effort: resample onto current grid if a wave_grid is provided
+            try:
+                wg = np.asarray(kwargs.get("wave_grid", None), dtype=float)
+                if wg is not None and mc is not None and wg.size == mc.size and wg.size >= 2:
+                    order = np.argsort(wg)
+                    wg = wg[order]
+                    mc = mc[order]
+                    resampled = np.interp(self.current_wave, wg, mc, left=0.0, right=0.0)
+                    self.stored_continuum = np.asarray(resampled, dtype=float).copy()
+                    self.manual_continuum_active = True
+                    return self._calculate_manual_continuum_preview(self.stored_continuum)
+            except Exception:
+                pass
         
         # Handle continuum points approach for compatibility
         if not continuum_points or len(continuum_points) < 2:

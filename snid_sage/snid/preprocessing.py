@@ -805,6 +805,7 @@ def fit_continuum(
     # spline args:
     knotnum: int = 13,
     izoff:    int = 0,
+    edge_guard_frac: float = 0.02,
 ) -> Tuple[NDArray[np.floating], NDArray[np.floating]]:
     """
     Remove a smooth continuum from `flux` on the fixed log‐λ grid.
@@ -822,7 +823,12 @@ def fit_continuum(
       passed to fit_continuum_spline
     """
     if method == "spline":
-        flat, cont = fit_continuum_spline(flux, knotnum=knotnum, izoff=izoff)
+        flat, cont = fit_continuum_spline(
+            flux,
+            knotnum=knotnum,
+            izoff=izoff,
+            edge_guard_frac=edge_guard_frac,
+        )
     else:
         raise ValueError(f"Unknown method={method!r}; only 'spline' is supported")
 
@@ -845,6 +851,8 @@ def fit_continuum_spline(
     flux: NDArray[np.floating],
     knotnum: int = 13,
     izoff:    int = 0,
+    *,
+    edge_guard_frac: float = 0.02,
 ) -> Tuple[NDArray[np.floating], NDArray[np.floating]]:
     """
     Continuum removal and scaling steps:
@@ -890,6 +898,26 @@ def fit_continuum_spline(
         return np.zeros_like(flux), np.ones_like(flux)
 
     # --- 2) place knots using robust averages ---
+    #
+    # Edge-guard: spectrum ends are often junk (throughput roll-off / extraction artifacts).
+    # We avoid letting the first/last knots be anchored to those bins by shrinking the
+    # knot-placement window inside the usable region [l1..l2]. We still evaluate the spline
+    # everywhere (full log grid); this only affects knot placement.
+    usable = int(max(0, (l2 - l1 + 1)))
+    try:
+        eg = float(edge_guard_frac)
+    except Exception:
+        eg = 0.0
+    eg = max(0.0, min(0.2, eg))  # keep it sane; 0.02 default
+    guard = int(round(eg * usable))
+    # Avoid guarding away too much (keep >= ~1/3 usable span)
+    guard = max(0, min(guard, max(0, usable // 3)))
+    l1_knot = int(l1 + guard)
+    l2_knot = int(l2 - guard)
+    # If we made the window too small to support knots, fall back to original.
+    if (l2_knot - l1_knot) < 3 * knotnum:
+        l1_knot, l2_knot = int(l1), int(l2)
+
     # Use log10(mean(flux)) per block (NOT mean(log10(flux))).
     kwidth = n // knotnum
     istart = ((izoff % kwidth) - kwidth) if izoff > 0 else 0
@@ -901,7 +929,7 @@ def fit_continuum_spline(
     sum_flux = 0.0
 
     for i in range(n):
-        if l1 < i < l2 and flux[i] > 0:
+        if l1_knot < i < l2_knot and flux[i] > 0:
             nave += 1.0
             sum_x += (i - 0.5)
             sum_flux += flux[i]
