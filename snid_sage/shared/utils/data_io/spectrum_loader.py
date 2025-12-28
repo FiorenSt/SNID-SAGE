@@ -287,9 +287,49 @@ def load_text_spectrum(filename: str, **kwargs) -> Tuple[np.ndarray, np.ndarray]
     Raises:
         SpectrumLoadError: If text file cannot be loaded or parsed
     """
+    def _count_leading_header_lines(path: str, max_lines: int = 10) -> int:
+        """
+        Count how many initial non-empty, non-comment lines look like headers.
+
+        This handles cases like:
+          wave,flux,flux_err
+          wavelength,flux,
+          3500.0,1.23e-16,
+        """
+        def _is_numeric_data_line(line: str) -> bool:
+            # Normalize common delimiters and tolerate trailing delimiters / empty last column
+            s = line.replace('"', '').strip().rstrip(',;')
+            s = s.replace(',', ' ').replace('\t', ' ').replace(';', ' ')
+            parts = [p for p in s.split() if p]
+            if len(parts) < 2:
+                return False
+            try:
+                float(parts[0])
+                float(parts[1])
+                return True
+            except Exception:
+                return False
+
+        header_lines = 0
+        with open(path, 'r', encoding='utf-8-sig', errors='ignore') as fh:
+            for _ in range(max_lines):
+                raw = fh.readline()
+                if not raw:
+                    break
+                s = raw.strip()
+                if not s:
+                    continue
+                if s.lstrip().startswith('#'):
+                    continue
+                if _is_numeric_data_line(s):
+                    break  # First numeric data line -> stop
+                header_lines += 1
+        return header_lines
+
     # First, check if file has headers by examining the first line
     try:
-        with open(filename, 'r') as f:
+        # Be explicit about encoding to avoid silently skipping header detection on UTF-8/BOM files
+        with open(filename, 'r', encoding='utf-8-sig', errors='ignore') as f:
             first_line = f.readline().strip()
             # Detect delimiter (comma, tab, semicolon, or whitespace)
             delimiter = ',' if ',' in first_line else ('\t' if '\t' in first_line else (';' if ';' in first_line else None))
@@ -318,17 +358,20 @@ def load_text_spectrum(filename: str, **kwargs) -> Tuple[np.ndarray, np.ndarray]
                     return _try_header_aware_loading(filename)
                 except Exception:
                     pass
-                # Fallback: try naive skip of the first row with detected delimiter
+                # Fallback: try skipping 1+ header-like rows with detected delimiter
                 try:
+                    skiprows = _count_leading_header_lines(filename)
                     if delimiter:
-                        data = np.loadtxt(filename, comments='#', skiprows=1, delimiter=delimiter, **kwargs)
+                        data = np.loadtxt(filename, comments='#', skiprows=skiprows, delimiter=delimiter, **kwargs)
                     else:
-                        data = np.loadtxt(filename, comments='#', skiprows=1, **kwargs)
+                        data = np.loadtxt(filename, comments='#', skiprows=skiprows, **kwargs)
                     if data.ndim == 2 and data.shape[1] >= 2:
                         wavelength = data[:, 0]
                         flux = data[:, 1]
                         wavelength, flux = _validate_and_clean_arrays(wavelength, flux)
-                        _LOGGER.info(f"✅ Text spectrum loaded (header skipped): {len(wavelength)} points")
+                        _LOGGER.info(
+                            f"✅ Text spectrum loaded (skipped {skiprows} header-like rows): {len(wavelength)} points"
+                        )
                         return wavelength, flux
                 except Exception:
                     pass  # Fall through to other methods
@@ -577,9 +620,40 @@ def _try_header_aware_loading(filename: str) -> Tuple[np.ndarray, np.ndarray]:
                 return False
         return True if tokens else False
 
+    def _count_leading_header_lines(path: str, max_lines: int = 10) -> int:
+        def _is_numeric_data_line(line: str) -> bool:
+            s = line.replace('"', '').strip().rstrip(',;')
+            s = s.replace(',', ' ').replace('\t', ' ').replace(';', ' ')
+            parts = [p for p in s.split() if p]
+            if len(parts) < 2:
+                return False
+            try:
+                float(parts[0])
+                float(parts[1])
+                return True
+            except Exception:
+                return False
+
+        header_lines = 0
+        with open(path, 'r', encoding='utf-8-sig', errors='ignore') as fh:
+            for _ in range(max_lines):
+                raw = fh.readline()
+                if not raw:
+                    break
+                s = raw.strip()
+                if not s:
+                    continue
+                if s.lstrip().startswith('#'):
+                    continue
+                if _is_numeric_data_line(s):
+                    break
+                header_lines += 1
+        return header_lines
+
     # Read first non-empty, non-comment line
     first_content_line = None
-    with open(filename, 'r') as fh:
+    # Use utf-8-sig to handle BOM-prefixed CSV headers (common on Windows exports)
+    with open(filename, 'r', encoding='utf-8-sig', errors='ignore') as fh:
         for raw in fh:
             line = raw.strip()
             if not line:
@@ -594,6 +668,8 @@ def _try_header_aware_loading(filename: str) -> Tuple[np.ndarray, np.ndarray]:
 
     delimiter = _detect_delimiter(first_content_line)
     tokens = _split(first_content_line, delimiter)
+    header_lines = _count_leading_header_lines(filename)
+    extra_skiprows = list(range(1, header_lines)) if header_lines > 1 else None
 
     # Identify if the first line is a header
     header_candidates = {"wave", "wavelength", "lambda", "lam", "wl", "angstrom", "ang",
@@ -609,7 +685,14 @@ def _try_header_aware_loading(filename: str) -> Tuple[np.ndarray, np.ndarray]:
         try:
             import pandas as pd
             sep = delimiter if delimiter is not None else r'\s+'
-            df = pd.read_csv(filename, sep=sep, comment='#', header=0)
+            df = pd.read_csv(
+                filename,
+                sep=sep,
+                comment='#',
+                header=0,
+                encoding='utf-8-sig',
+                skiprows=extra_skiprows
+            )
 
             # Build a case-insensitive name map
             name_map = {str(c).strip().lower(): c for c in df.columns}
@@ -620,9 +703,14 @@ def _try_header_aware_loading(filename: str) -> Tuple[np.ndarray, np.ndarray]:
             flux_col_name = next((name_map[k] for k in flux_keys if k in name_map), None)
 
             if wave_col_name is not None and flux_col_name is not None:
-                wavelength = df[wave_col_name].to_numpy()
-                flux = df[flux_col_name].to_numpy()
-                return _validate_and_clean_arrays(wavelength, flux)
+                # Robustly coerce to numeric and drop non-numeric rows (e.g. extra header line)
+                w_ser = pd.to_numeric(df[wave_col_name], errors='coerce')
+                f_ser = pd.to_numeric(df[flux_col_name], errors='coerce')
+                mask = np.isfinite(w_ser.to_numpy()) & np.isfinite(f_ser.to_numpy())
+                if np.any(mask):
+                    wavelength = w_ser.to_numpy()[mask]
+                    flux = f_ser.to_numpy()[mask]
+                    return _validate_and_clean_arrays(wavelength, flux)
 
             # Fallback: choose the first two numeric-like columns
             numeric_df = df.apply(pd.to_numeric, errors='coerce')
@@ -639,13 +727,17 @@ def _try_header_aware_loading(filename: str) -> Tuple[np.ndarray, np.ndarray]:
 
         # Try numpy genfromtxt with named columns
         try:
+            # genfromtxt can't easily skip "extra header lines" after the names row.
+            # In that case, prefer pandas/manual parsing.
+            if header_lines > 1:
+                raise SpectrumLoadError("Multiple header lines detected; skipping genfromtxt")
             arr = np.genfromtxt(
                 filename,
                 delimiter=delimiter if delimiter is not None else None,
                 names=True,
                 comments='#',
                 dtype=None,
-                encoding='utf-8'
+                encoding='utf-8-sig'
             )
             if arr is not None and getattr(arr, 'dtype', None) is not None and arr.dtype.names:
                 name_map = {str(n).strip().lower(): str(n) for n in arr.dtype.names}
@@ -693,9 +785,41 @@ def _try_alternative_text_loading(filename: str) -> Tuple[np.ndarray, np.ndarray
     Returns:
         Tuple[np.ndarray, np.ndarray]: Wavelength and flux arrays
     """
+    def _count_leading_header_lines(path: str, max_lines: int = 10) -> int:
+        def _is_numeric_data_line(line: str) -> bool:
+            s = line.replace('"', '').strip().rstrip(',;')
+            s = s.replace(',', ' ').replace('\t', ' ').replace(';', ' ')
+            parts = [p for p in s.split() if p]
+            if len(parts) < 2:
+                return False
+            try:
+                float(parts[0])
+                float(parts[1])
+                return True
+            except Exception:
+                return False
+
+        header_lines = 0
+        with open(path, 'r', encoding='utf-8-sig', errors='ignore') as fh:
+            for _ in range(max_lines):
+                raw = fh.readline()
+                if not raw:
+                    break
+                s = raw.strip()
+                if not s:
+                    continue
+                if s.lstrip().startswith('#'):
+                    continue
+                if _is_numeric_data_line(s):
+                    break
+                header_lines += 1
+        return header_lines
+
+    skiprows = _count_leading_header_lines(filename)
+
     # Try comma-separated
     try:
-        data = np.loadtxt(filename, delimiter=',', comments='#')
+        data = np.loadtxt(filename, delimiter=',', comments='#', skiprows=skiprows)
         if data.ndim == 2 and data.shape[1] >= 2:
             return _validate_and_clean_arrays(data[:, 0], data[:, 1])
     except:
@@ -711,8 +835,30 @@ def _try_alternative_text_loading(filename: str) -> Tuple[np.ndarray, np.ndarray
             return _validate_and_clean_arrays(df.iloc[:, 0].values, df.iloc[:, 1].values)
             
         # Try comma-delimited
-        df = pd.read_csv(filename, header=None, comment='#')
+        # If we detected a header, read it as such and try name-based selection first.
+        if skiprows >= 1:
+            try:
+                extra_skiprows = list(range(1, skiprows)) if skiprows > 1 else None
+                dfh = pd.read_csv(filename, comment='#', header=0, encoding='utf-8-sig', skiprows=extra_skiprows)
+                name_map = {str(c).strip().lower(): c for c in dfh.columns}
+                wave_keys = ["wave", "wavelength", "lambda", "lam", "wl", "angstrom", "ang"]
+                flux_keys = ["flux", "fnu", "flam", "counts", "spec", "spectrum", "intensity"]
+                wave_col = next((name_map[k] for k in wave_keys if k in name_map), None)
+                flux_col = next((name_map[k] for k in flux_keys if k in name_map), None)
+                if wave_col is not None and flux_col is not None:
+                    w_ser = pd.to_numeric(dfh[wave_col], errors='coerce')
+                    f_ser = pd.to_numeric(dfh[flux_col], errors='coerce')
+                    mask = np.isfinite(w_ser.to_numpy()) & np.isfinite(f_ser.to_numpy())
+                    if np.any(mask):
+                        return _validate_and_clean_arrays(w_ser.to_numpy()[mask], f_ser.to_numpy()[mask])
+            except Exception:
+                pass
+
+        df = pd.read_csv(filename, header=None, comment='#', encoding='utf-8-sig')
         if len(df.columns) >= 2:
+            # If header was present but read as data, drop first row
+            if skiprows >= 1 and len(df) > skiprows:
+                df = df.iloc[skiprows:, :]
             return _validate_and_clean_arrays(df.iloc[:, 0].values, df.iloc[:, 1].values)
             
     except ImportError:

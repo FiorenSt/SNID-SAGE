@@ -21,7 +21,7 @@ import time
 import numpy as np
 import csv
 import re
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed, wait, FIRST_COMPLETED
 import multiprocessing as mp
 
 from snid_sage.snid.snid import preprocess_spectrum, run_snid_analysis, SNIDResult
@@ -200,7 +200,13 @@ class BatchTemplateManager:
             # Fallback failed
             raise FileNotFoundError(f"Templates directory not found: {templates_dir}") from exc
         
-    def load_templates_once(self) -> bool:
+    def load_templates_once(
+        self,
+        *,
+        type_filter: Optional[List[str]] = None,
+        template_filter: Optional[List[str]] = None,
+        exclude_templates: Optional[List[str]] = None
+    ) -> bool:
         """
         Load templates once for the entire batch processing session.
         
@@ -218,7 +224,13 @@ class BatchTemplateManager:
             # Use unified storage system (for HDF5 templates) - this is already optimized
             try:
                 from snid_sage.snid.core.integration import load_templates_unified
-                self._templates = load_templates_unified(self.templates_dir, profile_id=self._profile_id)
+                self._templates = load_templates_unified(
+                    self.templates_dir,
+                    type_filter=type_filter,
+                    template_names=template_filter,
+                    exclude_templates=exclude_templates,
+                    profile_id=self._profile_id
+                )
                 self._templates_metadata = {}
                 self._log.info(f"✅ Loaded {len(self._templates)} templates using UNIFIED STORAGE")
             except ImportError:
@@ -330,6 +342,7 @@ _WORKER_ARGS_CACHE: Optional[Dict[str, Any]] = None
 def _mp_worker_initializer(templates_dir: str,
                            type_filter: Optional[List[str]],
                            template_filter: Optional[List[str]],
+                           exclude_templates: Optional[List[str]],
                            profile_id: Optional[str]) -> None:
     """Per-process initializer: load all templates once for this worker process."""
     global _WORKER_TM, _WORKER_ARGS_CACHE
@@ -351,24 +364,16 @@ def _mp_worker_initializer(templates_dir: str,
 
     # Build a per-process template manager and pre-load templates (all relevant HDF5 files)
     _WORKER_TM = BatchTemplateManager(templates_dir, verbose=False, profile_id=effective_profile_id)
-    _WORKER_TM.load_templates_once()
-
-    # Pre-warm unified storage path so subsequent analysis calls are fast
-    try:
-        from snid_sage.snid.core.integration import load_templates_unified
-        _ = load_templates_unified(
-            templates_dir,
-            type_filter=type_filter,
-            template_names=template_filter,
-            profile_id=effective_profile_id
-        )
-    except Exception:
-        # Non-fatal; run_snid_analysis will still load via unified storage
-        pass
+    _WORKER_TM.load_templates_once(
+        type_filter=type_filter,
+        template_filter=template_filter,
+        exclude_templates=exclude_templates
+    )
 
     _WORKER_ARGS_CACHE = {
         'type_filter': type_filter,
         'template_filter': template_filter,
+        'exclude_templates': exclude_templates,
         'templates_dir': templates_dir,
         'profile_id': effective_profile_id,
     }
@@ -387,7 +392,11 @@ def _mp_process_one(index: int,
     global _WORKER_TM
     if _WORKER_TM is None:
         _WORKER_TM = BatchTemplateManager(args.templates_dir, verbose=False)
-        _WORKER_TM.load_templates_once()
+        _WORKER_TM.load_templates_once(
+            type_filter=getattr(args, 'type_filter', None),
+            template_filter=getattr(args, 'template_filter', None),
+            exclude_templates=getattr(args, 'exclude_templates', None)
+        )
 
     try:
         name, success, message, summary = process_single_spectrum_optimized(
@@ -526,6 +535,14 @@ def process_single_spectrum_optimized(
             template_filter=args.template_filter,
             age_range=age_range
         )
+        # Apply exclude list defensively (BatchTemplateManager name filter supports includes; exclude is separate)
+        exclude_templates = getattr(args, 'exclude_templates', None)
+        if exclude_templates:
+            try:
+                exclude_set = set(exclude_templates)
+                filtered_templates = [t for t in filtered_templates if t.get('name', '') not in exclude_set]
+            except Exception:
+                filtered_templates = [t for t in filtered_templates if t.get('name', '') not in list(exclude_templates)]
         
         if not filtered_templates:
             return spectrum_name, False, "No templates after filtering", {
@@ -554,13 +571,13 @@ def process_single_spectrum_optimized(
             type_filter=getattr(args, 'type_filter', None),
             template_filter=getattr(args, 'template_filter', None),
             exclude_templates=getattr(args, 'exclude_templates', None),
+            preloaded_templates=filtered_templates,
             peak_window_size=int(getattr(args, 'peak_window_size', 10)),
             lapmin=getattr(args, 'lapmin', 0.3),
             hlap_ccc_threshold=getattr(args, 'hlap_ccc_threshold', 0.5),
             phase1_peak_min_height=getattr(args, "phase1_peak_min_height", 0.3),
             phase1_peak_min_distance=getattr(args, "phase1_peak_min_distance", 3),
             forced_redshift=used_forced_redshift,
-            reject_forced_fwhm_fallback=bool(getattr(args, "reject_forced_fwhm_fallback", True)),
             max_output_templates=int(getattr(args, 'max_output_templates', 10)),
             verbose=False,
             show_plots=False,
@@ -1450,21 +1467,8 @@ Examples:
         type=float, 
         help="Force analysis to this specific redshift for all spectra"
     )
-    # Forced-redshift behavior: by default we reject fallback-width peaks.
-    # Use --keep-forced-fwhm-fallback to opt out for debugging.
-    analysis_group.add_argument(
-        "--keep-forced-fwhm-fallback",
-        dest="reject_forced_fwhm_fallback",
-        action="store_false",
-        help="Forced-redshift only: keep template matches even when half-height FWHM width measurement failed (fallback width used)."
-    )
-    # Backwards-compatible alias (default already rejects; kept for existing scripts)
-    analysis_group.add_argument(
-        "--reject-forced-fwhm-fallback",
-        dest="reject_forced_fwhm_fallback",
-        action="store_true",
-        help=argparse.SUPPRESS,
-    )
+    # Forced-redshift FWHM fallback handling:
+    # Always reject fallback-width peaks (they are not reliable matches).
     analysis_group.add_argument(
         "--profile",
         dest="profile_id",
@@ -2467,7 +2471,6 @@ def main(args: argparse.Namespace) -> int:
                 'lapmin': float(getattr(args, 'lapmin', 0.3)),
                 'hlap_ccc_threshold': float(getattr(args, 'hlap_ccc_threshold', 0.5)),
                 'forced_redshift': getattr(args, 'forced_redshift', None),
-                'reject_forced_fwhm_fallback': bool(getattr(args, 'reject_forced_fwhm_fallback', True)),
                 'type_filter': getattr(args, 'type_filter', None),
                 'template_filter': getattr(args, 'template_filter', None),
                 'exclude_templates': getattr(args, 'exclude_templates', None),
@@ -2520,14 +2523,22 @@ def main(args: argparse.Namespace) -> int:
                     initargs=(template_manager.templates_dir,
                               getattr(args, 'type_filter', None),
                               getattr(args, 'template_filter', None),
+                              getattr(args, 'exclude_templates', None),
                               getattr(args, 'profile_id', None))
                 )
                 if ctx is not None:
                     executor_kwargs['mp_context'] = ctx
                 with ProcessPoolExecutor(**executor_kwargs) as ex:
                     collected: List[Tuple[int, Tuple[str, bool, str, Dict[str, Any]]]] = []
-                    futures = []
-                    for idx, item in enumerate(items):
+                    # Submit work in a bounded window to reduce memory pressure:
+                    # - Avoid holding thousands of Future objects/args at once in the parent.
+                    # - Keeps steady-state memory ~O(workers) instead of O(n_items).
+                    pending = set()
+                    item_iter = enumerate(items)
+                    window = max(1, int(max_workers) * 2)
+
+                    def _submit_one(idx: int, item: Dict[str, Any]) -> None:
+                        nonlocal submitted
                         fut = ex.submit(
                             _mp_process_one,
                             idx,
@@ -2536,13 +2547,31 @@ def main(args: argparse.Namespace) -> int:
                             args.output_dir,
                             args_dict
                         )
-                        futures.append(fut)
+                        pending.add(fut)
                         submitted += 1
 
-                    for fut in as_completed(futures):
-                        idx, res = fut.result()
-                        collected.append((idx, res))
-                        processed += 1
+                    # Prime the pipeline
+                    try:
+                        for _ in range(min(window, len(items))):
+                            idx, item = next(item_iter)
+                            _submit_one(idx, item)
+                    except StopIteration:
+                        pass
+
+                    # Drain with backpressure
+                    while pending:
+                        done, pending = wait(pending, return_when=FIRST_COMPLETED)
+                        for fut in done:
+                            idx, res = fut.result()
+                            collected.append((idx, res))
+                            processed += 1
+
+                            # Refill one slot
+                            try:
+                                nidx, nitem = next(item_iter)
+                                _submit_one(nidx, nitem)
+                            except StopIteration:
+                                pass
 
                         # Brief per-item one-liner (unordered, as futures complete)
                         if not is_quiet:

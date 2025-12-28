@@ -90,7 +90,7 @@ except ImportError:
     _LOG = logging.getLogger("snid.pipeline")
 
 # Half-height FWHM width estimation is robust, but can fail on pathological peaks.
-# When we fall back to a conservative default width, log a warning (rate-limited).
+# When we fall back to a conservative default width, log a debug message (rate-limited).
 _WIDTH_FWHM_FALLBACK_WARN_COUNT = 0
 _WIDTH_FWHM_FALLBACK_WARN_MAX = 10
 
@@ -99,9 +99,9 @@ def _warn_width_fwhm_fallback(message: str) -> None:
     global _WIDTH_FWHM_FALLBACK_WARN_COUNT
     try:
         if _WIDTH_FWHM_FALLBACK_WARN_COUNT < _WIDTH_FWHM_FALLBACK_WARN_MAX:
-            _LOG.warning(message)
+            _LOG.debug(message)
         elif _WIDTH_FWHM_FALLBACK_WARN_COUNT == _WIDTH_FWHM_FALLBACK_WARN_MAX:
-            _LOG.warning("Half-height FWHM width fallback used frequently; suppressing further warnings.")
+            _LOG.debug("Half-height FWHM width fallback used frequently; suppressing further debug messages.")
     finally:
         _WIDTH_FWHM_FALLBACK_WARN_COUNT += 1
 
@@ -906,6 +906,8 @@ def _run_forced_redshift_analysis_optimized(
     report_progress: Callable[[str, Optional[float]], None],
     *,
     profile_id: Optional[str] = None,
+    preloaded_templates: Optional[List[Dict[str, Any]]] = None,
+    # Always reject fallback-width peaks (unreliable) in forced-redshift mode.
 ) -> List[Dict[str, Any]]:
     """
     OPTIMIZED forced redshift analysis using vectorized FFT correlation.
@@ -917,7 +919,7 @@ def _run_forced_redshift_analysis_optimized(
     import time
     from .fft_tools import shiftit, overlap, calculate_rms, apply_filter as bandpass, dtft_drms
     from .preprocessing import apodize, pad_to_NW
-    from .core.integration import load_templates_unified, integrate_fft_optimization
+    from .core.integration import integrate_fft_optimization
     from .core.config import SNIDConfig
     
     matches = []
@@ -944,37 +946,43 @@ def _run_forced_redshift_analysis_optimized(
     # ============================================================================
     # LOAD TEMPLATES (SAME AS NORMAL ANALYSIS)
     # ============================================================================
-    
-    # Use unified storage for loading templates (same as normal analysis)
-    try:
-        # Load all templates unless explicit filters are provided by the caller
-        effective_type_filter = type_filter
-        # Use the same profile as current analysis for template loading
-        profile = _resolve_active_profile(profile_id)
-        # Use provided directory as-is; profile-specific index selection happens in storage layer
-        templates = load_templates_unified(
-            templates_dir,
-            type_filter=effective_type_filter,
-            template_names=template_filter,
-            exclude_templates=exclude_templates,
-            profile_id=profile.id
-        )
-        _LOG.info(f"✅ Loaded {len(templates)} templates using UNIFIED STORAGE for forced redshift analysis")
-    except Exception as e:
-        _LOG.warning(f"Unified storage failed in forced analysis, falling back to filesystem loader: {e}")
-        from .io import load_templates
-        templates, _ = load_templates(templates_dir, flatten=True)
-        
-        # Apply template filtering to filesystem templates
-        if template_filter:
-            templates = [t for t in templates if t.get('name', '') in template_filter]
-            _LOG.info(f"Applied template filter: {len(templates)} templates remaining")
-        elif exclude_templates:
-            original_count = len(templates)
-            templates = [t for t in templates if t.get('name', '') not in exclude_templates]
-            _LOG.info(f"Excluded {original_count - len(templates)} templates: {len(templates)} remaining")
-        
-        _LOG.info(f"✅ Loaded {len(templates)} templates using STANDARD method for forced redshift analysis")
+    templates: List[Dict[str, Any]]
+    if preloaded_templates is not None:
+        templates = preloaded_templates
+        _LOG.info(f"✅ Using {len(templates)} preloaded templates for forced redshift analysis (skipping on-demand load)")
+    else:
+        # Use unified storage for loading templates (same as normal analysis)
+        try:
+            from .core.integration import load_templates_unified
+            # Use the same profile as current analysis for template loading
+            profile = _resolve_active_profile(profile_id)
+            # Use provided directory as-is; profile-specific index selection happens in storage layer
+            templates = load_templates_unified(
+                templates_dir,
+                type_filter=type_filter,
+                template_names=template_filter,
+                exclude_templates=exclude_templates,
+                profile_id=profile.id
+            )
+            _LOG.info(f"✅ Loaded {len(templates)} templates using UNIFIED STORAGE for forced redshift analysis")
+        except Exception as e:
+            _LOG.warning(f"Unified storage failed in forced analysis, falling back to filesystem loader: {e}")
+            from .io import load_templates
+            templates, _ = load_templates(templates_dir, flatten=True)
+            _LOG.info(f"✅ Loaded {len(templates)} templates using STANDARD method for forced redshift analysis")
+
+    # Apply the same filtering semantics as normal analysis (defensive even when preloaded)
+    if template_filter:
+        templates = [t for t in templates if t.get('name', '') in template_filter]
+        _LOG.info(f"Forced analysis: applied template filter: {len(templates)} templates remaining")
+    if exclude_templates:
+        original_count = len(templates)
+        templates = [t for t in templates if t.get('name', '') not in exclude_templates]
+        _LOG.info(f"Forced analysis: excluded {original_count - len(templates)} templates: {len(templates)} remaining")
+    if type_filter:
+        original_count = len(templates)
+        templates = [t for t in templates if t.get('type', '') in type_filter]
+        _LOG.info(f"Forced analysis: type filtering: {original_count} -> {len(templates)} templates")
     
     if not templates:
         _LOG.error("No templates loaded for forced redshift analysis")
@@ -1275,16 +1283,12 @@ def _process_forced_redshift_match(
             width = 0.0
             z_width = 0.0
 
-        # Conservative fallback estimate (assume a modest FWHM in bin units)
+        # If half-height FWHM failed, treat the peak as unreliable.
+        # Default behavior in forced-redshift mode is to drop such matches silently
+        # (same spirit as rejecting too-short peaks).
         if not (np.isfinite(z_width) and z_width > 0.0):
-            fwhm_bins_fallback = 2.0 * 2.35  # matches prior fallback (FWHM≈4.7 bins)
-            z_width = float(fwhm_bins_fallback * float(DWLOG_grid) * (1.0 + float(z_est)))
-            width = float(z_width)
-            if used_fallback:
-                _warn_width_fwhm_fallback(
-                    f"Half-height FWHM width failed; using fallback width in forced-redshift match "
-                    f"for template={tpl.get('name','?')} (z≈{float(z_est):.6f})"
-                )
+            # Forced-redshift: fallback-width peaks are unreliable → drop silently.
+            return None
         
         # Arms / antisymmetric-noise machinery is intentionally disabled in SNID-SAGE:
         # it is not used by the HLAP/HLAP-CCC pipeline and is computationally expensive.
@@ -1394,6 +1398,9 @@ def run_snid_analysis(
     type_filter: Optional[List[str]] = None,
     template_filter: Optional[List[str]] = None,
     exclude_templates: Optional[List[str]] = None,
+    # Performance: optionally supply preloaded templates (already on standard grid, with precomputed FFTs).
+    # This is especially helpful for `sage batch --workers` where each worker can preload once and reuse.
+    preloaded_templates: Optional[List[Dict[str, Any]]] = None,
     peak_window_size: int = 10,
     # Phase-1 peak detection (normalized correlation peak-finder knobs)
     phase1_peak_min_height: float = 0.3,
@@ -1402,10 +1409,6 @@ def run_snid_analysis(
     hlap_ccc_threshold: float = 0.5,  # Best-metric threshold for clustering
     # NEW: Forced redshift parameter
     forced_redshift: Optional[float] = None,
-    # Forced-redshift hygiene: optionally reject matches where peak width had to use fallback.
-    # Default True: in forced-redshift mode a non-measurable half-height FWHM is a strong
-    # indicator the central (zero-lag) "peak" is not well-localized.
-    reject_forced_fwhm_fallback: bool = True,
     # Output options
     max_output_templates: int = 5,
     verbose: bool = False,
@@ -1453,9 +1456,6 @@ def run_snid_analysis(
         If provided, bypass redshift search and force all templates to this redshift.
         When set, all templates will be shifted to this exact redshift value,
         skipping the initial correlation-based redshift determination.
-    reject_forced_fwhm_fallback : bool
-        Forced-redshift only: if True, drop template matches where the half-height
-        FWHM width could not be measured and a conservative fallback width was used.
     max_output_templates : int
         Maximum number of best templates to include in results
     verbose : bool
@@ -1578,57 +1578,62 @@ def run_snid_analysis(
     
     # Skip template loading for forced redshift analysis (new method handles its own loading)
     if forced_redshift is None:
-        # NORMAL ANALYSIS: Load templates here
-        # Start template loading phase (will drive overall progress from ~25% to 100%)
-        report_progress("Loading template library", 25)
-        
-        # Resolve active profile early for template loading (avoid UnboundLocalError)
-        profile = _resolve_active_profile(profile_id)
+        # NORMAL ANALYSIS: load templates here, unless caller provided preloaded templates.
+        templates: List[Dict[str, Any]]
+        if preloaded_templates is not None:
+            templates = preloaded_templates
+            _LOG.info(f"✅ Using {len(templates)} preloaded templates (skipping on-demand load)")
+        else:
+            # Start template loading phase (will drive overall progress from ~25% to 100%)
+            report_progress("Loading template library", 25)
 
-        # Use unified storage for loading templates.
-        #
-        # IMPORTANT for batch --workers / multiprocessing (Windows spawn):
-        # keep imports local so worker startup stays lightweight and we don't
-        # fail module import if optional components are missing.
-        try:
-            from .core.integration import load_templates_unified  # local import by design
+            # Resolve active profile early for template loading (avoid UnboundLocalError)
+            profile = _resolve_active_profile(profile_id)
 
-            # Wire progress through to GUI: template loading will report incremental percentages
-            # Scale template-loading progress to fit within overall analysis range (~50–75%)
-            effective_templates_dir = templates_dir
+            # Use unified storage for loading templates.
+            #
+            # IMPORTANT for batch --workers / multiprocessing (Windows spawn):
+            # keep imports local so worker startup stays lightweight and we don't
+            # fail module import if optional components are missing.
+            try:
+                from .core.integration import load_templates_unified  # local import by design
 
-            templates = load_templates_unified(
-                effective_templates_dir,
-                type_filter=type_filter,
-                template_names=template_filter,
-                exclude_templates=exclude_templates,
-                progress_callback=lambda msg, pct: report_progress(
-                    f"{msg}",
-                    25 + (0.75 * float(pct or 0.0))
-                ),
-                profile_id=profile.id
-            )
-            _LOG.info(f"✅ Loaded {len(templates)} templates using UNIFIED STORAGE")
+                # Wire progress through to GUI: template loading will report incremental percentages
+                # Scale template-loading progress to fit within overall analysis range (~50–75%)
+                effective_templates_dir = templates_dir
 
-            # If unified storage is present but returns zero templates (e.g. missing
-            # index/HDF5 files, mismatched profile index, etc.), fall back to the
-            # filesystem loader so analysis can still run with plain template folders.
-            if not templates:
-                raise RuntimeError("Unified storage returned 0 templates")
-        except Exception as e:
-            _LOG.warning(f"Unified storage failed, falling back to filesystem loader: {e}")
-            templates, _ = load_templates(templates_dir, flatten=True)
-            
-            # Apply template filtering to filesystem templates
-            if template_filter:
-                templates = [t for t in templates if t.get('name', '') in template_filter]
-                _LOG.info(f"Applied template filter: {len(templates)} templates remaining")
-            elif exclude_templates:
-                original_count = len(templates)
-                templates = [t for t in templates if t.get('name', '') not in exclude_templates]
-                _LOG.info(f"Excluded {original_count - len(templates)} templates: {len(templates)} remaining")
-            
-            _LOG.info(f"✅ Loaded {len(templates)} templates using STANDARD method")
+                templates = load_templates_unified(
+                    effective_templates_dir,
+                    type_filter=type_filter,
+                    template_names=template_filter,
+                    exclude_templates=exclude_templates,
+                    progress_callback=lambda msg, pct: report_progress(
+                        f"{msg}",
+                        25 + (0.75 * float(pct or 0.0))
+                    ),
+                    profile_id=profile.id
+                )
+                _LOG.info(f"✅ Loaded {len(templates)} templates using UNIFIED STORAGE")
+
+                # If unified storage is present but returns zero templates (e.g. missing
+                # index/HDF5 files, mismatched profile index, etc.), fall back to the
+                # filesystem loader so analysis can still run with plain template folders.
+                if not templates:
+                    raise RuntimeError("Unified storage returned 0 templates")
+            except Exception as e:
+                _LOG.warning(f"Unified storage failed, falling back to filesystem loader: {e}")
+                templates, _ = load_templates(templates_dir, flatten=True)
+
+                # Apply template filtering to filesystem templates
+                if template_filter:
+                    templates = [t for t in templates if t.get('name', '') in template_filter]
+                    _LOG.info(f"Applied template filter: {len(templates)} templates remaining")
+                elif exclude_templates:
+                    original_count = len(templates)
+                    templates = [t for t in templates if t.get('name', '') not in exclude_templates]
+                    _LOG.info(f"Excluded {original_count - len(templates)} templates: {len(templates)} remaining")
+
+                _LOG.info(f"✅ Loaded {len(templates)} templates using STANDARD method")
         
         if not templates:
             _LOG.error("No templates loaded")
@@ -1786,23 +1791,12 @@ def run_snid_analysis(
                 cont,
                 report_progress,
                 profile_id=profile_id,
+                preloaded_templates=preloaded_templates,
             )
 
             _LOG.info(f"Phase 1 complete: Forced redshift analysis found {len(matches)} matches")
 
-            # Optional: remove forced-redshift matches whose phase-2 peak width could not be
-            # measured (half-height crossings not found), i.e. width used a fallback.
-            if bool(reject_forced_fwhm_fallback) and matches:
-                before = int(len(matches))
-                matches = [m for m in matches if not bool(m.get("width_fwhm_used_fallback", False))]
-                removed = int(before - len(matches))
-                analysis_trace["forced_fwhm_fallback_removed"] = removed
-                if removed:
-                    _LOG.info(
-                        "Forced redshift: removed %d/%d matches with fallback FWHM width (reject_forced_fwhm_fallback=True)",
-                        removed,
-                        before,
-                    )
+            # Forced redshift: fallback-width peaks are dropped inside the match builder.
 
         except Exception as e:
             _LOG.error(f"Error in forced redshift analysis: {e}")
