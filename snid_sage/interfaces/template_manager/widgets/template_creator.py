@@ -638,11 +638,6 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
         finally:
             self._update_actions_enabled()
             
-    def _save_template(self, template_info: Dict[str, Any], spectrum_data: Dict[str, np.ndarray]) -> bool:
-        """Deprecated: Use TemplateService instead."""
-        _LOGGER.error("_save_template fallback path invoked; this method is not supported in HDF5-only mode.")
-        return False
-            
     def _clear_form(self):
         """Clear the template creation form"""
         self.file_path_edit.clear()

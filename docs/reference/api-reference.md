@@ -427,23 +427,6 @@ def plot_correlation_function(
 - `output_file` (str, optional): Save to file
 - `show` (bool): Display plot
 
-### **plot_type_fractions()**
-
-Plot type fraction pie chart.
-
-```python
-def plot_type_fractions(
-    type_fractions: Dict[str, float],
-    output_file: Optional[str] = None,
-    show: bool = True
-)
-```
-
-**Parameters:**
-- `type_fractions` (dict): Type fractions
-- `output_file` (str, optional): Save to file
-- `show` (bool): Display plot
-
 ---
 
 ## Preprocessing Functions

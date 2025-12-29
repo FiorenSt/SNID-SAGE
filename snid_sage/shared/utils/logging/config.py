@@ -304,12 +304,6 @@ def print_logging_status() -> None:
         print(f"Error getting logging status: {e}")
 
 
-# Legacy compatibility functions
-def setup_logging(*args, **kwargs):
-    """Legacy function for backward compatibility"""
-    configure_from_environment(*args, **kwargs)
-
-
 def get_logger_config() -> Dict[str, Any]:
     """Get current logger configuration as dictionary"""
     try:

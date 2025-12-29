@@ -491,10 +491,8 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
             return
             
         try:
-            if hasattr(self, 'plot_item'):
-                self._plot_template_spectrum()
-            else:
-                self._create_placeholder_plot()
+            # _plot_template_spectrum() is a no-op when PyQtGraph plot_item is not available.
+            self._plot_template_spectrum()
         except Exception as e:
             _LOGGER.error(f"Error updating plot: {e}")
             
@@ -894,19 +892,6 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                 
     
         
-    def _create_sample_plot_pg(self):
-        """Deprecated: previously drew a fake sample spectrum when no real data was available.
-
-        Left in place for backward compatibility but no longer used; the GUI
-        now shows a clear text message instead of plotting any mock spectra.
-        """
-        _LOGGER.debug("Sample plot requested but disabled (no fake spectra policy).")
-            
-    def _create_placeholder_plot(self):
-        """Create a placeholder plot until template loading is implemented"""
-        # Compatibility method; handled by _plot_template_spectrum
-        pass
-    
     def clear_plot(self):
         """Clear the current plot"""
         if hasattr(self, 'plot_item'):

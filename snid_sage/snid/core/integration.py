@@ -499,10 +499,6 @@ def clear_global_cache():
     _LOG.info("Cleared global unified storage")
 
 # Legacy compatibility functions
-def initialize_global_cache(template_dir: str, **kwargs):
-    """Legacy compatibility - initialize unified storage."""
-    return get_unified_storage(template_dir)
-
 def get_global_cache():
     """Legacy compatibility - get unified storage.""" 
     return _GLOBAL_STORAGE
@@ -548,31 +544,3 @@ def enable_caching_for_cli(template_dir: str = "templates", **kwargs):
 def enable_caching_for_gui(template_dir: str = "templates", **kwargs):
     """Legacy compatibility - enable caching for GUI."""
     return enable_optimization(template_dir, **kwargs)
-
-def patch_load_templates():
-    """Legacy compatibility - patch load_templates to use unified storage."""
-    try:
-        from ..io import load_templates as original_load_templates
-        import snid_sage.snid.io as snid_io
-        
-        def unified_load_templates(template_dir: str, flatten: bool = True) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
-            """Unified storage version of load_templates."""
-            templates = load_templates_unified(template_dir)
-            
-            # Build type statistics
-            type_stats = {}
-            for template in templates:
-                template_type = template.get('type', 'Unknown')
-                type_stats[template_type] = type_stats.get(template_type, 0) + 1
-            
-            _LOG.info(f"Loaded {len(templates)} templates via unified storage")
-            return templates, type_stats
-        
-        # Replace the original function
-        snid_io.load_templates = unified_load_templates
-        _LOG.info("Successfully patched load_templates to use unified storage")
-        return True
-        
-    except Exception as e:
-        _LOG.error(f"Failed to patch load_templates: {e}")
-        return False 

@@ -361,43 +361,6 @@ class PySide6MultiStepEmissionAnalysisDialog(QtWidgets.QDialog):
         # Add the containerized plot to the main layout
         layout.addWidget(plot_frame)
     
-    def _create_plot_panel(self, main_layout):
-        """Legacy method - now using _create_plot_widget"""
-        self._create_plot_widget(main_layout)
-    
-    # Event handling methods - delegate to event handlers
-    def _on_sn_type_preset_selected(self, text):
-        """Delegate to event handler"""
-        self.event_handlers.on_sn_type_preset_selected(text)
-    
-    def _on_sn_phase_preset_selected(self, text):
-        """Delegate to event handler"""
-        self.event_handlers.on_sn_phase_preset_selected(text)
-    
-    def _on_element_preset_selected(self, text):
-        """Delegate to event handler"""
-        self.event_handlers.on_element_preset_selected(text)
-    
-    def _on_other_preset_selected(self, text):
-        """Delegate to event handler"""
-        self.event_handlers.on_other_preset_selected(text)
-    
-    def _on_sn_type_selected(self, text):
-        """Legacy compatibility - delegate to event handler"""
-        self.event_handlers.on_sn_type_selected(text)
-    
-    def _on_sn_phase_selected(self, text):
-        """Legacy compatibility - delegate to event handler"""
-        self.event_handlers.on_sn_phase_selected(text)
-    
-    def _on_element_selected(self, text):
-        """Legacy compatibility - delegate to event handler"""
-        self.event_handlers.on_element_selected(text)
-    
-    def _on_galaxy_selected(self, text):
-        """Legacy compatibility - delegate to event handler"""
-        self.event_handlers.on_galaxy_selected(text)
-    
     # Essential methods that need to remain in main class
     def _on_base_redshift_changed(self, value):
         """Handle base redshift change"""

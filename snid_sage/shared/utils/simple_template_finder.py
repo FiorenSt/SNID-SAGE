@@ -165,12 +165,6 @@ def find_templates_directory_or_raise() -> Path:
     return templates_dir
 
 
-# For backward compatibility
-def get_templates_directory() -> Optional[Path]:
-    """Legacy function name - use find_templates_directory() instead."""
-    return find_templates_directory()
-
-
 def find_images_directory() -> Optional[Path]:
     """
     Find the images directory for both GitHub installations and installed packages.

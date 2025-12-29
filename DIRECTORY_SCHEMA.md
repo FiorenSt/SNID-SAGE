@@ -228,7 +228,6 @@ SNID_SAGE/                                    # project root
 │   │       │   ├── detection.py
 │   │       │   ├── fwhm_analysis.py
 │   │       │   ├── interactive_fwhm_analyzer.py
-│   │       │   ├── line_analysis.py
 │   │       │   ├── line_db_loader.py
 │   │       │   ├── line_presets.py
 │   │       │   ├── line_selection_utils.py

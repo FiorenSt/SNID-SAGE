@@ -343,7 +343,6 @@ def dtft_drms(flux: np.ndarray, start_zero: float, left_edge: int, right_edge: i
 __all__ = [
     "apply_filter", 
     "calculate_rms",
-    "rms_filter",  # Legacy alias
     "cross_correlate", 
     "overlap", 
     "aspart", 

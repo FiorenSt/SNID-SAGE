@@ -541,8 +541,3 @@ Strict response policy:
             # Log debug message but don't fail
             return ""
 
-
-# Backward compatibility
-def create_llm_integration(gui_instance=None):
-    """Create and return LLM integration instance."""
-    return LLMIntegration(gui_instance) 

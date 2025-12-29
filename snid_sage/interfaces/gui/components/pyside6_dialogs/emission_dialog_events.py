@@ -286,67 +286,6 @@ class EmissionDialogEventHandlers:
         except Exception as e:
             _LOGGER.error(f"Error applying other preset '{text}': {e}")
 
-    # Event handlers for backward compatibility
-    def on_sn_type_selected(self, sn_type):
-        """Handle SN type selection from old dropdown (compatibility)"""
-        if not sn_type or sn_type in ["Select SN Type...", "Select..."]:
-            return
-        
-        try:
-            # Reset current selections for fresh start
-            self.current_type = None
-            self.current_phase = None 
-            self.current_element = None
-            # Delegate to the preset handler
-            self.on_sn_type_preset_selected(sn_type)
-        except Exception as e:
-            _LOGGER.error(f"Error selecting SN type {sn_type}: {e}")
-    
-    def on_sn_phase_selected(self, phase):
-        """Handle SN phase selection from old dropdown (compatibility)"""
-        if not phase or phase in ["Select Phase...", "Select..."]:
-            return
-        
-        try:
-            # Reset current selections for fresh start
-            self.current_type = None
-            self.current_phase = None
-            self.current_element = None
-            # Delegate to the preset handler  
-            self.on_sn_phase_preset_selected(phase)
-        except Exception as e:
-            _LOGGER.error(f"Error selecting SN phase {phase}: {e}")
-    
-    def on_element_selected(self, element):
-        """Handle element selection from old dropdown (compatibility)"""
-        if not element or element in ["Select Element...", "Select..."]:
-            return
-        
-        try:
-            # Reset current selections for fresh start
-            self.current_type = None
-            self.current_phase = None
-            self.current_element = None
-            # Delegate to the preset handler
-            self.on_element_preset_selected(element)
-        except Exception as e:
-            _LOGGER.error(f"Error selecting element {element}: {e}")
-    
-    def on_galaxy_selected(self, galaxy_type):
-        """Handle galaxy line selection from old dropdown (compatibility)"""
-        if not galaxy_type or galaxy_type in ["Select Galaxy Lines...", "Select..."]:
-            return
-        
-        try:
-            # Reset current selections for fresh start
-            self.current_type = None
-            self.current_phase = None
-            self.current_element = None
-            # Map to other preset handler
-            self.on_other_preset_selected(galaxy_type)
-        except Exception as e:
-            _LOGGER.error(f"Error selecting galaxy type {galaxy_type}: {e}")
-    
     def _get_smart_filtered_lines(self):
         """Get lines based on current type, phase, and element selections using smart filtering"""
         if not (self.current_type or self.current_phase or self.current_element):

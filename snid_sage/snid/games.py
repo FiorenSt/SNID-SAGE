@@ -1691,13 +1691,6 @@ def run_debris_game(use_deluxe_background: bool = True):
 
     pygame.quit()
 
-# Backward compatibility: redirect asteroids to debris
-def run_asteroids_game():
-    """
-    Backward compatibility wrapper - now runs the Space Debris game
-    """
-    run_debris_game()
-
 def show_game_menu_integrated(parent_window, callback=None):
     """
     Show an integrated game selection UI within a Qt parent window.

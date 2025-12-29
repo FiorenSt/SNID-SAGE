@@ -199,12 +199,6 @@ class EnhancedOpenRouterSummary:
         return text.strip()
 
 
-# Legacy compatibility
-class OpenRouterSummary(EnhancedOpenRouterSummary):
-    """Legacy compatibility class"""
-    pass
-
-
 def create_openrouter_summary(api_key=None, model_id=None):
     """Factory function to create summary instance"""
     return EnhancedOpenRouterSummary(api_key=api_key, model_id=model_id)

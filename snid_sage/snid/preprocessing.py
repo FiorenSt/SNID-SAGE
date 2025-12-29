@@ -4,7 +4,6 @@ preprocessing.py – low-level helpers for the Python SNID port
 Public API
 ----------
   • init_wavelength_grid
-  • medfilt
   • clip_aband
   • clip_sky_lines
   • clip_host_emission_lines
@@ -150,7 +149,6 @@ def get_grid_params() -> tuple[int, float, float, float]:
 def savgol_filter_fixed(data: NDArray[np.floating], window_length: int = 11, polyorder: int = 3) -> NDArray[np.floating]:
     """
     Apply Savitzky-Golay filter with fixed window length (pixel-based smoothing).
-    Replaces the old medfilt function.
     
     Parameters:
     -----------
@@ -188,17 +186,6 @@ def savgol_filter_fixed(data: NDArray[np.floating], window_length: int = 11, pol
     except Exception:
         # Return original data if filtering fails
         return data.copy()
-
-
-# Backward compatibility aliases
-def medfilt(data: NDArray[np.floating], medlen: int) -> NDArray[np.floating]:
-    """
-    Legacy wrapper for savgol_filter_fixed.
-    Apply Savitzky-Golay filter with pixel-based window length.
-    """
-    # Convert old median filter length to appropriate savgol window
-    window_length = max(3, medlen)
-    return savgol_filter_fixed(data, window_length, polyorder=3)
 
 
 # Wavelength-based filtering no longer supported
@@ -443,23 +430,6 @@ def log_rebin_maskaware(
 
     return log_wave.astype(float, copy=False), out.astype(float, copy=False), mask_logbins.astype(bool, copy=False)
 
-
-def log_rebin_interpolate(
-    wave: NDArray[np.floating],
-    flux: NDArray[np.floating],
-    masks: Optional[List[Tuple[float, float]]] = None,
-) -> Tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.bool_]]:
-    """Deprecated: use log_rebin_maskaware. Kept for compatibility."""
-    return log_rebin_maskaware(wave, flux, masks)
-
-
-def log_rebin_interpolate_masked_only(
-    wave: NDArray[np.floating],
-    flux: NDArray[np.floating],
-    masks: Optional[List[Tuple[float, float]]] = None,
-) -> Tuple[NDArray[np.floating], NDArray[np.floating], NDArray[np.bool_]]:
-    """Deprecated: use log_rebin_maskaware. Kept for compatibility."""
-    return log_rebin_maskaware(wave, flux, masks)
 
 # ------------------------------------------------------------------
 # cosine bell taper
@@ -1112,10 +1082,9 @@ def flatten_spectrum(wave: np.ndarray, flux: np.ndarray,
 
 __all__ = [
     "init_wavelength_grid",
-    "medfilt",
     "clip_aband", "clip_sky_lines", "clip_host_emission_lines",
     "apply_wavelength_mask",
     "log_rebin", "log_rebin_maskaware", "fit_continuum", "fit_continuum_spline", "apodize", "unflatten_on_loggrid", "prep_template", "flatten_spectrum",
     "enforce_positive_flux",
-    "log_rebin_interpolate", "compute_mask_on_loggrid", "log_rebin_interpolate_masked_only",
+    "compute_mask_on_loggrid",
 ]
