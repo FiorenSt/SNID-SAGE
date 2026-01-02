@@ -49,7 +49,7 @@ Notes:
 | `--type-filter TYPE...` | Restrict templates by type (e.g., Ia Ib Ic) |
 | `--template-filter NAME...` | Only use specific templates by name |
 | `--lapmin FLOAT` | Minimum overlap fraction (default: 0.3) |
-| `--hlap-ccc-threshold FLOAT` | HLAP-CCC clustering threshold (default: 0.5) |
+| `--hsigma-lap-ccc-threshold FLOAT` | HσLAP-CCC clustering threshold (default: 15.0) |
 | `--output-dir DIR` | Output directory for results |
 | `--stop-on-error` | Stop processing upon first error |
 | `--verbose` | Verbose console output |

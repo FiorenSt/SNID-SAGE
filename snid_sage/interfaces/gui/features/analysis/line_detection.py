@@ -302,7 +302,7 @@ class LineDetectionController:
                                         'template_type': template.get('type', 'Unknown'),
                                         'redshift': match.get('redshift', 0.0),
                                         'sigma_z': match.get('sigma_z', float('nan')),
-                                        'hlap_ccc': match.get('hlap_1mccc', match.get('hlap_ccc', 0.0)),
+                                        'hsigma_lap_ccc': match.get('hsigma_lap_ccc', float('nan')),
                                         'hlap': match.get('hlap', 0.0),
                                     }
                                     galaxy_matches.append(galaxy_match)
@@ -317,13 +317,13 @@ class LineDetectionController:
                         
                         if galaxy_matches:
                             try:
-                                # Sort by best available metric (HLAP-CCC preferred) - with extra validation
+                                # Sort by best available metric (HσLAP-CCC preferred) - with extra validation
                                 _LOGGER.debug("🔄 Sorting galaxy matches by best metric...")
                                 try:
-                                    # These dicts are simplified; sort on the stored hlap_ccc field
-                                    galaxy_matches.sort(key=lambda x: float(x.get('hlap_ccc', 0.0)) if isinstance(x, dict) else 0.0, reverse=True)
+                                    # These dicts are simplified; sort on the stored hsigma_lap_ccc field
+                                    galaxy_matches.sort(key=lambda x: float(x.get('hsigma_lap_ccc', float('nan'))) if isinstance(x, dict) else float('nan'), reverse=True)
                                 except ImportError:
-                                    galaxy_matches.sort(key=lambda x: float(x.get('hlap_ccc', 0.0)) if isinstance(x, dict) else 0.0, reverse=True)
+                                    galaxy_matches.sort(key=lambda x: float(x.get('hsigma_lap_ccc', float('nan'))) if isinstance(x, dict) else float('nan'), reverse=True)
                                 _LOGGER.debug("Successfully sorted galaxy matches")
                                 
                                 # Get the best match for the dialog
@@ -333,7 +333,7 @@ class LineDetectionController:
                                 return {
                                     'success': True,
                                     'redshift': best_match['redshift'],
-                                    'hlap_ccc': best_match.get('hlap_ccc', 0.0),
+                                        'hsigma_lap_ccc': best_match.get('hsigma_lap_ccc', float('nan')),
                                     'template': best_match['template_name'],
                                     'all_matches': galaxy_matches[:10]  # Include all matches for reference
                                 }
@@ -347,7 +347,7 @@ class LineDetectionController:
                                     return {
                                         'success': True,
                                         'redshift': best_match['redshift'],
-                                        'hlap_ccc': best_match.get('hlap_ccc', 0.0),
+                                        'hsigma_lap_ccc': best_match.get('hsigma_lap_ccc', float('nan')),
                                         'template': best_match['template_name'],
                                         'all_matches': galaxy_matches[:10]
                                     }
@@ -595,7 +595,7 @@ class LineDetectionController:
         parent = self.gui if isinstance(self.gui, QtWidgets.QWidget) else None
         summary = (
             f"Redshift (z): {best_z:.6f}\n"
-            f"Metric (HLAP-CCC): {best_metric:.2f}\n"
+            f"Metric (HσLAP-CCC): {best_metric:.2f}\n"
             f"Template: {best_template}\n"
             f"Confidence: {confidence}%\n\n"
             f"Accept this redshift?"
@@ -617,7 +617,7 @@ class LineDetectionController:
             # Update redshift status label
             if hasattr(self.gui, 'redshift_status_label'):
                 try:
-                    self.gui.redshift_status_label.setText(f"✅ z = {best_z:.6f} (auto, HLAP-CCC {best_metric:.2f})")
+                    self.gui.redshift_status_label.setText(f"✅ z = {best_z:.6f} (auto, HσLAP-CCC {best_metric:.2f})")
                 except Exception:
                     pass
 
@@ -626,7 +626,7 @@ class LineDetectionController:
                 'redshift': best_z,
                 'method': 'auto',
                 'confidence': confidence,
-                'hlap_ccc': best_metric,
+                'hsigma_lap_ccc': best_metric,
                 'template': best_template
             }
 

@@ -119,7 +119,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self._unique_types: Optional[List[str]] = None
         self._type_to_index: Optional[Dict[str, int]] = None
 
-        # Plot filter state: hide "Very Low" clusters by default (Q_cluster < 0.7)
+        # Plot filter state: hide "Very Low" clusters by default (Q_cluster < 3)
         self.show_very_low: bool = False
         self._very_low_checkbox: Optional[QtWidgets.QCheckBox] = None
         self._dropdown_index_to_candidate_index: List[Optional[int]] = []
@@ -214,10 +214,10 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
             return float('nan')
 
     def _is_very_low(self, candidate: Dict[str, Any]) -> bool:
-        """Very Low is defined as Q_cluster < 0.7, matching backend thresholds."""
+        """Very Low is defined as Q_cluster < 3, matching backend thresholds."""
         try:
             q = self._get_candidate_q_score(candidate)
-            return bool(np.isfinite(q) and q < 0.7)
+            return bool(np.isfinite(q) and q < 3)
         except Exception:
             return False
 
@@ -611,7 +611,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self._dropdown_index_to_candidate_index = []
         self._candidate_index_to_dropdown_index = {}
 
-        # Find where Very Low starts (first candidate with Q_cluster < 0.7)
+        # Find where Very Low starts (first candidate with Q_cluster < 3)
         very_low_start = None
         for idx, cand in enumerate(self.all_candidates):
             if self._is_very_low(cand):
@@ -643,7 +643,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
             # Insert a visual separator just before the first Very Low cluster entry.
             if very_low_start is not None and idx == very_low_start and idx != 0:
                 try:
-                    header_text = "──────── Very Low clusters (Q<0.7) ────────"
+                    header_text = "──────── Very Low clusters (Q<3) ────────"
                     self.cluster_dropdown.addItem(header_text)
                     header_combo_idx = self.cluster_dropdown.count() - 1
                     self._dropdown_index_to_candidate_index.append(None)
@@ -705,8 +705,8 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self._unique_types = sorted(list(set(c.get('type', 'Unknown') for _, c in plotted))) if plotted else []
         self._type_to_index = {sn_type: i for i, sn_type in enumerate(self._unique_types)}
         
-        # Determine metric name (HLAP-CCC or HLAP)
-        metric_name_global = 'HLAP-CCC'
+        # Determine metric name (HσLAP-CCC or HLAP)
+        metric_name_global = 'HσLAP-CCC'
         if MATH_UTILS_AVAILABLE:
             for cand in self.all_candidates:
                 if cand.get('matches'):
@@ -759,7 +759,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self.ax.set_xlabel('Redshift (z)', color='#000000', fontsize=15, labelpad=15)
         # Use a shorter Y label ("Type") to match the GMM clustering dialog
         self.ax.set_ylabel('Type', color='#000000', fontsize=15, labelpad=15)
-        # Z label uses the global metric name (e.g., "HLAP-CCC")
+        # Z label uses the global metric name (e.g., "HσLAP-CCC")
         self.ax.set_zlabel(metric_name_global, color='#000000', fontsize=15, labelpad=15)
         if self._unique_types is not None:
             self.ax.set_yticks(range(len(self._unique_types)))
@@ -820,7 +820,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         Return lists of redshifts and metric values for the given cluster candidate.
         
         Uses get_best_metric_value when math utils are available; otherwise falls back
-        to hlap/hlap_ccc fields. Provides sensible defaults when matches or metrics
+        to hlap/hsigma_lap_ccc fields. Provides sensible defaults when matches or metrics
         are missing so that plotting and highlighting can still work.
         """
         matches = candidate.get('matches', []) or []
@@ -848,9 +848,9 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
                     try:
                         metric_val = float(get_best_metric_value(m))
                     except Exception:
-                        metric_val = float(m.get('hlap_1mccc', m.get('hlap_ccc', m.get('hlap', 0.0))))
+                        metric_val = float(m.get('hsigma_lap_ccc', m.get('hlap', 0.0)))
                 else:
-                    metric_val = float(m.get('hlap_1mccc', m.get('hlap_ccc', m.get('hlap', 0.0))))
+                    metric_val = float(m.get('hsigma_lap_ccc', m.get('hlap', 0.0)))
                 metrics.append(metric_val)
             
             return redshifts, metrics
@@ -979,7 +979,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
                             key=get_best_metric_value, reverse=True)[:2]
         else:
             matches = sorted(self.selected_cluster.get('matches', []), 
-                            key=lambda m: m.get('hlap_1mccc', m.get('hlap_ccc', m.get('hlap', 0.0))), reverse=True)[:2]
+                            key=lambda m: m.get('hsigma_lap_ccc', m.get('hlap', 0.0)), reverse=True)[:2]
         
         # Get input spectrum data
         input_wave = input_flux = None

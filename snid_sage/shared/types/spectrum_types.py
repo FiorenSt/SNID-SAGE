@@ -83,34 +83,12 @@ class TemplateMatch:
     redshift: float = 0.0
     redshift_error: float = 0.0
     hlap: float = 0.0  # height * lap
+    hsigma_lap_ccc: float = 0.0  # preferred match-quality metric when available
     r_value: float = 0.0  # Correlation coefficient
     lap: float = 0.0  # Overlap fraction
     age: Optional[float] = None  # Days from explosion
     velocity: Optional[float] = None  # km/s
     template_path: Optional[str] = None
-
-
-@dataclass
-class SNIDResult:
-    """
-    Complete SNID analysis result.
-    
-    Contains the best match and all candidate matches with analysis metadata.
-    """
-    best_match: TemplateMatch
-    all_matches: List[TemplateMatch] = field(default_factory=list)
-    consensus_type: Optional[TemplateType] = None
-    consensus_redshift: float = 0.0
-    consensus_redshift_error: float = 0.0
-    consensus_age: float = 0.0
-    consensus_age_error: float = 0.0
-    type_fractions: Dict[str, float] = field(default_factory=dict)
-
-    type_confidence: float = 0.0
-    success: bool = True
-    error_message: Optional[str] = None
-    analysis_params: Dict[str, Any] = field(default_factory=dict)
-    runtime: float = 0.0  # Analysis time in seconds
 
 
 @dataclass

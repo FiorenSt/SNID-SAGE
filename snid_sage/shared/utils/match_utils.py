@@ -36,8 +36,9 @@ def extract_redshift_sigma(match: Dict[str, Any]) -> float:
             # Continue probing other keys
             pass
 
-    # Fallback: derive a loose proxy from similarity metric
-    # Higher metric -> smaller sigma; keep a conservative upper bound
+    # Fallback: derive a loose proxy from similarity metric.
+    # Higher metric -> smaller sigma; keep a conservative upper bound.
+    # Note: metric scale is HσLAP-CCC (preferred) or HLAP fallback.
     try:
         from snid_sage.shared.utils.math_utils import get_best_metric_value  # lazy import
 

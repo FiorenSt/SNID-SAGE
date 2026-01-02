@@ -26,7 +26,6 @@ __all__ = [
     'SpectrumData',
     'ProcessedSpectrum',
     'TemplateMatch',
-    'SNIDResult',
     
     # Line and analysis structures
     'LineIdentification',

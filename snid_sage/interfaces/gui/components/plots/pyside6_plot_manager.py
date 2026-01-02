@@ -945,7 +945,7 @@ class PySide6PlotManager:
             else:
                 redshift_text = f"z = {redshift:.6f}"
             
-            # Use best available metric (HLAP-CCC preferred)
+            # Use best available metric (HσLAP-CCC preferred)
             from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
             best_metric_value = get_best_metric_value(current_match)
             metric_name = get_best_metric_name(current_match)

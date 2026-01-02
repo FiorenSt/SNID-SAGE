@@ -1098,7 +1098,7 @@ class PySide6AppController(QtCore.QObject):
                 template_filter=analysis_kwargs.get('template_filter', None),
                 peak_window_size=analysis_kwargs.get('peak_window_size', 10),
                 lapmin=analysis_kwargs.get('lapmin', 0.3),
-                hlap_ccc_threshold=float(analysis_kwargs.get('hlap_ccc_threshold', 0.5)),
+                hsigma_lap_ccc_threshold=float(analysis_kwargs.get('hsigma_lap_ccc_threshold', 1.5)),
                 forced_redshift=forced_redshift,  # NEW: Pass forced redshift parameter
                 max_output_templates=analysis_kwargs.get('max_output_templates', 10),
                 verbose=analysis_kwargs.get('verbose', False),
@@ -1854,7 +1854,7 @@ class PySide6AppController(QtCore.QObject):
             if hasattr(result, 'best_matches') and selected_cluster.get('matches'):
                 cluster_matches = selected_cluster.get('matches', [])
                 
-                # Sort cluster matches by best available metric (HLAP-CCC preferred) descending
+                # Sort cluster matches by best available metric (HσLAP-CCC preferred) descending
                 try:
                     from snid_sage.shared.utils.math_utils import get_best_metric_value
                     cluster_matches_sorted = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
@@ -1862,7 +1862,7 @@ class PySide6AppController(QtCore.QObject):
                     # Fallback sorting if math utils not available
                     cluster_matches_sorted = sorted(
                         cluster_matches,
-                        key=lambda m: m.get('hlap_1mccc', m.get('hlap_ccc', m.get('hlap', 0.0))),
+                        key=lambda m: m.get('hsigma_lap_ccc', m.get('hlap', 0.0)),
                         reverse=True
                     )
                 
@@ -1899,7 +1899,7 @@ class PySide6AppController(QtCore.QObject):
                     result.redshift = best_cluster_match.get('redshift', 0.0)
                     # Store top-level match-quality diagnostics for display
                     result.hlap = best_cluster_match.get('hlap', 0.0)
-                    result.hlap_ccc = best_cluster_match.get('hlap_1mccc', best_cluster_match.get('hlap_ccc', 0.0))
+                    result.hsigma_lap_ccc = best_cluster_match.get('hsigma_lap_ccc', 0.0)
                     
                     _LOGGER.info(f"🎯 Updated result properties: {result.template_name} ({result.consensus_type}) "
                                 f"z={result.redshift:.6f}")

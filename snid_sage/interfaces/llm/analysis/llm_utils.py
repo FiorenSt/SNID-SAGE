@@ -123,7 +123,7 @@ def build_enhanced_context(snid_results: Union[Dict[str, Any], Any],
                     } if confidence_assessment else {}
                 
                 context['clustering_analysis'] = {
-                    'method': 'top5_hlap_ccc_gmm',
+                    'method': 'top5_hsigma_lap_ccc_gmm',
                     'success': True,
                     'winning_cluster': {
                         'type': cluster_type,
@@ -326,7 +326,7 @@ def _extract_template_info(template: Dict) -> Dict[str, Any]:
             'redshift_error': template.get('zerr', 0.0),
             'age': template.get('age', 0.0),
             'lap_score': template.get('lap', 0.0),
-            'metric_score': template.get('hlap_1mccc', template.get('hlap_ccc', template.get('hlap', 0.0))),
+            'metric_score': template.get('hsigma_lap_ccc', template.get('hlap', 0.0)),
             'grade': template.get('grade', '')
         }
     else:
@@ -339,7 +339,7 @@ def _extract_template_info(template: Dict) -> Dict[str, Any]:
             'redshift_error': getattr(template, 'zerr', 0.0),
             'age': getattr(template, 'age', 0.0),
             'lap_score': getattr(template, 'lap', 0.0),
-            'metric_score': getattr(template, 'hlap_1mccc', getattr(template, 'hlap_ccc', getattr(template, 'hlap', 0.0))),
+            'metric_score': getattr(template, 'hsigma_lap_ccc', getattr(template, 'hlap', 0.0)),
             'grade': getattr(template, 'grade', '')
         }
 
@@ -353,10 +353,10 @@ def _calculate_match_statistics(templates: List[Dict]) -> Dict[str, Any]:
     lap_values = []
     for t in templates:
         if isinstance(t, dict):
-            metric_values.append(t.get('hlap_1mccc', t.get('hlap_ccc', t.get('hlap', 0.0))))
+            metric_values.append(t.get('hsigma_lap_ccc', t.get('hlap', 0.0)))
             lap_values.append(t.get('lap', 0))
         else:
-            metric_values.append(getattr(t, 'hlap_1mccc', getattr(t, 'hlap_ccc', getattr(t, 'hlap', 0.0))))
+            metric_values.append(getattr(t, 'hsigma_lap_ccc', getattr(t, 'hlap', 0.0)))
             lap_values.append(getattr(t, 'lap', 0))
     
     return {
@@ -410,7 +410,7 @@ def _check_redshift_consistency(templates: List[Dict]) -> Dict[str, Any]:
             if isinstance(t, dict):
                 weights.append(t.get('primary_metric', t.get('hlap', 1.0)))  # Default weight of 1.0 if missing
             else:
-                weights.append(getattr(t, 'hlap_1mccc', getattr(t, 'hlap_ccc', getattr(t, 'hlap', 1.0))))
+                weights.append(getattr(t, 'hsigma_lap_ccc', getattr(t, 'hlap', 1.0)))
         
         # If we have meaningful weights (not all 1.0), use weighted calculation
         if any(w != 1.0 for w in weights):
@@ -483,10 +483,10 @@ def _assess_analysis_quality(snid_results: Dict) -> Dict[str, Any]:
         
         # Handle best_match as either dict or object
         if isinstance(best_match, dict):
-            metric = best_match.get('hlap_1mccc', best_match.get('hlap_ccc', best_match.get('hlap', 0.0)))
+            metric = best_match.get('hsigma_lap_ccc', best_match.get('hlap', 0.0))
             zerr = best_match.get('zerr', 1)
         else:
-            metric = getattr(best_match, 'hlap_1mccc', getattr(best_match, 'hlap_ccc', getattr(best_match, 'hlap', 0.0)))
+            metric = getattr(best_match, 'hsigma_lap_ccc', getattr(best_match, 'hlap', 0.0))
             zerr = getattr(best_match, 'zerr', 1)
         
         if float(metric) < 0.7:
@@ -688,9 +688,9 @@ def _assess_classification_confidence(templates: List[Dict], cluster_confidence_
     
     # Handle best_match as either dict or object
     if isinstance(best_match, dict):
-        metric = best_match.get('hlap_1mccc', best_match.get('hlap_ccc', best_match.get('hlap', 0.0)))
+        metric = best_match.get('hsigma_lap_ccc', best_match.get('hlap', 0.0))
     else:
-        metric = getattr(best_match, 'hlap_1mccc', getattr(best_match, 'hlap_ccc', getattr(best_match, 'hlap', 0.0)))
+        metric = getattr(best_match, 'hsigma_lap_ccc', getattr(best_match, 'hlap', 0.0))
     
     # Check consistency among top matches
     type_consistency = _check_type_consistency(templates)

@@ -12,7 +12,7 @@ Unified reference of configurable parameters across GUI and CLI.
 | age_min | float or null | None | `--age-min` | Minimum template age (days) |
 | age_max | float or null | None | `--age-max` | Maximum template age (days) |
 | max_output_templates | int | 10 | `--max-output-templates` | Maximum templates included in outputs (CLI/UI summaries) |
-| hlap_ccc_threshold | float | 0.5 | `--hlap-ccc-threshold` (batch) | Threshold used when clustering by HLAP-CCC (HLAP/(1−CCC)) |
+| hsigma_lap_ccc_threshold | float | 15.0 | `--hsigma-lap-ccc-threshold` (batch) | Threshold used when clustering by HσLAP-CCC ((height × lap × CCC) / sigma_z) |
 | forced_redshift | float or null | None | `--forced-redshift` | Force analysis at a fixed redshift; skips redshift search |
 | type_filter | list[str] or null | None | `--type-filter` | Allowed supernova types (Ia, Ib, Ic, II, …) |
 | template_filter | list[str] or null | None | `--template-filter` | Only use specified template names |

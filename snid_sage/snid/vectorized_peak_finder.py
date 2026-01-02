@@ -454,10 +454,10 @@ class VectorizedPeakFinder:
                 )
             
             # Arms / antisymmetric-noise machinery is intentionally disabled in SNID-SAGE:
-            # it is not used by the HLAP/HLAP-CCC pipeline and is computationally expensive.
+            # it is not used by the HLAP/HσLAP-CCC pipeline and is computationally expensive.
             r_value = 0.0
             
-            # HLAP is computed for downstream scoring (HLAP-CCC) and reporting.
+            # HLAP is computed for downstream scoring (HσLAP-CCC) and reporting.
             hlap = float(hgt_p) * float(lap) if (np.isfinite(hgt_p) and np.isfinite(lap)) else 0.0
             
             # Prepare spectra data for plotting

@@ -54,8 +54,8 @@ class SNIDConfig:
     template_filter: Optional[List[str]] = None
     peak_window_size: int = 10
     lapmin: float = 0.3
-    # Best-metric threshold for clustering (HLAP-CCC: HLAP/(1−CCC))
-    hlap_ccc_threshold: float = 0.5
+    # Best-metric threshold for clustering (HσLAP-CCC: (height × lap × CCC) / sqrt(sigma_z))
+    hsigma_lap_ccc_threshold: float = 1.5
 
     forced_redshift: Optional[float] = None
     
@@ -250,7 +250,7 @@ class SNIDConfig:
             'template_filter': self.template_filter,
             'peak_window_size': self.peak_window_size,
             'lapmin': self.lapmin,
-            'hlap_ccc_threshold': self.hlap_ccc_threshold,
+            'hsigma_lap_ccc_threshold': self.hsigma_lap_ccc_threshold,
 
             'forced_redshift': self.forced_redshift
         }

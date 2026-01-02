@@ -806,9 +806,9 @@ def _process_template_peaks(
                     )
                 
                 # Arms / antisymmetric-noise machinery is intentionally disabled in SNID-SAGE:
-                # it is not used by the HLAP/HLAP-CCC pipeline and is computationally expensive.
+                # it is not used by the HLAP/HσLAP-CCC pipeline and is computationally expensive.
 
-                # HLAP is computed for downstream scoring (HLAP-CCC) and reporting.
+                # HLAP is computed for downstream scoring (HσLAP-CCC) and reporting.
                 hlap = float(hgt_p) * float(lap) if (np.isfinite(hgt_p) and np.isfinite(lap)) else 0.0
                 
                 # Prepare spectra data for plotting (required by GUI plotting system)
@@ -1165,7 +1165,7 @@ def _run_forced_redshift_analysis_optimized(
     _LOG.info(f"⚡ Performance: {total_time:.2f}s total, {templates_per_second:.1f} templates/sec")
     _LOG.info(f"⚡ Average: {total_time/len(templates)*1000:.1f}ms per template")
     
-    # Sort matches by best available metric (HLAP-CCC preferred)
+    # Sort matches by best available metric (HσLAP-CCC preferred; fallback to HLAP)
     try:
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         matches.sort(key=get_best_metric_value, reverse=True)
@@ -1287,10 +1287,10 @@ def _process_forced_redshift_match(
             return None
         
         # Arms / antisymmetric-noise machinery is intentionally disabled in SNID-SAGE:
-        # it is not used by the HLAP/HLAP-CCC pipeline and is computationally expensive.
+        # it is not used by the HLAP/HσLAP-CCC pipeline and is computationally expensive.
 
         # Store results if they pass quality criteria
-        # HLAP is computed for downstream scoring (HLAP-CCC) and reporting.
+        # HLAP is computed for downstream scoring (HσLAP-CCC) and reporting.
         hlap = float(hgt_p) * float(lap) if (np.isfinite(hgt_p) and np.isfinite(lap)) else 0.0
         if lap >= lapmin:
             # Convert overlap indices into [left_edge:right_edge] coordinates for downstream metrics.
@@ -1319,7 +1319,7 @@ def _process_forced_redshift_match(
                 "sigma_z": float('nan'),
                 "r": 0.0,
                 "lap": lap,
-                # Canonical phase-2 peak diagnostics (used by HLAP-CCC + sigma_z)
+                # Canonical phase-2 peak diagnostics (used by HσLAP-CCC + sigma_z)
                 "width": width,
                 "height": hgt_p,
                 "hlap": hlap,
@@ -1402,7 +1402,7 @@ def run_snid_analysis(
     phase1_peak_min_height: float = 0.3,
     phase1_peak_min_distance: int = 3,
     lapmin: float = 0.3,
-    hlap_ccc_threshold: float = 0.5,  # Best-metric threshold for clustering
+    hsigma_lap_ccc_threshold: float = 1.5,  # Best-metric threshold for clustering
     # NEW: Forced redshift parameter
     forced_redshift: Optional[float] = None,
     # Output options
@@ -1527,9 +1527,9 @@ def run_snid_analysis(
     )
     # Persist thresholds used for downstream reporting/plotting
     try:
-        result.hlap_ccc_threshold = float(hlap_ccc_threshold)
+        result.hsigma_lap_ccc_threshold = float(hsigma_lap_ccc_threshold)
     except Exception:
-        result.hlap_ccc_threshold = hlap_ccc_threshold
+        result.hsigma_lap_ccc_threshold = hsigma_lap_ccc_threshold
     try:
         result.lapmin = float(lapmin)
     except Exception:
@@ -2104,7 +2104,7 @@ def run_snid_analysis(
     analysis_trace["phase2_match_count_after_redshift_filter"] = int(len(matches))
 
     # ============================================================================
-    # PHASE-2 METRICS: overlap diagnostics (CCC + residual-noise), HLAP-CCC scoring, and sigma_z
+    # PHASE-2 METRICS: overlap diagnostics (CCC + residual-noise), sigma_z, and HσLAP-CCC scoring
     # ============================================================================
     
     # Always compute when we have any matches so weak/single-match cases still get consistent metrics.
@@ -2112,7 +2112,7 @@ def run_snid_analysis(
         try:
             from snid_sage.shared.utils.math_utils import (
                 compute_phase2_overlap_diagnostics,
-                compute_hlap_ccc_metric,
+                compute_hsigma_lap_ccc_metric,
                 compute_sigma_z_metrics,
             )
             _LOG.info("Computing phase-2 overlap diagnostics")
@@ -2132,19 +2132,19 @@ def run_snid_analysis(
                 processed_spectrum_for_metrics,
                 verbose=verbose,
                 trim_percentile=99.5,
-                residual_clip_percentile=99.5,
+                residual_clip_percentile=99.0,
             )
 
-            # 2) Compute HLAP-CCC score (HLAP/(1-CCCtrim)); scoring-only
-            matches = compute_hlap_ccc_metric(
+            # 2) Compute sigma_z = width * residual_noise_std (NaN when unavailable)
+            matches = compute_sigma_z_metrics(matches)
+
+            # 3) Compute HσLAP-CCC = (height × lap × CCC) / sqrt(sigma_z) (NaN when sigma_z unavailable)
+            matches = compute_hsigma_lap_ccc_metric(
                 matches,
                 processed_spectrum_for_metrics,
                 verbose=verbose,
                 trim_percentile=99.5,
             )
-
-            # 3) Compute sigma_z = width * residual_noise_std (NaN when unavailable)
-            matches = compute_sigma_z_metrics(matches)
 
             _LOG.info(f"Phase-2 metrics computed for {len(matches)} matches")
         except Exception as e:
@@ -2160,8 +2160,7 @@ def run_snid_analysis(
                     lap_v = 0.0
                 hlap = float(h * lap_v)
                 match['hlap'] = hlap
-                match['hlap_1mccc'] = hlap  # CCC treated as 0 -> denom=1
-                match['hlap_ccc'] = hlap
+                match['hsigma_lap_ccc'] = float('nan')  # sigma_z unavailable -> metric = NaN
                 match['ccc_similarity_trimmed'] = 0.0
                 match['ccc_similarity_trimmed_capped'] = 0.0
                 match['ccc_similarity'] = 0.0
@@ -2177,27 +2176,32 @@ def run_snid_analysis(
     # Pre-compute best-metric thresholded list for fallback paths and summary logic
     try:
         from snid_sage.shared.utils.math_utils import get_best_metric_value
-        thresholded_matches = [m for m in matches if get_best_metric_value(m) >= float(hlap_ccc_threshold)]
+        thresholded_matches = [m for m in matches if get_best_metric_value(m) >= float(hsigma_lap_ccc_threshold)]
     except Exception:
         thresholded_matches = list(matches)
     
-    # Report the count that will actually go to clustering (after HLAP-CCC threshold filtering)
-    report_progress(f"✅ Correlation complete: {len(thresholded_matches)} matches found (passed HLAP-CCC threshold ≥{hlap_ccc_threshold:.2f})", 100)
-    _LOG.info(f"Phase 2: {len(matches)} matches after redshift filtering, {len(thresholded_matches)} matches above HLAP-CCC threshold (≥{hlap_ccc_threshold:.2f}) proceeding to clustering")
+    # Report the count that will actually go to clustering (after HσLAP-CCC threshold filtering)
+    report_progress(
+        f"✅ Correlation complete: {len(thresholded_matches)} matches found (passed HσLAP-CCC threshold ≥{hsigma_lap_ccc_threshold:.2f})",
+        100,
+    )
+    _LOG.info(
+        f"Phase 2: {len(matches)} matches after redshift filtering, {len(thresholded_matches)} matches above HσLAP-CCC threshold (≥{hsigma_lap_ccc_threshold:.2f}) proceeding to clustering"
+    )
     
     if len(matches) >= 1:  # Allow clustering with any number of matches
         try:
             from .cosmological_clustering import perform_direct_gmm_clustering
             
             report_progress("Performing cosmological GMM clustering analysis with best metric")
-            _LOG.info("Using direct GMM clustering on redshift values with best available metric (HLAP-CCC preferred)")
+            _LOG.info("Using direct GMM clustering on redshift values with best available metric (HσLAP-CCC preferred)")
             
             clustering_results = perform_direct_gmm_clustering(
                 matches, 
                 min_matches_per_type=1,  # Accept any type with at least 1 match
                 max_clusters_per_type=10,
                 verbose=verbose,
-                hlap_ccc_threshold=hlap_ccc_threshold,
+                hsigma_lap_ccc_threshold=hsigma_lap_ccc_threshold,
                 use_weighted_gmm=bool(use_weighted_gmm),
                 model_selection_method=gmm_model_selection,
                 # Defensive: ensure clustering cannot see out-of-bounds redshifts
@@ -2387,7 +2391,7 @@ def run_snid_analysis(
         if filtered_matches:
             # Find most common type among filtered matches
             type_counts = {}
-            type_metrics = {}  # Track best metric values for each type (HLAP-CCC preferred)
+            type_metrics = {}  # Track best metric values for each type (HσLAP-CCC preferred)
             for match in filtered_matches:
                 tp = match['template'].get('type', 'Unknown')
                 type_counts[tp] = type_counts.get(tp, 0) + 1
@@ -2409,7 +2413,7 @@ def run_snid_analysis(
             # Use proper statistical redshift calculations instead of simple mean
             redshifts = [m['redshift'] for m in filtered_matches]
             if redshifts:
-                # Use balanced weighting with best metric (HLAP-CCC preferred) and per-match σ
+                # Use balanced weighting with best metric (HσLAP-CCC preferred) and per-match σ
                 from snid_sage.shared.utils.math_utils import (
                     estimate_weighted_redshift,
                     get_best_metric_value,
@@ -2562,8 +2566,8 @@ def run_snid_analysis(
         best_match = filtered_matches[0]
         result.r = best_match['r']
         result.lap = best_match['lap']
-        # Primary metric is HLAP-CCC
-        result.hlap_ccc = best_match.get('hlap_1mccc', best_match.get('hlap_ccc', 0.0))
+        # Primary metric is HσLAP-CCC
+        result.hsigma_lap_ccc = best_match.get('hsigma_lap_ccc', 0.0)
         result.redshift = best_match['redshift']
         result.redshift_error = best_match.get('sigma_z', float('nan'))
         raw_template_name = best_match['template'].get('name', 'Unknown')
@@ -2589,7 +2593,7 @@ def run_snid_analysis(
         # No good matches
         result.r = 0.0
         result.lap = 0.0
-        result.hlap_ccc = 0.0
+        result.hsigma_lap_ccc = 0.0
         result.consensus_type = 'Unknown'
         result.type_confidence = 0.0
 
@@ -2622,22 +2626,22 @@ def run_snid_analysis(
 
     # If enhanced metric exists, apply the same threshold used for clustering to what we display
     try:
-        any_metric = any(('hlap_1mccc' in m or 'hlap_ccc' in m) for m in overlay_candidates)
-        if any_metric and isinstance(hlap_ccc_threshold, (int, float)):
+        any_metric = any(('hsigma_lap_ccc' in m) for m in overlay_candidates)
+        if any_metric and isinstance(hsigma_lap_ccc_threshold, (int, float)):
             from snid_sage.shared.utils.math_utils import get_best_metric_value
-            filtered = [m for m in overlay_candidates if get_best_metric_value(m) >= float(hlap_ccc_threshold)]
+            filtered = [m for m in overlay_candidates if get_best_metric_value(m) >= float(hsigma_lap_ccc_threshold)]
             # Do not fallback if filtering removes all; an empty list correctly signals no reliable matches
             overlay_candidates = filtered
     except Exception:
         pass
 
-    # Sort by best available metric (HLAP-CCC preferred)
+    # Sort by best available metric (HσLAP-CCC preferred; fallback to HLAP)
     try:
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         overlay_candidates.sort(key=get_best_metric_value, reverse=True)
     except Exception:
-        # Fallback stable sort by HLAP/HLAP-CCC when utilities are unavailable
-        overlay_candidates.sort(key=lambda m: m.get('hlap_1mccc', m.get('hlap_ccc', m.get('hlap', 0.0))), reverse=True)
+        # Fallback stable sort by best available keys when utilities are unavailable
+        overlay_candidates.sort(key=lambda m: m.get('hsigma_lap_ccc', m.get('hlap', 0.0)), reverse=True)
 
     # Expose top-N to GUI
     result.best_matches = overlay_candidates[:_mot]
@@ -2748,7 +2752,7 @@ def run_snid(
     apodize_percent: float = 10.0,
     peak_window_size: int = 10,
     lapmin: float = 0.3,
-    hlap_ccc_threshold: float = 0.5,  # Best-metric threshold for clustering (HLAP-CCC preferred)
+    hsigma_lap_ccc_threshold: float = 1.5,  # Best-metric threshold for clustering (HσLAP-CCC preferred)
 
     # NEW: Forced redshift parameter
     forced_redshift: Optional[float] = None,
@@ -2960,7 +2964,7 @@ def run_snid(
         exclude_templates=exclude_templates,
         peak_window_size=peak_window_size,
         lapmin=lapmin,
-        hlap_ccc_threshold=hlap_ccc_threshold,
+        hsigma_lap_ccc_threshold=hsigma_lap_ccc_threshold,
         
         forced_redshift=forced_redshift,
         max_output_templates=max_output_templates,

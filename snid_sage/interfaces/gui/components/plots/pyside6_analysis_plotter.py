@@ -407,7 +407,7 @@ class PySide6AnalysisPlotter:
             if not clustering_ok:
                 try:
                     from snid_sage.shared.utils.math_utils import get_best_metric_value
-                    threshold = float(getattr(result, 'hlap_ccc_threshold', 0.5))
+                    threshold = float(getattr(result, 'hsigma_lap_ccc_threshold', 1.5))
                     filtered_matches = [m for m in matches if float(get_best_metric_value(m)) >= threshold]
                 except Exception:
                     filtered_matches = matches

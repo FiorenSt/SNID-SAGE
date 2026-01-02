@@ -573,7 +573,7 @@ def process_single_spectrum_optimized(
             preloaded_templates=filtered_templates,
             peak_window_size=int(getattr(args, 'peak_window_size', 10)),
             lapmin=getattr(args, 'lapmin', 0.3),
-            hlap_ccc_threshold=getattr(args, 'hlap_ccc_threshold', 0.5),
+            hsigma_lap_ccc_threshold=getattr(args, 'hsigma_lap_ccc_threshold', 1.5),
             phase1_peak_min_height=getattr(args, "phase1_peak_min_height", 0.3),
             phase1_peak_min_distance=getattr(args, "phase1_peak_min_distance", 3),
             forced_redshift=used_forced_redshift,
@@ -723,7 +723,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
         
         if winning_cluster:
             cluster_matches = winning_cluster.get('matches', [])
-            # Sort cluster matches by best available metric (HLAP-CCC preferred) descending
+            # Sort cluster matches by best available metric (HσLAP-CCC preferred) descending
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
     
@@ -731,12 +731,12 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
     if not cluster_matches:
         if hasattr(result, 'filtered_matches') and result.filtered_matches:
             cluster_matches = result.filtered_matches
-            # Sort by best available metric (HLAP-CCC preferred) descending
+            # Sort by best available metric (HσLAP-CCC preferred) descending
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
         elif hasattr(result, 'best_matches') and result.best_matches:
             cluster_matches = result.best_matches
-            # Sort by best available metric (HLAP-CCC preferred) descending
+            # Sort by best available metric (HσLAP-CCC preferred) descending
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
     
@@ -752,7 +752,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
         'consensus_subtype': result.best_subtype,
         'redshift': result.redshift,
         'redshift_error': result.redshift_error,
-        'hlap_ccc': getattr(result, 'hlap_ccc', 0.0),
+        'hsigma_lap_ccc': getattr(result, 'hsigma_lap_ccc', 0.0),
 
 
         'runtime': result.runtime_sec,
@@ -761,7 +761,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
     }
     
     # If we have any matches (from cluster or fallback), override the "best_*" fields
-    # to reflect the true top match according to the best metric (HLAP-CCC),
+    # to reflect the true top match according to the best metric (HσLAP-CCC),
     # and also expose the best metric on the summary for downstream reporting.
     if cluster_matches:
         top_match = cluster_matches[0]
@@ -772,8 +772,8 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
         # Use the top match's redshift/error for "Best Match Redshift"
         summary['redshift'] = top_match.get('redshift', summary['redshift'])
         summary['redshift_error'] = top_match.get('sigma_z', summary['redshift_error'])
-        # Always expose HLAP-CCC; if missing, fall back to HLAP
-        summary['hlap_ccc'] = top_match.get('hlap_1mccc', top_match.get('hlap_ccc', top_match.get('hlap', summary.get('hlap_ccc', 0.0))))
+        # Expose HσLAP-CCC (may be NaN when sigma_z is unavailable)
+        summary['hsigma_lap_ccc'] = top_match.get('hsigma_lap_ccc', float('nan'))
         # Propagate age for top match if available (used as fallback when no cluster age)
         if isinstance(top_tpl, dict):
             summary['age'] = top_tpl.get('age', summary.get('age', None))
@@ -935,7 +935,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                         # Group for confidence computation
                         if st not in by_subtype:
                             by_subtype[st] = {'metrics': [], 'z_errs': []}
-                        # Best available metric (HLAP-CCC preferred)
+                        # Best available metric (HσLAP-CCC preferred)
                         try:
                             from snid_sage.shared.utils.math_utils import get_best_metric_value
                             metric_val_all = float(get_best_metric_value(m))
@@ -957,7 +957,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                     tpl = m.get('template', {}) if isinstance(m.get('template'), dict) else {}
                     z = m.get('redshift')
                     zerr = m.get('sigma_z', None)
-                    # Best available metric (HLAP-CCC preferred)
+                    # Best available metric (HσLAP-CCC preferred)
                     try:
                         from snid_sage.shared.utils.math_utils import get_best_metric_value
                         metric_val = float(get_best_metric_value(m))
@@ -1107,18 +1107,18 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 penalty = min(mets.size / 5.0, 1.0) if mets.size else 0.0
                 penalized = mean_top * penalty
                 summary['cluster_penalized_score'] = penalized
-                if penalized > 2.5:
+                if penalized > 9:
                     summary['cluster_quality_category'] = 'High'
-                    summary['cluster_quality_description'] = f'Excellent match quality (HLAP-CCC: {penalized:.2f})'
-                elif penalized >= 1.2:
+                    summary['cluster_quality_description'] = f'Excellent match quality (HσLAP-CCC: {penalized:.2f})'
+                elif penalized >= 6:
                     summary['cluster_quality_category'] = 'Medium'
-                    summary['cluster_quality_description'] = f'Good match quality (HLAP-CCC: {penalized:.2f})'
-                elif penalized >= 0.7:
+                    summary['cluster_quality_description'] = f'Good match quality (HσLAP-CCC: {penalized:.2f})'
+                elif penalized >= 3:
                     summary['cluster_quality_category'] = 'Low'
-                    summary['cluster_quality_description'] = f'Poor match quality (HLAP-CCC: {penalized:.2f})'
+                    summary['cluster_quality_description'] = f'Poor match quality (HσLAP-CCC: {penalized:.2f})'
                 else:
                     summary['cluster_quality_category'] = 'Very Low'
-                    summary['cluster_quality_description'] = f'Very poor match quality (HLAP-CCC: {penalized:.2f})'
+                    summary['cluster_quality_description'] = f'Very poor match quality (HσLAP-CCC: {penalized:.2f})'
         except Exception:
             pass
         
@@ -1231,7 +1231,7 @@ def _save_spectrum_outputs(
                     elif hasattr(result, 'best_matches') and result.best_matches:
                         plot_matches = result.best_matches
                 
-                # CRITICAL: Sort all plot matches by best available metric (HLAP-CCC preferred) descending
+                # CRITICAL: Sort all plot matches by best available metric (HσLAP-CCC preferred) descending
                 if plot_matches:
                     from snid_sage.shared.utils.math_utils import get_best_metric_value
                     plot_matches = sorted(plot_matches, key=get_best_metric_value, reverse=True)
@@ -1427,11 +1427,11 @@ Examples:
         help="Minimum overlap fraction required"
     )
     analysis_group.add_argument(
-        "--hlap-ccc-threshold",
-        dest="hlap_ccc_threshold",
+        "--hsigma-lap-ccc-threshold",
+        dest="hsigma_lap_ccc_threshold",
         type=float,
-        default=0.5,
-        help="Minimum HLAP-CCC value required for clustering (HLAP-CCC: HLAP/(1−CCC))"
+        default=1.5,
+        help="Minimum HσLAP-CCC value required for clustering (HσLAP-CCC: (height × lap × CCC) / sqrt(sigma_z))"
     )
     analysis_group.add_argument(
         "--phase1-peak-min-height",
@@ -1925,9 +1925,9 @@ def generate_summary_report(results: List[Tuple], args: argparse.Namespace, wall
         medium_quality = sum(1 for metric in all_metrics if 5.0 <= metric < 10.0)
         low_quality = sum(1 for metric in all_metrics if metric < 5.0)
         
-        # Determine metric name (HLAP-CCC preferred)
+        # Determine metric name (HσLAP-CCC preferred)
         from snid_sage.shared.utils.math_utils import get_best_metric_name
-        metric_name = get_best_metric_name(successful_results[0][3]) if successful_results else "HLAP-CCC"
+        metric_name = get_best_metric_name(successful_results[0][3]) if successful_results else "HσLAP-CCC"
         
         report.append(f"ANALYSIS QUALITY ({metric_name} Distribution):")
         report.append(f"   Average {metric_name}: {avg_metric:.2f}")
@@ -2144,7 +2144,7 @@ def _export_results_table(results: List[Tuple], output_dir: Path) -> Optional[Pa
                     from snid_sage.shared.utils.math_utils import get_best_metric_value
                     q_cluster = get_best_metric_value(summary)
                 except Exception:
-                    q_cluster = summary.get('hlap_ccc', None)
+                    q_cluster = summary.get('hsigma_lap_ccc', None)
             row['Q_cluster'] = q_cluster
 
             row['match_quality'] = summary.get('cluster_quality_category', None)
@@ -2467,7 +2467,7 @@ def main(args: argparse.Namespace) -> int:
                 'age_min': getattr(args, 'age_min', None),
                 'age_max': getattr(args, 'age_max', None),
                 'lapmin': float(getattr(args, 'lapmin', 0.3)),
-                'hlap_ccc_threshold': float(getattr(args, 'hlap_ccc_threshold', 0.5)),
+                'hsigma_lap_ccc_threshold': float(getattr(args, 'hsigma_lap_ccc_threshold', 1.5)),
                 'forced_redshift': getattr(args, 'forced_redshift', None),
                 'type_filter': getattr(args, 'type_filter', None),
                 'template_filter': getattr(args, 'template_filter', None),
@@ -2651,7 +2651,7 @@ def main(args: argparse.Namespace) -> int:
                         else:
                             redshift = summary.get('redshift', 0)
                             z_marker = ""
-                        # Report BOTH best metric (HLAP-CCC preferred) and Q_cluster (penalized top-5).
+                        # Report BOTH best metric (HσLAP-CCC preferred) and Q_cluster (penalized top-5).
                         from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
                         best_metric_value = float(get_best_metric_value(summary))
                         best_metric_name = str(get_best_metric_name(summary))

@@ -218,11 +218,11 @@ Examples:
         help="Minimum overlap fraction required"
     )
     analysis_group.add_argument(
-        "--hlap-ccc-threshold",
-        dest="hlap_ccc_threshold",
+        "--hsigma-lap-ccc-threshold",
+        dest="hsigma_lap_ccc_threshold",
         type=float,
-        default=0.5,
-        help="Minimum HLAP-CCC value required for clustering (HLAP-CCC: HLAP/(1−CCC))"
+        default=1.5,
+        help="Minimum HσLAP-CCC value required for clustering (HσLAP-CCC: (height × lap × CCC) / sqrt(sigma_z))"
     )
     # Analysis options completed
     
@@ -458,7 +458,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
     
     if winning_cluster:
         cluster_matches = winning_cluster.get('matches', [])
-        # Sort cluster matches by best available metric (HLAP-CCC preferred) descending
+        # Sort cluster matches by best available metric (HσLAP-CCC preferred) descending
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
     
@@ -466,12 +466,12 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
     if not cluster_matches:
         if hasattr(result, 'filtered_matches') and result.filtered_matches:
             cluster_matches = result.filtered_matches
-            # Sort by best available metric (HLAP-CCC preferred) descending
+            # Sort by best available metric (HσLAP-CCC preferred) descending
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
         elif hasattr(result, 'best_matches') and result.best_matches:
             cluster_matches = result.best_matches
-            # Sort by best available metric (HLAP-CCC preferred) descending
+            # Sort by best available metric (HσLAP-CCC preferred) descending
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
     
@@ -487,7 +487,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
         'consensus_subtype': result.best_subtype,
         'redshift': result.redshift,
         'redshift_error': result.redshift_error,
-        'hlap_ccc': getattr(result, 'hlap_ccc', 0.0),
+        'hsigma_lap_ccc': getattr(result, 'hsigma_lap_ccc', 0.0),
 
 
         'runtime': result.runtime_sec,
@@ -678,7 +678,7 @@ def _save_spectrum_outputs(
                     elif hasattr(result, 'best_matches') and result.best_matches:
                         plot_matches = result.best_matches
                 
-                # CRITICAL: Sort all plot matches by best available metric (HLAP-CCC preferred) descending
+                # CRITICAL: Sort all plot matches by best available metric (HσLAP-CCC preferred) descending
                 if plot_matches:
                     from snid_sage.shared.utils.math_utils import get_best_metric_value
                     plot_matches = sorted(plot_matches, key=get_best_metric_value, reverse=True)
@@ -1013,7 +1013,7 @@ def main(args: argparse.Namespace) -> int:
             phase1_peak_min_height=getattr(args, "phase1_peak_min_height", 0.3),
             phase1_peak_min_distance=getattr(args, "phase1_peak_min_distance", 3),
             lapmin=args.lapmin,
-                hlap_ccc_threshold=getattr(args, 'hlap_ccc_threshold', 0.5),
+                hsigma_lap_ccc_threshold=getattr(args, 'hsigma_lap_ccc_threshold', 1.5),
 
             forced_redshift=args.forced_redshift,
             max_output_templates=args.max_output_templates,
@@ -1159,7 +1159,7 @@ def main(args: argparse.Namespace) -> int:
                     try:
                         from snid_sage.shared.utils.math_utils import get_best_metric_name, get_best_metric_value
                         bm = (result.best_matches[0] if getattr(result, 'best_matches', None) else {})
-                        metric_name = get_best_metric_name(bm) if bm else "HLAP-CCC"
+                        metric_name = get_best_metric_name(bm) if bm else "HσLAP-CCC"
                         metric_value = get_best_metric_value(bm) if bm else float('nan')
                         print(f"{spectrum_name}: {result.consensus_type} z={result.redshift:.6f} {metric_name}={metric_value:.2f}")
                     except Exception:

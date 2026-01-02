@@ -46,7 +46,7 @@ result, analysis_trace = run_snid_analysis(
 # Access results
 print(f"Type: {result.consensus_type}")
 print(f"Redshift: {result.redshift}")
-print(f"Confidence: {getattr(result, 'hlap_ccc', None)}")
+print(f"Confidence: {getattr(result, 'hsigma_lap_ccc', None)}")
 ```
 
 ---
@@ -249,7 +249,7 @@ def run_snid_analysis(
     forced_redshift: Optional[float] = None,
     peak_window_size: int = 10,
     lapmin: float = 0.3,
-    hlap_ccc_threshold: float = 0.5,
+    hsigma_lap_ccc_threshold: float = 15.0,
     max_output_templates: int = 5,
     verbose: bool = False,
     show_plots: bool = True,
@@ -274,7 +274,7 @@ def run_snid_analysis(
 | forced_redshift | float or None | None | Force specific redshift |
 | peak_window_size | int | 10 | Peak detection window |
 | lapmin | float | 0.3 | Minimum overlap |
-| hlap_ccc_threshold | float | 0.5 | Threshold for clustering quality (HLAP-CCC: HLAP/(1−CCC)) |
+| hsigma_lap_ccc_threshold | float | 15.0 | Threshold for clustering quality (HσLAP-CCC: (height × lap × CCC) / sigma_z) |
 | max_output_templates | int | 5 | Maximum output templates |
 | verbose | bool | False | Verbose output |
 | show_plots | bool | True | Show plots |
@@ -294,6 +294,16 @@ def run_snid_analysis(
 
 Class containing SNID analysis results.
 
+**Canonical definition / import**
+
+`SNIDResult` is defined in the SNID pipeline and re-exported for stable imports:
+
+```python
+from snid_sage.snid import SNIDResult
+```
+
+Note: `SNIDResult` is **not** provided by `snid_sage.shared.types`.
+
 #### **Properties**
 - `success` (bool): Whether analysis succeeded
 - `spectrum_name` (str): Input spectrum name
@@ -306,7 +316,7 @@ Class containing SNID analysis results.
 - `redshift_error` (float): Redshift uncertainty
 - `age` (float): Age from maximum light
 - `age_error` (float): Age uncertainty
-- `hlap_ccc` (float): Best HLAP-CCC value (when available)
+- `hsigma_lap_ccc` (float): Best HσLAP-CCC value (when available)
 - `lap` (float): Best overlap fraction
 - `runtime_sec` (float): Analysis runtime
 - `best_matches` (list): List of best template matches

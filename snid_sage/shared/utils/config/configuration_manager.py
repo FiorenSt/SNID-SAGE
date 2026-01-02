@@ -259,7 +259,7 @@ class ConfigurationManager:
                 'wavelength_tolerance': 10.0,
                 # Analysis gating parameters
                 'lapmin': 0.3,
-                'hlap_ccc_threshold': 0.5,  # Best-metric threshold for clustering (HLAP-CCC)
+                'hsigma_lap_ccc_threshold': 1.5,  # Best-metric threshold for clustering (HσLAP-CCC)
 
                 'wmin': None,  # Optional wavelength limits
                 'wmax': None,

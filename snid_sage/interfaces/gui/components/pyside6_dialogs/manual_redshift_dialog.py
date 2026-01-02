@@ -1001,12 +1001,16 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                 best_match = results.best_matches[0]
                 best_redshift = best_match.get('redshift', 0.0)
                 template_name = best_match.get('template_name', 'Unknown')
-                metric_score = best_match.get('hlap_1mccc', best_match.get('hlap_ccc', best_match.get('hlap', 0.0)))
+                metric_score = best_match.get('hsigma_lap_ccc', best_match.get('hlap', 0.0))
                 
                 progress.close()
                 
-                # Check if the match is confident enough (HLAP-CCC >= 0.5 for non-very-low matches)
-                if metric_score >= 0.5:
+                # Auto-apply threshold:
+                # Match-quality categories in the pipeline use Q_cluster thresholds:
+                #   Very Low < 3, Low 3–<6, Medium 6–≤9, High > 9
+                # Here we use a simple per-best-match heuristic consistent with "not Very Low":
+                #   auto-apply when metric_score >= 3.0, otherwise ask for confirmation.
+                if float(metric_score) >= 3.0:
                     # Directly apply the redshift without asking
                     self.redshift_input.setValue(best_redshift)
                     # Trigger the redshift change which will update the line positions
@@ -1030,7 +1034,7 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                         f"⚠️ Weak galaxy template match found:\n\n"
                         f"📋 Template: {template_name}\n"
                         f"🌌 Redshift: z = {best_redshift:.6f}\n"
-                        f"📊 Metric: {metric_score:.2f} (weak)\n\n"
+                        f"📊 Metric: {float(metric_score):.2f} (<3; weak)\n\n"
                         f"Apply this redshift anyway?",
                         QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
                     

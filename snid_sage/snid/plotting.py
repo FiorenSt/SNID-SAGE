@@ -479,7 +479,7 @@ def plot_comparison(result: Any, figsize: Tuple[int, int] = (12, 9),
             info_text += f" ± {result.consensus_redshift_error:.4f}"
         info_text += "\n"
     
-    # Use best available metric (HLAP-CCC preferred)
+    # Use best available metric (HσLAP-CCC preferred)
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
     if hasattr(result, 'best_matches') and result.best_matches:
         best_metric_value = get_best_metric_value(result.best_matches[0])
@@ -553,7 +553,7 @@ def plot_comparison(result: Any, figsize: Tuple[int, int] = (12, 9),
     
     template_info += f"Age: {template_age:.1f} days\n"
     template_info += f"z = {z_template:.6f}\n"
-    # Use best available metric (HLAP-CCC preferred)
+    # Use best available metric (HσLAP-CCC preferred)
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
     best_metric_value = get_best_metric_value(best_match)
     metric_name = get_best_metric_name(best_match)
@@ -701,7 +701,7 @@ def plot_correlation_function(result: Any, figsize: Tuple[int, int] = (8, 6),
     if template_age is not None and np.isfinite(template_age):
         template_info += f"Age: {template_age:.1f} days\n"
     template_info += f"z = {redshift:.6f}\n"
-    # Use best available metric (HLAP-CCC preferred)
+    # Use best available metric (HσLAP-CCC preferred)
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
     best_metric_value = get_best_metric_value(best_match)
     metric_name = get_best_metric_name(best_match)
@@ -821,7 +821,7 @@ def plot_redshift_age(result: Any, figsize: Tuple[int, int] = (8, 6),
     if not clustering_ok:
         try:
             from snid_sage.shared.utils.math_utils import get_best_metric_value
-            threshold = float(getattr(result, 'hlap_ccc_threshold', 0.5))
+            threshold = float(getattr(result, 'hsigma_lap_ccc_threshold', 1.5))
             matches = [m for m in matches if float(get_best_metric_value(m)) >= threshold]
         except Exception:
             threshold = None
@@ -848,7 +848,7 @@ def plot_redshift_age(result: Any, figsize: Tuple[int, int] = (8, 6),
         sn_subtype = template.get('subtype', 'Unknown') if isinstance(template, dict) else 'Unknown'
         if not sn_subtype or sn_subtype.strip() == '':
             sn_subtype = 'Unknown'
-        # Use best available metric for point size (HLAP-CCC preferred)
+        # Use best available metric for point size (HσLAP-CCC preferred)
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         size_metric = float(get_best_metric_value(match))
         data.append({
@@ -1231,7 +1231,7 @@ def plot_flux_comparison(match: Dict[str, Any], result: Any,
         template_info_lines.append(f"z = {z_template:.6f} ±{redshift_error:.6f}")
     else:
         template_info_lines.append(f"z = {z_template:.6f}")
-    # Use best available metric (HLAP-CCC preferred)
+    # Use best available metric (HσLAP-CCC preferred)
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
     best_metric_value = get_best_metric_value(match)
     metric_name = get_best_metric_name(match)
@@ -1470,7 +1470,7 @@ def plot_flat_comparison(match: Dict[str, Any], result: Any,
         template_info_lines.append(f"z = {z_template:.6f} ±{redshift_error:.6f}")
     else:
         template_info_lines.append(f"z = {z_template:.6f}")
-    # Use best available metric (HLAP-CCC preferred)
+    # Use best available metric (HσLAP-CCC preferred)
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
     best_metric_value = get_best_metric_value(match)
     metric_name = get_best_metric_name(match)
@@ -1652,7 +1652,7 @@ def plot_correlation_view(match: Dict[str, Any], result: Any,
     if template_age is not None and np.isfinite(template_age):
         template_info += f"Age: {template_age:.1f} days\n"
     template_info += f"z = {z_template:.6f}\n"
-    # Use best available metric (HLAP-CCC preferred)
+    # Use best available metric (HσLAP-CCC preferred)
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
     best_metric_value = get_best_metric_value(match)
     metric_name = get_best_metric_name(match)
@@ -2158,7 +2158,7 @@ def compute_cluster_subtype_proportions(cluster_matches: List[Dict[str, Any]],
         if not subtype or subtype.strip() == '':
             subtype = 'Unknown'
         
-        # Use best available metric (HLAP-CCC preferred)
+        # Use best available metric (HσLAP-CCC preferred)
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         value = get_best_metric_value(match) if weighted else 1.0
         subtype_values[subtype] += value

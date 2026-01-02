@@ -638,7 +638,7 @@ class AnalysisMenuManager:
                     if hasattr(snid_results, 'best_matches') and selected_cluster.get('matches'):
                         cluster_matches = selected_cluster.get('matches', [])
                         
-                        # Sort cluster matches by best available metric (HLAP-CCC preferred) descending
+                        # Sort cluster matches by best available metric (HσLAP-CCC preferred) descending
                         try:
                             from snid_sage.shared.utils.math_utils import get_best_metric_value
                             cluster_matches_sorted = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
@@ -646,7 +646,7 @@ class AnalysisMenuManager:
                             # Fallback sorting if math utils not available
                             cluster_matches_sorted = sorted(
                                 cluster_matches,
-                                key=lambda m: m.get('hlap_1mccc', m.get('hlap_ccc', m.get('hlap', 0.0))),
+                                key=lambda m: m.get('hsigma_lap_ccc', m.get('hlap', 0.0)),
                                 reverse=True
                             )
                         
@@ -682,7 +682,7 @@ class AnalysisMenuManager:
                             snid_results.consensus_type = template.get('type', 'Unknown')
                             snid_results.redshift = best_cluster_match.get('redshift', 0.0)
                             snid_results.hlap = best_cluster_match.get('hlap', 0.0)
-                            snid_results.hlap_ccc = best_cluster_match.get('hlap_1mccc', best_cluster_match.get('hlap_ccc', 0.0))
+                            snid_results.hsigma_lap_ccc = best_cluster_match.get('hsigma_lap_ccc', 0.0)
                             
                             _LOGGER.info(f"🎯 Updated result properties: {snid_results.template_name} ({snid_results.consensus_type}) "
                                         f"z={snid_results.redshift:.6f}")

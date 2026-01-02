@@ -287,7 +287,7 @@ class PySide6RedshiftAgeDialog(QtWidgets.QDialog):
             if not clustering_ok:
                 try:
                     from snid_sage.shared.utils.math_utils import get_best_metric_value
-                    threshold = float(getattr(self.analysis_results, 'hlap_ccc_threshold', 0.5))
+                    threshold = float(getattr(self.analysis_results, 'hsigma_lap_ccc_threshold', 1.5))
                     filtered_matches = [m for m in matches if float(get_best_metric_value(m)) >= threshold]
                 except Exception:
                     filtered_matches = matches
@@ -374,7 +374,7 @@ Please check your analysis results and try again.
             return
         
         # Build summary text
-        threshold = float(getattr(self.analysis_results, 'hlap_ccc_threshold', 0.5))
+        threshold = float(getattr(self.analysis_results, 'hsigma_lap_ccc_threshold', 1.5))
         total_matches = len(self.all_matches)
         valid_points = len(self.plot_data)
         
@@ -389,7 +389,7 @@ Please check your analysis results and try again.
             f"📊 DATA SOURCE: {self.match_source}",
             f"📝 TOTAL MATCHES: {total_matches}",
             f"🎯 VALID DATA POINTS: {valid_points}",
-            f"📏 METRIC THRESHOLD (HLAP-CCC): {threshold}",
+            f"📏 METRIC THRESHOLD (HσLAP-CCC): {threshold}",
             "",
             "📊 DISTRIBUTION STATISTICS:",
             f"   Redshift Range: {min(redshifts):.4f} - {max(redshifts):.4f}",

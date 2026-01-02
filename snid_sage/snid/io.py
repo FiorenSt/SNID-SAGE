@@ -553,8 +553,8 @@ def write_detailed_result(result: Any, filename: str) -> None:
         except Exception:
             pass
         try:
-            if hasattr(result, 'hlap_ccc_threshold'):
-                f.write(f"# Metric threshold (HLAP-CCC)    : {float(getattr(result, 'hlap_ccc_threshold')):.3f}\n")
+            if hasattr(result, 'hsigma_lap_ccc_threshold'):
+                f.write(f"# Metric threshold (HσLAP-CCC)    : {float(getattr(result, 'hsigma_lap_ccc_threshold')):.3f}\n")
         except Exception:
             pass
         if hasattr(result, 'dwlog') and result.dwlog:
@@ -647,7 +647,7 @@ def write_detailed_result(result: Any, filename: str) -> None:
             elif hasattr(result, 'best_matches') and result.best_matches:
                 cluster_matches = result.best_matches
         
-        # Sort cluster matches by best available metric (HLAP-CCC preferred) descending
+        # Sort cluster matches by best available metric (HσLAP-CCC preferred) descending
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
         

@@ -475,9 +475,9 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
                 
                 # Use the same threshold/bounds as the pipeline when available
                 try:
-                    thr = float(getattr(self.analysis_results, "hlap_ccc_threshold", 0.5) or 0.5)
+                    thr = float(getattr(self.analysis_results, "hsigma_lap_ccc_threshold", 1.5) or 1.5)
                 except Exception:
-                    thr = 0.5
+                    thr = 1.5
                 try:
                     zmin_used = getattr(self.analysis_results, "zmin_used", None)
                     zmax_used = getattr(self.analysis_results, "zmax_used", None)
@@ -491,7 +491,7 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
                     min_matches_per_type=1,  # Accept any type with at least 1 match
                     max_clusters_per_type=10,
                     verbose=True,
-                    hlap_ccc_threshold=thr,
+                    hsigma_lap_ccc_threshold=thr,
                     zmin=zmin_used,
                     zmax=zmax_used,
                 )
@@ -680,7 +680,8 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
                     from snid_sage.shared.utils.math_utils import get_best_metric_value
                     matches_sorted = sorted(matches, key=get_best_metric_value, reverse=True)
                 except Exception:
-                    matches_sorted = sorted(matches, key=lambda m: m.get('hlap_1mccc', m.get('hlap_ccc', m.get('hlap', 0.0))), reverse=True)
+                    from snid_sage.shared.utils.math_utils import get_best_metric_value
+                    matches_sorted = sorted(matches, key=get_best_metric_value, reverse=True)
                 best_match = matches_sorted[0]
             
             # Get input spectrum data
@@ -807,7 +808,7 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
                 if not matches:
                     continue
                 
-                # Extract axes: X=redshift, Y=type index, Z=best metric (HLAP-CCC preferred)
+                # Extract axes: X=redshift, Y=type index, Z=best metric (HσLAP-CCC preferred)
                 xs = []
                 ys = []
                 zs = []
@@ -841,8 +842,8 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
             self.ax.set_xlabel('Redshift (z)', fontsize=15, labelpad=15)
             # Keep shorter label text ("Type") but with larger font
             self.ax.set_ylabel('Type', fontsize=15, labelpad=15)
-            # Z is the best metric (HLAP-CCC preferred)
-            self.ax.set_zlabel('HLAP-CCC', fontsize=15, labelpad=15)
+            # Z is the best metric (HσLAP-CCC preferred)
+            self.ax.set_zlabel('HσLAP-CCC', fontsize=15, labelpad=15)
             # No title for clean look
             try:
                 self.ax.set_title('')
@@ -873,7 +874,7 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
             self.ax.xaxis.label.set_color('#000000')
             self.ax.yaxis.label.set_color('#000000')
             self.ax.zaxis.label.set_color('#000000')
-            # Slightly smaller tick labels on all axes (z values, HLAP-CCC values, and type indices)
+            # Slightly smaller tick labels on all axes (z values, HσLAP-CCC values, and type indices)
             self.ax.tick_params(colors='#666666', labelsize=10)
             self.ax.grid(True, alpha=0.4, color='gray', linestyle='-', linewidth=0.5)
             

@@ -116,7 +116,7 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
             'age_min': -9999,  # Default minimum age (shows "No minimum")
             'age_max': 9999,   # Default maximum age (shows "No maximum") 
             'lapmin': 0.3,
-            'hlap_ccc_threshold': 0.5,  # HLAP-CCC threshold for clustering
+            'hsigma_lap_ccc_threshold': 1.5,  # HσLAP-CCC threshold for clustering
             'max_output_templates': 10,
             
             
@@ -393,11 +393,11 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
         self.widgets['lapmin'].setToolTip("Minimum overlap fraction required between spectrum and template (any precision)")
         correlation_layout.addRow("Minimum Overlap (lapmin):", self.widgets['lapmin'])
         
-        self.widgets['hlap_ccc_threshold'] = create_flexible_double_input(min_val=0.0, max_val=50.0, default=0.5)
-        self.widgets['hlap_ccc_threshold'].setToolTip(
-            "Minimum best-metric value required for clustering (HLAP-CCC: HLAP/(1−CCC), default: 0.5, any precision)"
+        self.widgets['hsigma_lap_ccc_threshold'] = create_flexible_double_input(min_val=0.0, max_val=500.0, default=1.5)
+        self.widgets['hsigma_lap_ccc_threshold'].setToolTip(
+            "Minimum best-metric value required for clustering (HσLAP-CCC: (height × lap × CCC) / sqrt(sigma_z), default: 1.5, any precision)"
         )
-        correlation_layout.addRow("HLAP-CCC Clustering Threshold:", self.widgets['hlap_ccc_threshold'])
+        correlation_layout.addRow("HσLAP-CCC Clustering Threshold:", self.widgets['hsigma_lap_ccc_threshold'])
         
         
         layout.addWidget(correlation_group)
@@ -819,7 +819,7 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
                 _LOGGER.debug(f"Configuration dialog: Redshift mode is '{mode}', not using forced redshift")
         
         # Load basic parameters
-        for key in ['zmin', 'zmax', 'lapmin', 'hlap_ccc_threshold', 'age_min', 'age_max', 
+        for key in ['zmin', 'zmax', 'lapmin', 'hsigma_lap_ccc_threshold', 'age_min', 'age_max', 
                    'max_output_templates']:
             if key in params and key in self.widgets and params[key] is not None:
                 try:
@@ -912,7 +912,7 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
             result['zmin'] = self.widgets['zmin'].value()
             result['zmax'] = self.widgets['zmax'].value()
             result['lapmin'] = self.widgets['lapmin'].value()
-            result['hlap_ccc_threshold'] = self.widgets['hlap_ccc_threshold'].value()
+            result['hsigma_lap_ccc_threshold'] = self.widgets['hsigma_lap_ccc_threshold'].value()
             result['max_output_templates'] = self.widgets['max_output_templates'].value()
             
             # Age range

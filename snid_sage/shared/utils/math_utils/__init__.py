@@ -3,6 +3,11 @@ Mathematical utility functions for SNID SAGE.
 
 This module provides statistically rigorous weighted calculations for
 redshift and age estimation using template quality metrics.
+
+Primary match-quality metric (preferred when available): HσLAP-CCC
+    HσLAP-CCC = (height × lap × CCC) / sqrt(sigma_z)
+
+Weighting policy for clustering/aggregation: w = (HσLAP-CCC)^2
 """
 
 from .weighted_statistics import (
@@ -19,7 +24,7 @@ from .similarity_metrics import (
     concordance_correlation_coefficient,
     concordance_correlation_coefficient_trimmed,
     compute_phase2_overlap_diagnostics,
-    compute_hlap_ccc_metric,
+    compute_hsigma_lap_ccc_metric,
     compute_sigma_z_metrics,
     residual_noise_clipped_std,
     get_best_metric_value,
@@ -42,7 +47,7 @@ __all__ = [
     'concordance_correlation_coefficient',
     'concordance_correlation_coefficient_trimmed',
     'compute_phase2_overlap_diagnostics',
-    'compute_hlap_ccc_metric',
+    'compute_hsigma_lap_ccc_metric',
     'compute_sigma_z_metrics',
     'residual_noise_clipped_std',
     'get_best_metric_value',

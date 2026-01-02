@@ -1,10 +1,16 @@
 """
 Similarity and composite metric utilities for SNID SAGE.
 
-The primary metric used is the concordance correlation coefficient (CCC),
-which is combined with HLAP (height * lap) to form the HLAP-CCC composite metric:
-    HLAP/(1-CCC)
-with CCC estimated using 99.5% trimming (drop top 0.5% contributors).
+Primary metric: HσLAP-CCC
+    HσLAP-CCC = (height × lap × CCC) / sqrt(sigma_z)
+
+Where:
+- height = peak height
+- lap = lap parameter
+- CCC = concordance correlation coefficient (99.5% trimmed, capped to [0, 1])
+- sigma_z = width × residual_noise_std
+
+This is a BREAKING change replacing the previous composite metric definition.
 """
 
 from __future__ import annotations
@@ -92,7 +98,7 @@ def residual_noise_clipped_std(
     a_window: np.ndarray,
     b_window: np.ndarray,
     *,
-    clip_percentile: float = 99.5,
+    clip_percentile: float = 99.0,
 ) -> Tuple[float, Dict[str, float]]:
     """
     Compute residual noise as std(residuals) after clipping extreme residuals.
@@ -274,7 +280,7 @@ def _extract_template_flux(match: Dict[str, Any]) -> np.ndarray:
 
 
 # =============================================================================
-# Match-level metrics (HLAP, HLAP-CCC) and overlap diagnostics (CCC, residual noise)
+# Match-level metrics (HLAP, HσLAP-CCC) and overlap diagnostics (CCC, residual noise)
 # =============================================================================
 
 def _extract_match_height_width_lap(match: Dict[str, Any]) -> Tuple[float, float, float]:
@@ -411,7 +417,7 @@ def compute_phase2_overlap_diagnostics(
     verbose: bool = False,
     *,
     trim_percentile: float = 99.5,
-    residual_clip_percentile: float = 99.5,
+    residual_clip_percentile: float = 99.0,
     apodize_percent: float = 10.0,
     compute_ccc: bool = True,
     compute_noise: bool = True,
@@ -500,28 +506,40 @@ def compute_sigma_z_metrics(matches: List[Dict[str, Any]]) -> List[Dict[str, Any
     return out
 
 
-def _compute_hlap_ccc_from_ccc(hlap: float, ccc_trimmed_capped: float, *, denom_eps: float = 1e-3) -> float:
-    """Compute HLAP/(1-CCC) using capped CCC in [0,1]."""
+def _compute_hsigma_lap_ccc_from_ccc(
+    hlap: float,
+    ccc_trimmed_capped: float,
+    sigma_z: float,
+) -> float:
+    """Compute HσLAP-CCC = (HLAP * CCC) / sqrt(sigma_z).
+
+    Failure policy: return NaN when sigma_z is NaN or <= 0.
+    """
     if not (np.isfinite(hlap) and hlap > 0.0):
         return float("nan")
-    ccc_clip = float(np.clip(float(ccc_trimmed_capped), 0.0, 0.999999))
-    denom = max(float(denom_eps), 1.0 - ccc_clip)
-    return float(hlap / denom)
+    if not (np.isfinite(sigma_z) and sigma_z > 0.0):
+        return float("nan")
+    ccc_clip = float(np.clip(float(ccc_trimmed_capped), 0.0, 1.0))
+    return float((hlap * ccc_clip) / float(np.sqrt(sigma_z)))
 
 
-def compute_hlap_ccc_metric(
+def compute_hsigma_lap_ccc_metric(
     matches: List[Dict[str, Any]],
     processed_spectrum: Dict[str, Any],
     verbose: bool = False,
     *,
     trim_percentile: float = 99.5,
-    residual_clip_percentile: float = 99.5,
-    denom_eps: float = 1e-3,
+    residual_clip_percentile: float = 99.0,
 ) -> List[Dict[str, Any]]:
-    """Compute HLAP/(1-CCC) where CCC is the 99.5% trimmed CCC over the phase-2 overlap region.
+    """Compute HσLAP-CCC = (height × lap × CCC) / sqrt(sigma_z) for each match.
 
-    Important: this function is **scoring-only**. It does **not** compute per-match uncertainty.
-    Use `compute_phase2_overlap_diagnostics()` + `compute_sigma_z_metrics()` for sigma_z.
+    Requirements / computation order:
+    - CCC diagnostics are computed here if missing (trimmed/capped CCC).
+    - sigma_z MUST already exist on each match dict (computed via `compute_sigma_z_metrics()`).
+
+    Failure policy:
+    - If sigma_z is NaN or <= 0, the metric is NaN.
+    - Downstream selection falls back to HLAP via `get_best_metric_value()`.
     """
     if not matches:
         return matches
@@ -555,19 +573,23 @@ def compute_hlap_ccc_metric(
         if not np.isfinite(ccc_capped):
             ccc_capped = 0.0
 
-        hlap_ccc = _compute_hlap_ccc_from_ccc(hlap, ccc_capped, denom_eps=float(denom_eps))
+        try:
+            sigma_z = float(enhanced.get("sigma_z", float("nan")))
+        except Exception:
+            sigma_z = float("nan")
+        hsigma_lap_ccc = _compute_hsigma_lap_ccc_from_ccc(hlap, ccc_capped, sigma_z)
 
         enhanced["hlap"] = hlap
-        enhanced["hlap_1mccc"] = hlap_ccc
-        enhanced["hlap_ccc"] = hlap_ccc
+        enhanced["hsigma_lap_ccc"] = hsigma_lap_ccc
 
         if verbose and i < 5:
             logger.debug(
-                "HLAP-CCC %d: hlap=%.3g ccc=%.3g metric=%.3g",
+                "HσLAP-CCC %d: hlap=%.3g ccc=%.3g sigma_z=%.3g metric=%.3g",
                 i,
                 float(hlap) if np.isfinite(hlap) else float("nan"),
                 float(ccc_capped),
-                float(hlap_ccc) if np.isfinite(hlap_ccc) else float("nan"),
+                float(sigma_z) if np.isfinite(sigma_z) else float("nan"),
+                float(hsigma_lap_ccc) if np.isfinite(hsigma_lap_ccc) else float("nan"),
             )
 
         enhanced_matches.append(enhanced)
@@ -617,7 +639,7 @@ def get_best_metric_value(match: Dict[str, Any]) -> float:
     """
     Get the best available metric value for sorting/display.
     
-    Returns HLAP-CCC if available, otherwise falls back to HLAP (height × lap).
+    Returns HσLAP-CCC if available, otherwise falls back to HLAP (height × lap).
     
     Parameters
     ----------
@@ -631,8 +653,8 @@ def get_best_metric_value(match: Dict[str, Any]) -> float:
     """
     if not isinstance(match, dict):
         return 0.0
-    # Prefer HLAP/(1-CCC) when available
-    v = match.get("hlap_1mccc", match.get("hlap_ccc", None))
+    # Prefer HσLAP-CCC when available
+    v = match.get("hsigma_lap_ccc", None)
     try:
         if v is not None:
             return float(v)
@@ -659,7 +681,7 @@ def get_hlap_value(match: Dict[str, Any]) -> float:
     """
     Get HLAP (height × lap) from a match dict.
 
-    This is intentionally independent of HLAP-CCC / CCC diagnostics and is used
+    This is intentionally independent of HσLAP-CCC / CCC diagnostics and is used
     for HLAP-based thresholding and quality labeling.
     """
     if not isinstance(match, dict):
@@ -684,7 +706,7 @@ def get_metric_name_for_match(match: Dict[str, Any]) -> str:
     """
     Get the name of the metric being used for a match.
     
-    Returns 'HLAP-CCC' if available, otherwise 'HLAP'.
+    Returns 'HσLAP-CCC' if available, otherwise 'HLAP'.
     
     Parameters
     ----------
@@ -696,8 +718,8 @@ def get_metric_name_for_match(match: Dict[str, Any]) -> str:
     str
         Name of the metric
     """
-    if isinstance(match, dict) and ("hlap_1mccc" in match or "hlap_ccc" in match):
-        return "HLAP-CCC"
+    if isinstance(match, dict) and ("hsigma_lap_ccc" in match):
+        return "HσLAP-CCC"
     return "HLAP"
 
 
@@ -705,7 +727,7 @@ def get_best_metric_name(match: Dict[str, Any]) -> str:
     """
     Get the name of the best available metric for a match.
     
-    Returns 'HLAP-CCC' if available, otherwise 'HLAP'.
+    Returns 'HσLAP-CCC' if available, otherwise 'HLAP'.
     This is a convenience function for summary reports.
     
     Parameters
@@ -718,8 +740,8 @@ def get_best_metric_name(match: Dict[str, Any]) -> str:
     str
         Name of the best available metric
     """
-    if isinstance(match, dict) and any(k in match for k in ("hlap_1mccc", "hlap_ccc")):
-        return "HLAP-CCC"
+    if isinstance(match, dict) and ("hsigma_lap_ccc" in match):
+        return "HσLAP-CCC"
     return "HLAP"
 
 
@@ -744,8 +766,8 @@ def get_metric_display_values(match: Dict[str, Any]) -> Dict[str, float]:
         'metric_name': get_metric_name_for_match(match)
     }
     
-    if 'hlap_1mccc' in match or 'hlap_ccc' in match:
-        values['hlap_1mccc'] = match.get('hlap_1mccc', match.get('hlap_ccc', 0.0))
+    if 'hsigma_lap_ccc' in match:
+        values['hsigma_lap_ccc'] = match.get('hsigma_lap_ccc', 0.0)
         values['hlap'] = match.get('hlap', 0.0)
         values['ccc_similarity_trimmed'] = match.get('ccc_similarity_trimmed', match.get('ccc_similarity', 0.0))
         values['ccc_similarity_trimmed_capped'] = match.get('ccc_similarity_trimmed_capped', match.get('ccc_similarity_capped', 0.0))

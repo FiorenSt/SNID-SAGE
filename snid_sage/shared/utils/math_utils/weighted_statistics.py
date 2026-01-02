@@ -1,7 +1,7 @@
 """
 Statistically rigorous weighted calculations for redshift and age estimation in SNID SAGE.
 
-This module implements best-metric weighted estimation methods (preferring HLAP-CCC) for optimal redshift 
+This module implements best-metric weighted estimation methods (preferring HσLAP-CCC) for optimal redshift
 and age estimation with full covariance analysis.
 """
 
@@ -18,7 +18,7 @@ def compute_cluster_weights(
     redshift_errors: Union[np.ndarray, List[float]]
 ) -> np.ndarray:
     """
-    Compute canonical cluster weights: w_i = (metric_i)^2 / sigma_z_i^2.
+    Compute canonical cluster weights: w_i = (HσLAP-CCC_i)^2.
 
     This is a thin wrapper around calculate_combined_weights for clarity.
     """
@@ -75,7 +75,7 @@ def estimate_weighted_redshift(
     metric_values: Union[np.ndarray, List[float]]
 ) -> float:
     """
-    Weighted mean redshift using weights w = (metric)^2 / sigma_z^2.
+    Weighted mean redshift using weights w = (HσLAP-CCC)^2.
     """
     z = np.asarray(redshifts, dtype=float)
     sigma = np.asarray(redshift_errors, dtype=float)
@@ -97,7 +97,7 @@ def estimate_weighted_epoch(
 ) -> float:
     """
     Weighted mean epoch (age) using the same cluster weights as redshift:
-    w = (metric)^2 / sigma_z^2.
+    w = (HσLAP-CCC)^2.
     """
     t = np.asarray(ages, dtype=float)
     sigma = np.asarray(redshift_errors, dtype=float)
@@ -119,7 +119,7 @@ def weighted_redshift_error(
 ) -> float:
     """
     Uncertainty for redshift reported as unbiased weighted SD within the set.
-    Uses weights w = (metric)^2 / sigma_z^2.
+    Uses weights w = (HσLAP-CCC)^2.
     Single-member rule: return that member's sigma_z.
     """
     z = np.asarray(redshifts, dtype=float)
@@ -145,7 +145,7 @@ def weighted_epoch_error(
 ) -> float:
     """
     Uncertainty for age reported as unbiased weighted SD within the set.
-    Uses redshift-based weights w = (metric)^2 / sigma_z^2.
+    Uses redshift-based weights w = (HσLAP-CCC)^2.
     Single-member rule: return NaN (cannot estimate SD from one point).
     """
     t = np.asarray(ages, dtype=float)
@@ -171,32 +171,24 @@ def calculate_combined_weights(
     uncertainties: Union[np.ndarray, List[float]]
 ) -> np.ndarray:
     """
-    Calculate combined weights using both best-metric quality and individual uncertainties.
+    Calculate cluster weights from best-metric values.
     
-    This implements the statistically correct approach for weighted averaging when
-    both quality indicators (best metric) and individual uncertainties are available.
+    For HσLAP-CCC, sigma_z normalization is already included in the metric:
+        HσLAP-CCC = (height × lap × CCC) / sqrt(sigma_z)
+    so the canonical cluster weight is simply:
+        w_i = (HσLAP-CCC_i)^2
     
     Parameters
     ----------
     metric_values : array-like
-        Best metric quality scores (HLAP-CCC preferred; fallback to HLAP)
+        Best metric quality scores (HσLAP-CCC preferred; fallback to HLAP)
     uncertainties : array-like
-        Individual uncertainty estimates for each template (e.g., redshift errors)
+        Kept for API compatibility; not used in the current weighting formula.
         
     Returns
     -------
     np.ndarray
-        Combined weights = (metric)² / σ²
-        
-    Notes
-    -----
-    Statistical Formulation:
-    - Quality weight: q_i = (metric_i)²
-    - Precision weight: p_i = 1/σ²_i
-    - Combined weight: w_i = q_i × p_i = (metric_i)² / σ²_i
-    
-    This gives high-quality templates with low uncertainty the highest influence,
-    which is statistically optimal for uncertainty propagation.
+        Weights = (HσLAP-CCC)²
     """
     metric_values = np.asarray(metric_values, dtype=float)
     uncertainties = np.asarray(uncertainties, dtype=float)
@@ -208,19 +200,10 @@ def calculate_combined_weights(
     if len(metric_values) == 0:
         return np.array([])
     
-    # Handle zero uncertainties (perfect measurements) by using a small floor value
-    # This prevents infinite weights while preserving the relative ordering
-    min_uncertainty = np.min(uncertainties[uncertainties > 0]) if np.any(uncertainties > 0) else 1e-6
-    uncertainty_floor = min_uncertainty * 0.1
-    safe_uncertainties = np.maximum(uncertainties, uncertainty_floor)
-    
-    # Calculate combined weights using squared best-metric values (HLAP-CCC preferred)
-    quality_weights = metric_values ** 2
-    precision_weights = 1.0 / (safe_uncertainties ** 2)  # Inverse variance weighting
-    combined_weights = quality_weights * precision_weights
+    # Canonical weights for HσLAP-CCC: w = metric^2
+    combined_weights = metric_values ** 2
     
     logger.debug(f"Combined weighting: Best-metric [{metric_values.min():.2f}, {metric_values.max():.2f}], "
-                f"uncertainties [{uncertainties.min():.4f}, {uncertainties.max():.4f}], "
                 f"weights [{combined_weights.min():.2e}, {combined_weights.max():.2e}]")
     
     return combined_weights
@@ -228,7 +211,7 @@ def calculate_combined_weights(
 
 def apply_exponential_weighting(metric_values: Union[np.ndarray, List[float]]) -> np.ndarray:
     """
-    Apply squared-metric weighting to HLAP-CCC/HLAP values for template prioritization.
+    Apply squared-metric weighting to HσLAP-CCC/HLAP values for template prioritization.
     
     This helper now implements w = (metric)² to match the main pipeline's
     weighting policy when per-template σ is unavailable (quality-only case).
@@ -245,7 +228,7 @@ def apply_exponential_weighting(metric_values: Union[np.ndarray, List[float]]) -
         
     Notes
     -----
-    Transformation: w = (metric)²
+    Transformation: w = (HσLAP-CCC)²
     """
     metric_values = np.asarray(metric_values, dtype=float)
     

@@ -1481,7 +1481,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                 return
 
             # Looser thresholds (as requested)
-            base_kwargs['hlap_ccc_threshold'] = 0.4
+            base_kwargs['hsigma_lap_ccc_threshold'] = 1.0
             base_kwargs['lapmin'] = 0.25
 
             # Keep controller config in sync so subsequent opens show the looser values
@@ -1490,7 +1490,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                     if 'analysis' not in self.app_controller.current_config or not isinstance(self.app_controller.current_config.get('analysis'), dict):
                         self.app_controller.current_config['analysis'] = {}
                     self.app_controller.current_config['analysis'].update({
-                        'hlap_ccc_threshold': 0.4,
+                        'hsigma_lap_ccc_threshold': 1.0,
                         'lapmin': 0.25,
                     })
             except Exception:
@@ -1498,7 +1498,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
 
             try:
                 if hasattr(self, 'status_label'):
-                    self.status_label.setText("Rerunning analysis with looser parameters (HLAP-CCC ≥ 0.40, lapmin ≥ 0.25)...")
+                    self.status_label.setText("Rerunning analysis with looser parameters (HσLAP-CCC ≥ 1.0, lapmin ≥ 0.25)...")
                 if hasattr(self, 'config_status_label'):
                     self.config_status_label.setText("Rerun (looser parameters)")
                     self.config_status_label.setStyleSheet(
@@ -1962,7 +1962,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                     elif result.clustering_results.get('best_cluster'):
                         cluster_info = " [Auto Selected Cluster]"
                 
-                # Use best available metric (HLAP-CCC preferred)
+                # Use best available metric (HσLAP-CCC preferred)
                 from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
                 if hasattr(result, 'best_matches') and result.best_matches:
                     best_metric_value = get_best_metric_value(result.best_matches[0])

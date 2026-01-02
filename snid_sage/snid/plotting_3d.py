@@ -3,7 +3,7 @@
 ================================================
 
 This module provides advanced visualization capabilities for the improved
-GMM clustering approach, including 3D plots showing redshift vs type vs best metric (HLAP-CCC/HLAP).
+GMM clustering approach, including 3D plots showing redshift vs type vs best metric (HσLAP-CCC/HLAP).
 """
 
 import numpy as np
@@ -41,7 +41,7 @@ def plot_3d_type_clustering(
     theme_manager=None
 ) -> plt.Figure:
     """
-    Create a 3D visualization of redshift vs type vs best metric (HLAP-CCC/HLAP) with clustering results.
+    Create a 3D visualization of redshift vs type vs best metric (HσLAP-CCC/HLAP) with clustering results.
     
     Parameters:
     -----------
@@ -82,7 +82,7 @@ def plot_3d_type_clustering(
     ax.set_facecolor('white')
     
     # Determine which metric is being used
-    metric_name = clustering_results.get('metric_used', 'HLAP-CCC')
+    metric_name = clustering_results.get('metric_used', 'HσLAP-CCC')
     
     # Get unique types and create consistent color map
     unique_types = list(viz_data['type_mapping'].keys())
@@ -286,7 +286,7 @@ def plot_cluster_statistics_summary(
         return fig
     
     # Determine which metric is being used
-    metric_name = clustering_results.get('metric_used', 'HLAP-CCC')
+    metric_name = clustering_results.get('metric_used', 'HσLAP-CCC')
     
     # Create subplots
     fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=figsize)
@@ -390,7 +390,7 @@ def plot_2d_redshift_vs_metric(
         return fig
     
     # Determine which metric is being used
-    metric_name = clustering_results.get('metric_used', 'HLAP-CCC')
+    metric_name = clustering_results.get('metric_used', 'HσLAP-CCC')
     
     fig, ax = plt.subplots(figsize=figsize)
     
@@ -450,7 +450,7 @@ def plot_simple_scatter(
         return fig
     
     # Determine which metric is being used
-    metric_name = clustering_results.get('metric_used', 'HLAP-CCC')
+    metric_name = clustering_results.get('metric_used', 'HσLAP-CCC')
     
     all_candidates = clustering_results.get('all_candidates', [])
     if not all_candidates:

@@ -77,21 +77,19 @@ class UnifiedResultsFormatter:
         else:
             self.spectrum_name = getattr(result, 'spectrum_name', 'Unknown')
         
-        # Determine which metric is being used
-        self.metric_name = "HLAP-CCC"
+        # Determine which metric is being used (prefer dynamic detection from first match)
+        self.metric_name = "HσLAP-CCC"
         if hasattr(result, 'clustering_results') and result.clustering_results:
-            self.metric_name = result.clustering_results.get('metric_used', 'HLAP-CCC')
+            self.metric_name = result.clustering_results.get('metric_used', 'HσLAP-CCC')
         else:
             try:
-                # Inspect best match to decide metric label
+                from snid_sage.shared.utils.math_utils import get_best_metric_name
                 best_list = getattr(result, 'filtered_matches', None) or getattr(result, 'best_matches', None) or []
                 if best_list and isinstance(best_list, list):
-                    if ('hlap_1mccc' in best_list[0]) or ('hlap_ccc' in best_list[0]):
-                        self.metric_name = 'HLAP-CCC'
-                    else:
-                        self.metric_name = 'HLAP'
+                    self.metric_name = str(get_best_metric_name(best_list[0]))
             except Exception:
-                pass
+                # Fallback to HLAP if metric utilities are unavailable
+                self.metric_name = "HLAP"
         
         # Create standardized summary data
         self.summary_data = self._create_standardized_summary()
@@ -154,7 +152,7 @@ class UnifiedResultsFormatter:
         cluster_matches = []
         if winning_cluster:
             cluster_matches = winning_cluster.get('matches', [])
-            # Sort by best available metric (HLAP-CCC preferred) descending
+            # Sort by best available metric (HσLAP-CCC preferred) descending
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             cluster_matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
         
@@ -236,13 +234,13 @@ class UnifiedResultsFormatter:
                         # Check for valid age (negative ages are valid for pre-peak)
                         if age is not None and np.isfinite(age):
                             ages.append(age)
-                            # Use best available metric (HLAP-CCC preferred)
+                            # Use best available metric (HσLAP-CCC preferred)
                             from snid_sage.shared.utils.math_utils import get_best_metric_value
                             age_metric_values.append(get_best_metric_value(m))
                     
                     if ages:
                         ages = np.array(ages)
-                        # Use same reliability weights as redshift for age: (metric)^2 / sigma_z^2
+                        # Use the same reliability weights as redshift for age: (best-metric)^2
                         # Build arrays aligned with ages list
                         metric_values = []
                         z_errors = []
@@ -500,25 +498,25 @@ class UnifiedResultsFormatter:
                         penalty = min(len(top_metrics) / 5.0, 1.0)
                         penalized = mean_top * penalty
                 if penalized is not None:
-                    if penalized > 2.5:
+                    if penalized > 9:
                         q_cat = 'High'
-                        q_desc = f'Excellent match quality (HLAP-CCC: {penalized:.2f})'
-                    elif penalized >= 1.2:
+                        q_desc = f'Excellent match quality (HσLAP-CCC: {penalized:.2f})'
+                    elif penalized >= 6:
                         q_cat = 'Medium'
-                        q_desc = f'Good match quality (HLAP-CCC: {penalized:.2f})'
-                    elif penalized >= 0.7:
+                        q_desc = f'Good match quality (HσLAP-CCC: {penalized:.2f})'
+                    elif penalized >= 3:
                         q_cat = 'Low'
-                        q_desc = f'Poor match quality (HLAP-CCC: {penalized:.2f})'
+                        q_desc = f'Poor match quality (HσLAP-CCC: {penalized:.2f})'
                     else:
                         q_cat = 'Very Low'
-                        q_desc = f'Very poor match quality (HLAP-CCC: {penalized:.2f})'
+                        q_desc = f'Very poor match quality (HσLAP-CCC: {penalized:.2f})'
                     summary['cluster_quality_level'] = q_cat
                     summary['cluster_quality_description'] = q_desc
                     summary['cluster_penalized_score'] = penalized
             except Exception:
                 pass
 
-            # If no clustering, compute a type-level match quality from penalized top-5 best metric (HLAP-CCC preferred)
+            # If no clustering, compute a type-level match quality from penalized top-5 best metric (HσLAP-CCC preferred)
         if not winning_cluster and active_matches:
             try:
                 from snid_sage.shared.utils.math_utils import get_best_metric_value
@@ -547,18 +545,18 @@ class UnifiedResultsFormatter:
                     penalty = min(len(top_metrics) / 5.0, 1.0)
                     penalized = mean_top * penalty
                     # Map to quality
-                    if penalized > 2.5:
+                    if penalized > 9:
                         q_cat = 'High'
-                        q_desc = f'Excellent match quality (HLAP-CCC: {penalized:.2f})'
-                    elif penalized >= 1.2:
+                        q_desc = f'Excellent match quality (HσLAP-CCC: {penalized:.2f})'
+                    elif penalized >= 6:
                         q_cat = 'Medium'
-                        q_desc = f'Good match quality (HLAP-CCC: {penalized:.2f})'
-                    elif penalized >= 0.7:
+                        q_desc = f'Good match quality (HσLAP-CCC: {penalized:.2f})'
+                    elif penalized >= 3:
                         q_cat = 'Low'
-                        q_desc = f'Poor match quality (HLAP-CCC: {penalized:.2f})'
+                        q_desc = f'Poor match quality (HσLAP-CCC: {penalized:.2f})'
                     else:
                         q_cat = 'Very Low'
-                        q_desc = f'Very poor match quality (HLAP-CCC: {penalized:.2f})'
+                        q_desc = f'Very poor match quality (HσLAP-CCC: {penalized:.2f})'
                     summary['cluster_quality_level'] = q_cat
                     summary['cluster_quality_description'] = q_desc + ' [No clustering]'
                     summary['cluster_penalized_score'] = penalized
@@ -581,7 +579,7 @@ class UnifiedResultsFormatter:
             winning_cluster = self._get_active_cluster()
             if winning_cluster:
                 cluster_matches = winning_cluster.get('matches', [])
-                # Sort by best available metric (HLAP-CCC preferred) descending
+                # Sort by best available metric (HσLAP-CCC preferred) descending
                 from snid_sage.shared.utils.math_utils import get_best_metric_value
                 matches = sorted(cluster_matches, key=get_best_metric_value, reverse=True)
         
@@ -627,10 +625,10 @@ class UnifiedResultsFormatter:
                 'best_metric_value': get_best_metric_value(match)
             }
             
-            # Add metric-specific fields when available (HLAP-CCC diagnostics)
-            if ('hlap_1mccc' in match) or ('hlap_ccc' in match):
+            # Add metric-specific fields when available (HσLAP-CCC diagnostics)
+            if ('hsigma_lap_ccc' in match):
                 formatted_match.update({
-                    'hlap_ccc': match.get('hlap_1mccc', match.get('hlap_ccc', 0.0)),
+                    'hsigma_lap_ccc': match.get('hsigma_lap_ccc', float('nan')),
                     'ccc_similarity': match.get('ccc_similarity_trimmed', match.get('ccc_similarity', None)),
                     'ccc_similarity_capped': match.get('ccc_similarity_trimmed_capped', match.get('ccc_similarity_capped', None))
                 })
@@ -983,7 +981,7 @@ class UnifiedResultsFormatter:
             else:
                 cluster_note = ""
 
-            # Determine display metric name from first match (HLAP-CCC preferred)
+            # Determine display metric name from first match (HσLAP-CCC preferred)
             try:
                 first_metric_name = s['template_matches'][0].get('metric_name', self.metric_name)
             except Exception:
@@ -1059,7 +1057,7 @@ class UnifiedResultsFormatter:
             if not has_clusters:
                 fm = getattr(result, 'filtered_matches', []) or []
                 # Determine if best metric is present by inspecting fields
-                any_ccc = any(('hlap_1mccc' in m or 'hlap_ccc' in m) for m in fm)
+                any_ccc = any(('hsigma_lap_ccc' in m) for m in fm)
                 surviving = len(fm)
                 if surviving == 0:
                     lines.append("")

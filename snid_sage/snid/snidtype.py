@@ -201,12 +201,13 @@ class SNIDResult:
     zmin_used: Optional[float] = None
     zmax_used: Optional[float] = None
     lapmin: Optional[float] = None
-    hlap_ccc_threshold: Optional[float] = None
+    hsigma_lap_ccc_threshold: Optional[float] = None
     
     # Basic match parameters
     r: float = 0.0
     lap: float = 0.0
     hlap: float = 0.0
+    hsigma_lap_ccc: float = 0.0
     redshift: float = 0.0
     redshift_error: float = 0.0
     template_name: str = "Unknown"
@@ -260,8 +261,8 @@ class SNIDResult:
         if hasattr(self, 'redshift_error') and self.redshift_error > 0:
             redshift_str += f" ± {self.redshift_error:.5f}"
         
-        # Prefer reporting the best available match metric (HLAP-CCC preferred)
-        metric_name = "HLAP-CCC"
+        # Prefer reporting the best available match metric (HσLAP-CCC preferred)
+        metric_name = "HσLAP-CCC"
         metric_value = None
         try:
             from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
@@ -397,7 +398,7 @@ def compute_type_subtype_stats(matches: List[Dict[str, Any]]) -> Dict[str, Any]:
         all_matches = data['_all']
         z_vals = np.array([m['redshift'] for m in all_matches])
         z_errs = np.array([m.get('sigma_z', np.nan) for m in all_matches])
-        # Use best available metric (HLAP-CCC preferred)
+        # Use best available metric (HσLAP-CCC preferred)
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         metric_values = np.array([get_best_metric_value(m) for m in all_matches])
         
@@ -416,7 +417,7 @@ def compute_type_subtype_stats(matches: List[Dict[str, Any]]) -> Dict[str, Any]:
                 z_err = m.get('sigma_z', np.nan)
                 if np.isfinite(age) and np.isfinite(z_err) and z_err > 0:
                     age_vals.append(age)
-                    # Use best available metric (HLAP-CCC preferred)
+                    # Use best available metric (HσLAP-CCC preferred)
                     age_metric_values.append(get_best_metric_value(m))
                     age_z_errs.append(z_err)
         
@@ -442,7 +443,7 @@ def compute_type_subtype_stats(matches: List[Dict[str, Any]]) -> Dict[str, Any]:
                 
             z_vals = np.array([m['redshift'] for m in sub_matches])
             z_errs = np.array([m.get('sigma_z', np.nan) for m in sub_matches])
-            # Use best available metric (HLAP-CCC preferred)
+            # Use best available metric (HσLAP-CCC preferred)
             metric_values = np.array([get_best_metric_value(m) for m in sub_matches])
             
             z_mean = estimate_weighted_redshift(z_vals, z_errs, metric_values)
@@ -459,7 +460,7 @@ def compute_type_subtype_stats(matches: List[Dict[str, Any]]) -> Dict[str, Any]:
                     z_err = m.get('sigma_z', np.nan)
                     if np.isfinite(age) and np.isfinite(z_err) and z_err > 0:
                         age_vals.append(age)
-                        # Use best available metric (HLAP-CCC preferred)
+                        # Use best available metric (HσLAP-CCC preferred)
                         age_metric_values.append(get_best_metric_value(m))
                         age_z_errs.append(z_err)
             

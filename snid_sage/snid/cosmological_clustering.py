@@ -26,7 +26,7 @@ from collections import defaultdict
 _LOGGER = logging.getLogger(__name__)
 
 
-# Uses top-5 best metric values (HLAP-CCC preferred; fallback to HLAP) with penalties for small clusters
+# Uses top-5 best metric values (HσLAP-CCC preferred; fallback to HLAP) with penalties for small clusters
 
 
 
@@ -224,7 +224,7 @@ def perform_direct_gmm_clustering(
     min_matches_per_type: int = 2,
     max_clusters_per_type: int = 10,
     verbose: bool = False,
-    hlap_ccc_threshold: float = 0.5,  # Best-metric threshold for clustering (HLAP-CCC)
+    hsigma_lap_ccc_threshold: float = 1.5,  # Best-metric threshold for clustering (HσLAP-CCC)
     use_weighted_gmm: Optional[bool] = None,  # Hidden option: when True, use weighted GMM + weighted BIC
     # Optional: model selection method for choosing the number of GMM components.
     # Default is 'elbow'. Optional 'bic' chooses min(BIC).
@@ -245,7 +245,7 @@ def perform_direct_gmm_clustering(
     matching the approach in transformation_comparison_test.py exactly.
     
     NEW: Now automatically uses the best available similarity metric via
-    get_best_metric_value(): prefers HLAP-CCC; falls back to HLAP when needed.
+    get_best_metric_value(): prefers HσLAP-CCC; falls back to HLAP when needed.
     
     Parameters
     ----------
@@ -257,15 +257,15 @@ def perform_direct_gmm_clustering(
         Maximum clusters for GMM
     verbose : bool, optional
         Enable detailed logging
-    hlap_ccc_threshold : float, optional
-        Minimum HLAP-CCC value required for matches to be considered for clustering
-        (HLAP-CCC: HLAP/(1−CCC), with CCC estimated via 99.5% trimming).
+    hsigma_lap_ccc_threshold : float, optional
+        Minimum HσLAP-CCC value required for matches to be considered for clustering
+        (HσLAP-CCC: (height × lap × CCC) / sqrt(sigma_z)).
         
     Hidden Options
     --------------
     use_weighted_gmm : bool, optional
         When True, enables sample-weighted GMM fitting and weighted-BIC selection
-        using combined weights (metric^2 / sigma_z^2). By default (None/False),
+        using combined weights (HσLAP-CCC)^2. By default (None/False),
         the method uses standard unweighted GMM and unweighted BIC. If None, the
         value is read from environment variable 'SNID_SAGE_WEIGHTED_GMM' (1/true/on).
 
@@ -298,12 +298,12 @@ def perform_direct_gmm_clustering(
         model_selection_method = "elbow"
     
     # Determine which metric to use - now using get_best_metric_value()
-    # This automatically prioritizes HLAP-CCC > HLAP
-    metric_name = "HLAP-CCC"
+    # This automatically prioritizes HσLAP-CCC > HLAP
+    metric_name = "HσLAP-CCC"
     metric_key = "best_metric"  # Not actually used anymore, see get_best_metric_value() calls
     
     _LOGGER.info(f"🔄 Starting direct GMM {metric_name} clustering")
-    _LOGGER.info(f"🎯 HLAP-CCC threshold: {hlap_ccc_threshold:.2f} (matches below this are excluded from clustering)")
+    _LOGGER.info(f"🎯 HσLAP-CCC threshold: {hsigma_lap_ccc_threshold:.2f} (matches below this are excluded from clustering)")
 
     # ---------------------------------------------------------------------
     # Optional strict redshift gating
@@ -345,17 +345,17 @@ def perform_direct_gmm_clustering(
     
     for match in gated_matches:
         metric_value = get_best_metric_value(match)
-        if metric_value >= hlap_ccc_threshold:
+        if metric_value >= hsigma_lap_ccc_threshold:
             filtered_matches.append(match)
         else:
             excluded_count += 1
     
     if excluded_count > 0:
-        _LOGGER.info(f"🙅 Filtered out {excluded_count} matches below HLAP-CCC threshold {hlap_ccc_threshold:.2f}")
+        _LOGGER.info(f"🙅 Filtered out {excluded_count} matches below HσLAP-CCC threshold {hsigma_lap_ccc_threshold:.2f}")
         _LOGGER.info(f"✅ Proceeding with {len(filtered_matches)} matches for clustering")
     
     if not filtered_matches:
-        _LOGGER.info(f"No matches above HLAP-CCC threshold {hlap_ccc_threshold:.2f}")
+        _LOGGER.info(f"No matches above HσLAP-CCC threshold {hsigma_lap_ccc_threshold:.2f}")
         return {'success': False, 'reason': 'no_matches_above_threshold'}
     
     # Group filtered matches by type
@@ -443,7 +443,7 @@ def perform_direct_gmm_clustering(
                     'cluster_id': cluster_info['id'],
                     'matches': cluster_info['matches'],
                     'size': cluster_info['size'],
-                    'mean_metric': mean_metric,  # Mean of selected best metric (HLAP-CCC / HLAP)
+                    'mean_metric': mean_metric,  # Mean of selected best metric (HσLAP-CCC / HLAP)
                     'metric_name': metric_name,  # NEW: Name of metric used
                     'redshift_span': cluster_info['redshift_span'],
                     'cluster_method': 'direct_gmm',
@@ -578,7 +578,7 @@ def perform_direct_gmm_clustering(
     # Select best cluster (top-5 penalized score). Do not gate/throw away clusters.
     best_cluster, quality_assessment = find_winning_cluster_top5_method(
         all_cluster_candidates,
-        hlap_ccc_threshold=float(hlap_ccc_threshold),
+        hsigma_lap_ccc_threshold=float(hsigma_lap_ccc_threshold),
         verbose=verbose
     )
     
@@ -662,7 +662,7 @@ def _perform_direct_gmm_clustering(
             )
         
         # Build weights only when requested; default to unweighted GMM.
-        # Official weighting policy: w_i = (metric_i)^2 / sigma_z_i^2
+        # Official weighting policy (HσLAP-CCC): w_i = (metric_i)^2
         if use_weighted_gmm:
             raw_weights = calculate_combined_weights(metric_values, sigmas)
             sum_w = float(np.sum(raw_weights)) if raw_weights.size else 0.0
@@ -1065,7 +1065,7 @@ def choose_subtype_weighted_voting(
         if not subtype or subtype.strip() == '':
             subtype = 'Unknown'
         
-        # Use best available metric (HLAP-CCC preferred)
+        # Use best available metric (HσLAP-CCC preferred)
         from snid_sage.shared.utils.math_utils import get_best_metric_value
         metric_value = get_best_metric_value(match)
         # Pull per-match redshift uncertainty if available
@@ -1145,7 +1145,7 @@ def choose_subtype_weighted_voting(
 
 
 def create_3d_visualization_data(clustering_results: Dict[str, Any]) -> Dict[str, np.ndarray]:
-    """Prepare data for 3D visualization: redshift vs type vs best metric (HLAP-CCC / HLAP)."""
+    """Prepare data for 3D visualization: redshift vs type vs best metric (HσLAP-CCC / HLAP)."""
     
     redshifts = []
     metric_values = []
@@ -1171,7 +1171,7 @@ def create_3d_visualization_data(clustering_results: Dict[str, Any]) -> Dict[str
             
             for match in candidate.get('matches', []):
                 redshifts.append(match['redshift'])
-                # Use best available metric (HLAP-CCC preferred)
+                # Use best available metric (HσLAP-CCC preferred)
                 from snid_sage.shared.utils.math_utils import get_best_metric_value
                 metric_values.append(get_best_metric_value(match))
                 types.append(sn_type)
@@ -1195,7 +1195,7 @@ def create_3d_visualization_data(clustering_results: Dict[str, Any]) -> Dict[str
             for cluster in type_result['clusters']:
                 for match in cluster['matches']:
                     redshifts.append(match['redshift'])
-                    # Use best available metric (HLAP-CCC preferred)
+                    # Use best available metric (HσLAP-CCC preferred)
                     from snid_sage.shared.utils.math_utils import get_best_metric_value
                     metric_values.append(get_best_metric_value(match))
                     types.append(sn_type)
@@ -1205,7 +1205,7 @@ def create_3d_visualization_data(clustering_results: Dict[str, Any]) -> Dict[str
     
     return {
         'redshifts': np.array(redshifts),
-        # Best available metric values (HLAP-CCC preferred; fallback to HLAP)
+        # Best available metric values (HσLAP-CCC preferred; fallback to HLAP)
         'metric_values': np.array(metric_values),
         'types': types,
         'type_indices': np.array(type_indices),
@@ -1221,12 +1221,12 @@ def create_3d_visualization_data(clustering_results: Dict[str, Any]) -> Dict[str
 
 def find_winning_cluster_top5_method(
     all_cluster_candidates: List[Dict[str, Any]], 
-    hlap_ccc_threshold: float = 0.5,
+    hsigma_lap_ccc_threshold: float = 1.5,
     *,
     verbose: bool = False
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """
-    Find the winning cluster using the top-5 best metric method (HLAP-CCC preferred; fallback to HLAP).
+    Find the winning cluster using the top-5 best metric method (HσLAP-CCC preferred; fallback to HLAP).
     
     This method:
     1. Takes the top 5 best metric values from each cluster (using get_best_metric_value()).
@@ -1253,7 +1253,7 @@ def find_winning_cluster_top5_method(
     
     # Parameters not used anymore; see get_best_metric_value() calls
     # Standardize metric naming; do not imply comparison phrasing.
-    metric_name = 'HLAP-CCC'
+    metric_name = 'HσLAP-CCC'
     
     # We intentionally do NOT "gate" / discard clusters based on Q_cluster.
     # We still compute the penalized top-5 score (a.k.a. Q_cluster) for ranking/reporting.
@@ -1266,10 +1266,10 @@ def find_winning_cluster_top5_method(
         if not matches:
             continue
             
-        # Extract metric values (HLAP-CCC preferred via get_best_metric_value) and sort descending.
+        # Extract metric values (HσLAP-CCC preferred via get_best_metric_value) and sort descending.
         metric_vals = []
         for match in matches:
-            # Top-5 penalized scoring / comparisons use HLAP-CCC
+            # Top-5 penalized scoring / comparisons use metric values directly (no weighting).
             from snid_sage.shared.utils.math_utils import get_best_metric_value
             metric = get_best_metric_value(match)
             try:
@@ -1363,7 +1363,7 @@ def find_winning_cluster_top5_method(
         'confidence_assessment': confidence_assessment,
         'quality_assessment': quality_assessment,
         'metric_used': metric_name,
-        'selection_method': 'top5_hlap_ccc'
+        'selection_method': 'top5_hsigma_lap_ccc'
     }
     
     if verbose:
@@ -1450,23 +1450,23 @@ def _calculate_absolute_quality(winning_cluster_info: Dict[str, Any], metric_nam
     penalty_factor = winning_cluster_info['penalty_factor']
     cluster_size = winning_cluster_info['cluster_size']
     
-    # Quality categories based on penalized top-5 HLAP-CCC score (global rule)
-    #  - Very Low: < 0.7
-    #  - Low: 0.7 to < 1.2
-    #  - Medium: 1.2 to ≤ 2.5
-    #  - High: > 2.5
-    if penalized_score > 2.5:
+    # Quality categories based on penalized top-5 score (Q_cluster; global rule)
+    #  - Very Low: < 3
+    #  - Low: 3 to < 6
+    #  - Medium: 6 to ≤ 9
+    #  - High: > 9
+    if penalized_score > 9:
         quality_category = 'High'
-        quality_description = f'Excellent match quality (HLAP-CCC: {penalized_score:.2f})'
-    elif penalized_score >= 1.2:
+        quality_description = f'Excellent match quality (HσLAP-CCC: {penalized_score:.2f})'
+    elif penalized_score >= 6:
         quality_category = 'Medium'
-        quality_description = f'Good match quality (HLAP-CCC: {penalized_score:.2f})'
-    elif penalized_score >= 0.7:
+        quality_description = f'Good match quality (HσLAP-CCC: {penalized_score:.2f})'
+    elif penalized_score >= 3:
         quality_category = 'Low'
-        quality_description = f'Poor match quality (HLAP-CCC: {penalized_score:.2f})'
+        quality_description = f'Poor match quality (HσLAP-CCC: {penalized_score:.2f})'
     else:
         quality_category = 'Very Low'
-        quality_description = f'Very poor match quality (HLAP-CCC: {penalized_score:.2f})'
+        quality_description = f'Very poor match quality (HσLAP-CCC: {penalized_score:.2f})'
     
     # Add penalty information if applicable
     if penalty_factor < 1.0:

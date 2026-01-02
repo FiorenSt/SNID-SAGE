@@ -60,7 +60,7 @@ class PySide6SubtypeProportionsDialog(QtWidgets.QDialog):
     - Interactive matplotlib pie chart with subtype distribution
     - Cluster-aware data selection prioritizing user selection
     - Detailed statistics table with quality metrics
-    - Metric-threshold analysis (best metric; HLAP-CCC preferred)
+    - Metric-threshold analysis (best metric; HσLAP-CCC preferred)
     - Export functionality for plots and data
     """
     
