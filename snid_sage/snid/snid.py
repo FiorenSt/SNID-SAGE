@@ -585,7 +585,6 @@ def _process_template_peaks(
     # Optional pre-computed template data for optimization
     template_fft: Optional[np.ndarray] = None,
     template_rms: Optional[float] = None,
-    r_scale: float = 1.0,
 ) -> List[Dict[str, Any]]:
     """
     Process peaks found in correlation for a single template.
@@ -964,7 +963,7 @@ def _run_forced_redshift_analysis_optimized(
         except Exception as e:
             _LOG.warning(f"Unified storage failed in forced analysis, falling back to filesystem loader: {e}")
             from .io import load_templates
-            templates, _ = load_templates(templates_dir, flatten=True)
+            templates, _ = load_templates(templates_dir, flatten=True, profile_id=profile.id)
             _LOG.info(f"✅ Loaded {len(templates)} templates using STANDARD method for forced redshift analysis")
 
     # Apply the same filtering semantics as normal analysis (defensive even when preloaded)
@@ -1085,13 +1084,6 @@ def _run_forced_redshift_analysis_optimized(
             if not correlation_results:
                 raise RuntimeError(f"Vectorized correlation returned no results for {sn_type} batch {batch_idx}")
 
-            # Profile-aware R scaling (match normal analysis behavior)
-            try:
-                pid = str(getattr(profile, 'id', '')).lower()
-                r_scale = 0.75 if pid == 'onir' else 1.0
-            except Exception:
-                r_scale = 1.0
-
             # Process correlation results for forced redshift
             for template_name, corr_result in correlation_results.items():
                 template_data = corr_result['template']
@@ -1141,7 +1133,6 @@ def _run_forced_redshift_analysis_optimized(
                     lap,
                     lpeak,
                     corr_result["correlation"],
-                    r_scale=r_scale,
                 )
 
                 if match_info is not None:
@@ -1194,7 +1185,6 @@ def _process_forced_redshift_match(
     lap: float,
     lpeak: float,
     correlation: Optional[np.ndarray] = None,
-    r_scale: float = 1.0,
 ) -> Optional[Dict[str, Any]]:
     """
     Process a single forced redshift match with optimized correlation handling.
@@ -1618,7 +1608,7 @@ def run_snid_analysis(
                     raise RuntimeError("Unified storage returned 0 templates")
             except Exception as e:
                 _LOG.warning(f"Unified storage failed, falling back to filesystem loader: {e}")
-                templates, _ = load_templates(templates_dir, flatten=True)
+                templates, _ = load_templates(templates_dir, flatten=True, profile_id=profile.id)
 
                 # Apply template filtering to filesystem templates
                 if template_filter:
@@ -1907,12 +1897,6 @@ def run_snid_analysis(
 
                     try:
                         from .vectorized_peak_finder import VectorizedPeakFinder
-                        # Profile-aware R scaling (ONIR only) – fixed starter value c_onir ≈ 0.71
-                        try:
-                            pid = getattr(profile, 'id', '').lower()
-                            r_scale = 0.75 if pid == 'onir' else 1.0
-                        except Exception:
-                            r_scale = 1.0
                         peak_finder = VectorizedPeakFinder(
                             NW_grid,
                             DWLOG_grid,
@@ -1922,7 +1906,6 @@ def run_snid_analysis(
                             k2,
                             k3,
                             k4,
-                            r_scale=r_scale,
                             phase1_peak_min_distance=int(phase1_peak_min_distance),
                             phase1_peak_min_height=float(phase1_peak_min_height),
                         )
@@ -1977,7 +1960,6 @@ def run_snid_analysis(
                                     right_edge,
                                     template_fft=correlation_results[template_name]['template_fft'],
                                     template_rms=template_rms,
-                                    r_scale=r_scale,
                                 )
                                 matches.extend(template_matches)
                                 type_matches += len(template_matches)
@@ -2025,7 +2007,6 @@ def run_snid_analysis(
                                 right_edge,
                                 template_fft=corr_result['template_fft'],
                                 template_rms=template_rms,
-                                r_scale=r_scale,
                             )
                             matches.extend(template_matches)
                             type_matches += len(template_matches)

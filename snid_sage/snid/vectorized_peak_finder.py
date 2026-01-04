@@ -49,7 +49,6 @@ class VectorizedPeakFinder:
         k2: int,
         k3: int,
         k4: int,
-        r_scale: float = 1.0,
         *,
         phase1_peak_min_distance: int = 3,
         phase1_peak_min_height: float = 0.3,
@@ -74,11 +73,6 @@ class VectorizedPeakFinder:
         self.lz2 = lz2
         self.k1, self.k2, self.k3, self.k4 = k1, k2, k3, k4
         self.mid = NW_grid // 2
-        # Optional profile-aware scaling for Tonry-Davis R (ONIR only use-case)
-        try:
-            self.r_scale = float(r_scale)
-        except Exception:
-            self.r_scale = 1.0
 
         # Phase-1 peak detection knobs.
         # These apply to the *normalized* phase-1 correlation (Rz) passed to find_peaks.

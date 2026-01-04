@@ -14,7 +14,7 @@ from datetime import datetime
 from .snidtype import TYPENAME, TYPE_TO_INDICES
 
 # Import preprocessing functions for template processing
-from .preprocessing import log_rebin, fit_continuum
+from .preprocessing import log_rebin, fit_continuum, init_wavelength_grid
 
 # Use centralized logging if available
 try:
@@ -411,7 +411,12 @@ def read_template(filename: str) -> Dict[str, Any]:
     return template
 
 
-def load_templates(template_dir: str, flatten: bool = True) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
+def load_templates(
+    template_dir: str,
+    flatten: bool = True,
+    *,
+    profile_id: Optional[str] = None,
+) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
     """
     Load all template spectra from a directory.
     
@@ -427,7 +432,7 @@ def load_templates(template_dir: str, flatten: bool = True) -> Tuple[List[Dict[s
     # First try to use unified storage directly as a fallback
     try:
         from .core.integration import load_templates_unified
-        templates = load_templates_unified(template_dir)
+        templates = load_templates_unified(template_dir, profile_id=profile_id)
         
         # Build type statistics
         type_counts = {}
@@ -452,6 +457,24 @@ def load_templates(template_dir: str, flatten: bool = True) -> Tuple[List[Dict[s
     
     # Standard number of points for log rebinning
     std_num_points = 1024
+    std_w0 = 2500.0
+    std_w1 = 10000.0
+    try:
+        from snid_sage.shared.profiles.builtins import register_builtins
+        from snid_sage.shared.profiles.registry import get_profile
+        register_builtins()
+        prof = get_profile(profile_id or "optical")
+        std_num_points = int(prof.grid.nw)
+        std_w0 = float(prof.grid.min_wave_A)
+        std_w1 = float(prof.grid.max_wave_A)
+    except Exception:
+        # Keep optical defaults when profile resolution is unavailable
+        pass
+    # Ensure global grid matches the desired profile for any on-the-fly rebinning
+    try:
+        init_wavelength_grid(num_points=int(std_num_points), min_wave=float(std_w0), max_wave=float(std_w1))
+    except Exception:
+        pass
     
     for filename in template_files:
         try:
@@ -496,12 +519,12 @@ def load_templates(template_dir: str, flatten: bool = True) -> Tuple[List[Dict[s
                         wave_arr = raw_template['wave']
                         flux_arr = raw_template['flux']
                         
-                        # Process the spectrum for template use
-                        log_wave, processed_flux = process_spectrum_for_template(
-                            wave_arr, flux_arr,
-                            flatten=flatten,
-                            num_points=std_num_points
-                        )
+                        # Log-rebin to the active grid and (optionally) flatten via continuum removal
+                        log_wave, log_flux = log_rebin(np.asarray(wave_arr, dtype=float), np.asarray(flux_arr, dtype=float))
+                        if flatten:
+                            processed_flux, _cont = fit_continuum(log_flux, method="spline")
+                        else:
+                            processed_flux = log_flux
                         
                         raw_template['wave'] = log_wave
                         raw_template['flux'] = processed_flux

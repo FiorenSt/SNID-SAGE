@@ -236,7 +236,11 @@ class BatchTemplateManager:
             except ImportError:
                 # Fallback to standard loading
                 from snid_sage.snid.io import load_templates
-                self._templates, self._templates_metadata = load_templates(self.templates_dir, flatten=True)
+                self._templates, self._templates_metadata = load_templates(
+                    self.templates_dir,
+                    flatten=True,
+                    profile_id=self._profile_id,
+                )
                 self._log.info(f"✅ Loaded {len(self._templates)} templates using STANDARD method")
             
             self._load_time = time.time() - start_time

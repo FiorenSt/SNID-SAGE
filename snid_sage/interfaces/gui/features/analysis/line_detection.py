@@ -235,130 +235,133 @@ class LineDetectionController:
                 _LOGGER.info(f"🔍 Auto redshift search: Using {spectrum_source}")
                 _LOGGER.info(f"🔍 Spectrum length: {len(tapered_flux)} points")
                 
-                # Create input spectrum tuple for SNID analysis
-                input_spectrum = (log_wave, tapered_flux)
-                
                 if progress_callback:
                     progress_callback("Running galaxy template correlation analysis...")
                 
                 # Run SNID analysis with ONLY galaxy templates and NO preprocessing
                 try:
-                    # Get templates directory from GUI
-                    templates_dir = self.gui.get_templates_dir()
+                    # Align Host redshift search with the *normal* GUI pipeline:
+                    # - same active profile id (grid)
+                    # - same templates directory resolution
+                    # - same analysis knobs (lapmin / peak_window_size / hsigma threshold / max_output_templates)
+                    app = getattr(self.gui, 'app_controller', None)
+                    try:
+                        active_profile_id = getattr(app, 'active_profile_id', None) or getattr(self.gui, 'active_profile_id', None)
+                    except Exception:
+                        active_profile_id = None
+                    active_profile_id = str(active_profile_id or self._resolve_active_profile_id() or 'optical').strip()
+
+                    pid = str(active_profile_id).strip().lower()
+                    zmax_profile = 2.5 if pid == 'onir' else 1.0
+
+                    # Resolve templates dir in the same way as the main analysis controller when possible
+                    templates_dir = None
+                    try:
+                        if app is not None and hasattr(app, '_resolve_templates_directory'):
+                            templates_dir = app._resolve_templates_directory(profile_id=active_profile_id)  # type: ignore[attr-defined]
+                    except Exception:
+                        templates_dir = None
+                    if not templates_dir:
+                        templates_dir = self.gui.get_templates_dir()
                     if not templates_dir or not os.path.exists(templates_dir):
                         raise Exception("Templates directory not found")
-                    
-                    # Use the correct parameters for run_snid_analysis
+
+                    # Pull current analysis knobs for parity (fallback to the normal defaults)
+                    analysis_cfg = {}
+                    try:
+                        if app is not None and getattr(app, 'current_config', None):
+                            analysis_cfg = (app.current_config.get('analysis', {}) or {})
+                    except Exception:
+                        analysis_cfg = {}
+                    last_kwargs = {}
+                    try:
+                        if app is not None and getattr(app, 'last_analysis_kwargs', None):
+                            last_kwargs = (app.last_analysis_kwargs or {})
+                    except Exception:
+                        last_kwargs = {}
+
+                    # Host/galaxy redshift search should use the same "looser parameters" policy as the GUI rerun helper:
+                    #   lapmin = 0.25, hsigma_lap_ccc_threshold = 1.0
+                    # This keeps host redshift behavior consistent and avoids surprising misses for galaxy features.
+                    lapmin = 0.25
+                    try:
+                        peak_window_size = int(last_kwargs.get('peak_window_size', analysis_cfg.get('peak_window_size', 10)) or 10)
+                    except Exception:
+                        peak_window_size = 10
+                    hsigma_thr = 1.0
+                    try:
+                        max_out = int(last_kwargs.get('max_output_templates', analysis_cfg.get('max_output_templates', 10)) or 10)
+                    except Exception:
+                        max_out = 10
+
                     results, analysis_trace = run_snid_analysis(
                         processed_spectrum=processed,  # Use the processed spectrum dict directly
                         templates_dir=templates_dir,
                         # Template filtering - galaxy types only
-                        type_filter=['Galaxy'],  # Use Galaxy template type
+                        type_filter=['Galaxy', 'Gal'],  # Include both Galaxy and Gal types
                         # Analysis parameters
-                        zmin=0.0,
-                        zmax=1.0,
+                        zmin=-0.01,
+                        zmax=float(zmax_profile),
                         # Correlation parameters
-                        lapmin=0.2,    # Lower overlap requirement for galaxies
-                        peak_window_size=20,
+                        lapmin=lapmin,
+                        peak_window_size=peak_window_size,
+                        hsigma_lap_ccc_threshold=hsigma_thr,
                         # Output control
-                        max_output_templates=15,
+                        max_output_templates=max_out,
                         verbose=False,
                         show_plots=False,
-                    save_plots=False,
-                    # Use active profile from config/env if available to keep grid consistent
-                    profile_id=self._resolve_active_profile_id()
+                        save_plots=False,
+                        # Use active profile from config/env if available to keep grid consistent
+                        profile_id=active_profile_id
                     )
                     
                     if progress_callback:
                         progress_callback("Analysis complete - processing results...")
                     
                     if results and hasattr(results, 'best_matches') and results.best_matches:
-                        # Filter for galaxy matches
-                        galaxy_matches = []
-                        _LOGGER.info(f"🔍 Processing {len(results.best_matches)} template matches for galaxy filtering")
-                        
-                        for i, match in enumerate(results.best_matches):
+                        best_match = results.best_matches[0]
+
+                        # Prefer the winning cluster's hybrid redshift (normal-run behavior)
+                        chosen_z = None
+                        q_cluster = None
+                        template_desc = None
+                        try:
+                            clres = getattr(results, 'clustering_results', None)
+                            if clres and clres.get('success') and clres.get('best_cluster'):
+                                bc = clres.get('best_cluster') or {}
+                                zc = bc.get('enhanced_redshift', None)
+                                if zc is not None and np.isfinite(float(zc)):
+                                    chosen_z = float(zc)
+                                    # True Q_cluster is the penalized top-5 score.
+                                    q_cluster = float(bc.get('penalized_score', bc.get('composite_score', 0.0)) or 0.0)
+                                    template_desc = f"{bc.get('type', 'Galaxy')} cluster {bc.get('cluster_id', 0)}"
+                        except Exception:
+                            pass
+
+                        # Fallbacks
+                        if chosen_z is None:
                             try:
-                                if not isinstance(match, dict):
-                                    _LOGGER.warning(f"⚠️ Match {i} is not a dictionary: {type(match)}")
-                                    continue
-                                    
-                                # Get template information from the match
-                                template = match.get('template', {})
-                                if not isinstance(template, dict):
-                                    _LOGGER.warning(f"⚠️ Template in match {i} is not a dictionary: {type(template)}")
-                                    continue
-                                    
-                                template_type = template.get('type', '').lower()
-                                template_name = template.get('name', '').lower()
-                                
-                                # Look for galaxy templates by type or name patterns
-                                if (template_type in ['galaxy', 'gal'] or 
-                                    template_name.startswith('kc') or 'gal' in template_name):
-                                    
-                                    # Create a simplified match structure for the redshift dialog
-                                    galaxy_match = {
-                                        'template_name': template.get('name', 'Unknown'),
-                                        'template_type': template.get('type', 'Unknown'),
-                                        'redshift': match.get('redshift', 0.0),
-                                        'sigma_z': match.get('sigma_z', float('nan')),
-                                        'hsigma_lap_ccc': match.get('hsigma_lap_ccc', float('nan')),
-                                        'hlap': match.get('hlap', 0.0),
-                                    }
-                                    galaxy_matches.append(galaxy_match)
-                                    _LOGGER.debug(f"Added galaxy match: {galaxy_match['template_name']}")
-                                    
-                            except Exception as match_error:
-                                _LOGGER.error(f"❌ Error processing match {i}: {match_error}")
-                                _LOGGER.error(f"   Match data: {match}")
-                                continue
-                        
-                        _LOGGER.info(f"Found {len(galaxy_matches)} galaxy template matches")
-                        
-                        if galaxy_matches:
-                            try:
-                                # Sort by best available metric (HσLAP-CCC preferred) - with extra validation
-                                _LOGGER.debug("🔄 Sorting galaxy matches by best metric...")
-                                try:
-                                    # These dicts are simplified; sort on the stored hsigma_lap_ccc field
-                                    galaxy_matches.sort(key=lambda x: float(x.get('hsigma_lap_ccc', float('nan'))) if isinstance(x, dict) else float('nan'), reverse=True)
-                                except ImportError:
-                                    galaxy_matches.sort(key=lambda x: float(x.get('hsigma_lap_ccc', float('nan'))) if isinstance(x, dict) else float('nan'), reverse=True)
-                                _LOGGER.debug("Successfully sorted galaxy matches")
-                                
-                                # Get the best match for the dialog
-                                best_match = galaxy_matches[0]
-                                
-                                # Return the format expected by the manual redshift dialog
-                                return {
-                                    'success': True,
-                                    'redshift': best_match['redshift'],
-                                        'hsigma_lap_ccc': best_match.get('hsigma_lap_ccc', float('nan')),
-                                    'template': best_match['template_name'],
-                                    'all_matches': galaxy_matches[:10]  # Include all matches for reference
-                                }
-                                
-                            except Exception as sort_error:
-                                _LOGGER.error(f"Error sorting galaxy matches: {sort_error}")
-                                _LOGGER.error(f"   Galaxy matches: {galaxy_matches}")
-                                # Return the best unsorted match if sorting fails
-                                if galaxy_matches:
-                                    best_match = galaxy_matches[0]
-                                    return {
-                                        'success': True,
-                                        'redshift': best_match['redshift'],
-                                        'hsigma_lap_ccc': best_match.get('hsigma_lap_ccc', float('nan')),
-                                        'template': best_match['template_name'],
-                                        'all_matches': galaxy_matches[:10]
-                                    }
-                                else:
-                                    return {'success': False, 'error': 'No valid galaxy matches found'}
-                        else:
-                            _LOGGER.warning("⚠️ No galaxy templates found after filtering")
-                            return {'success': False, 'error': 'No galaxy templates found after filtering'}
-                    else:
-                        _LOGGER.warning("⚠️ No template matches found in SNID results")
-                        return {'success': False, 'error': 'No template matches found in SNID results'}
+                                zc = getattr(results, 'consensus_redshift', None)
+                                if zc is not None and np.isfinite(float(zc)):
+                                    chosen_z = float(zc)
+                                    template_desc = "consensus redshift"
+                            except Exception:
+                                pass
+                        if chosen_z is None:
+                            chosen_z = float(best_match.get('redshift', 0.0) or 0.0)
+                            template_desc = "best match"
+
+                        return {
+                            'success': True,
+                            'redshift': chosen_z,
+                            'q_cluster': q_cluster,
+                            'template': template_desc,
+                            'snid_result': results,
+                            'analysis_trace': analysis_trace,
+                        }
+
+                    _LOGGER.warning("⚠️ No template matches found in SNID results")
+                    return {'success': False, 'error': 'No galaxy template matches found'}
                         
                 except Exception as e:
                     _LOGGER.error(f"SNID analysis failed: {e}")
@@ -551,10 +554,8 @@ class LineDetectionController:
         msg.setText(
             "No galaxy redshift matches found.\n\n"
             "This could mean:\n"
-            "• The spectrum is not a galaxy\n"
-            "• The redshift is outside the search range\n"
-            "• The signal-to-noise is too low\n"
-            "• Galaxy templates don't match this type\n\n"
+            "• The spectrum has no clear galaxy features\n"
+            "• The spectrum quality is too low\n\n"
             "Would you like to try manual redshift determination?"
         )
         msg.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Cancel)

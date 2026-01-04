@@ -657,13 +657,18 @@ def get_best_metric_value(match: Dict[str, Any]) -> float:
     v = match.get("hsigma_lap_ccc", None)
     try:
         if v is not None:
-            return float(v)
+            vf = float(v)
+            # IMPORTANT: treat NaN/inf as "not available" so we can fall back to HLAP.
+            # This avoids dropping all matches during thresholding when sigma_z is unavailable.
+            if np.isfinite(vf):
+                return vf
     except Exception:
         pass
     # Fallback: HLAP (height × lap)
     try:
         if "hlap" in match:
-            return float(match["hlap"])
+            hv = float(match["hlap"])
+            return hv if np.isfinite(hv) else 0.0
     except Exception:
         pass
     try:

@@ -460,7 +460,14 @@ class InteractiveRedshiftPlotWidget(QtWidgets.QWidget):
 class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
     """PySide6 dialog for manual galaxy redshift determination"""
     
-    def __init__(self, parent, spectrum_data, current_redshift=0.0, include_auto_search=False):
+    def __init__(
+        self,
+        parent,
+        spectrum_data,
+        current_redshift=0.0,
+        include_auto_search=False,
+        auto_search_callback=None,
+    ):
         """Initialize manual redshift dialog"""
         super().__init__(parent)
         
@@ -468,6 +475,9 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
         self.spectrum_data = spectrum_data
         self.current_redshift = current_redshift
         self.include_auto_search = include_auto_search
+        # Optional: reuse the normal pipeline via an external callback (e.g. host redshift search controller).
+        # When provided, Auto Search will call this callback and use its chosen (cluster) redshift.
+        self.auto_search_callback = auto_search_callback
         self.result = None
         
         # UI state
@@ -864,6 +874,13 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
         try:
             # Show progress dialog
             progress = QtWidgets.QProgressDialog("Running automatic galaxy redshift search...", "Cancel", 0, 100, self)
+            # UX: keep the dialog stable regardless of label text length
+            try:
+                progress.setWindowTitle("SNID SAGE — Host Redshift Search")
+                progress.setMinimumWidth(520)
+                progress.setMinimumHeight(120)
+            except Exception:
+                pass
             progress.setWindowModality(QtCore.Qt.WindowModal)
             progress.show()
             
@@ -874,10 +891,18 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                 QtWidgets.QApplication.processEvents()
                 if progress.wasCanceled():
                     raise InterruptedError("User canceled operation")
+
+            # Ensure the label doesn't cause the dialog to shrink/grow across updates
+            try:
+                progress.setLabelText("Initializing…")
+                QtWidgets.QApplication.processEvents()
+            except Exception:
+                pass
             
             # Import required modules
             from snid_sage.snid.snid import run_snid_analysis, preprocess_spectrum
             import os
+            import numpy as np
             
             progress_callback("Checking spectrum preprocessing...", 5)
             
@@ -932,7 +957,7 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                         skyclip=False,  # No sky clipping for galaxies
                         emclip_z=-1.0,  # No emission clipping
                         wavelength_masks=None,  # No masking
-                        apodize_percent=5.0,  # Minimal apodization
+                        apodize_percent=10.0,  # Standard apodization (keep consistent with auto-search analysis)
                         verbose=False,
                         profile_id=active_pid or 'optical'
                     )
@@ -966,62 +991,255 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
             
             progress_callback("Loading galaxy templates...", 35)
             
+            # Resolve profile-aware redshift range (ONIR can reach higher)
+            try:
+                active_pid = (
+                    getattr(self.parent_gui.app_controller, 'active_profile_id', None)
+                    if hasattr(self, 'parent_gui') and hasattr(self.parent_gui, 'app_controller')
+                    else None
+                )
+                active_pid = str(active_pid or 'optical').strip().lower()
+            except Exception:
+                active_pid = 'optical'
+            zmax_profile = 2.5 if active_pid == 'onir' else 1.0
+
             # Run SNID analysis with ONLY galaxy templates
             progress_callback("Correlating with galaxy templates...", 40)
-            
-            results, analysis_trace = run_snid_analysis(
-                processed_spectrum=processed_spectrum,
-                templates_dir=templates_dir,
-                # Template filtering - only galaxies
-                type_filter=['Galaxy', 'Gal'],  # Include both Galaxy and Gal types
-                # Redshift range suitable for galaxies
-                zmin=0.0,
-                zmax=1.0,
-                # Relaxed correlation parameters for galaxies
-                lapmin=0.2,    # Lower overlap requirement for galaxies
-                peak_window_size=20,  # Larger window for broader galaxy features
-                # Output control: respect configured max_output_templates when available
-                max_output_templates=(
-                    int(self.parent_gui.app_controller.current_config.get('analysis', {}).get('max_output_templates', 20))
-                    if hasattr(self, 'parent_gui') and hasattr(self.parent_gui, 'app_controller') and hasattr(self.parent_gui.app_controller, 'current_config') and self.parent_gui.app_controller.current_config is not None
-                    else 20
-                ),
-                verbose=False,
-                show_plots=False,
-                save_plots=False,
-                progress_callback=lambda msg, pct=None: progress_callback(msg, 40 + (pct or 0) * 0.5 if pct else None),
-                # Use the same active profile as preprocessing/GUI
-                profile_id=(getattr(self.parent_gui.app_controller, 'active_profile_id', None)
-                            if hasattr(self, 'parent_gui') and hasattr(self.parent_gui, 'app_controller') else None)
-            )
+
+            results = None
+            analysis_trace = None
+
+            # Prefer a centralized callback (e.g. Host redshift search controller) when supplied.
+            if callable(getattr(self, "auto_search_callback", None)):
+                try:
+                    payload = self.auto_search_callback(
+                        progress_callback=lambda msg: progress_callback(msg, None)
+                    )
+                except TypeError:
+                    payload = self.auto_search_callback()
+
+                if isinstance(payload, dict):
+                    if payload.get("success") is False:
+                        progress.close()
+                        QtWidgets.QMessageBox.information(
+                            self,
+                            "Auto Search",
+                            payload.get("error", "Automatic galaxy redshift search failed."),
+                        )
+                        return
+                    results = payload.get("snid_result") or payload.get("results")
+                    analysis_trace = payload.get("analysis_trace")
+
+            # Fallback: run locally (still uses the normal pipeline incl. clustering)
+            if results is None:
+                results, analysis_trace = run_snid_analysis(
+                    processed_spectrum=processed_spectrum,
+                    templates_dir=templates_dir,
+                    # Template filtering - only galaxies
+                    type_filter=['Galaxy', 'Gal'],  # Include both Galaxy and Gal types
+                    # Redshift range suitable for galaxies
+                    zmin=-0.01,
+                    zmax=float(zmax_profile),
+                    # Use the same "looser parameters" policy as the main GUI rerun prompt
+                    lapmin=0.25,
+                    hsigma_lap_ccc_threshold=1.0,
+                    # Output control: respect configured max_output_templates when available
+                    max_output_templates=(
+                        int(self.parent_gui.app_controller.current_config.get('analysis', {}).get('max_output_templates', 20))
+                        if hasattr(self, 'parent_gui') and hasattr(self.parent_gui, 'app_controller') and hasattr(self.parent_gui.app_controller, 'current_config') and self.parent_gui.app_controller.current_config is not None
+                        else 20
+                    ),
+                    verbose=False,
+                    show_plots=False,
+                    save_plots=False,
+                    progress_callback=lambda msg, pct=None: progress_callback(msg, 40 + (pct or 0) * 0.5 if pct else None),
+                    # Use the same active profile as preprocessing/GUI
+                    profile_id=(getattr(self.parent_gui.app_controller, 'active_profile_id', None)
+                                if hasattr(self, 'parent_gui') and hasattr(self.parent_gui, 'app_controller') else None)
+                )
             
             progress_callback("Processing results...", 95)
             
-            if results and results.success and hasattr(results, 'best_matches') and results.best_matches:
+            # For host-galaxy redshift discovery we can proceed whenever we have candidate matches,
+            # even if the full SNIDResult did not mark the run as "successful" (e.g. no robust type consensus).
+            if results and hasattr(results, 'best_matches') and results.best_matches:
                 best_match = results.best_matches[0]
-                best_redshift = best_match.get('redshift', 0.0)
-                template_name = best_match.get('template_name', 'Unknown')
-                metric_score = best_match.get('hsigma_lap_ccc', best_match.get('hlap', 0.0))
+
+                # Prefer the winning cluster redshift (normal-run behavior) and make Q_cluster handling robust.
+                chosen_redshift = None
+                q_cluster = None
+                choice_source = None
+                scored = []
+                try:
+                    clres = getattr(results, 'clustering_results', None)
+                    if isinstance(clres, dict):
+                        best_cluster = clres.get('best_cluster') if isinstance(clres.get('best_cluster'), dict) else None
+                        all_candidates = clres.get('all_candidates', []) or []
+
+                        # Gather candidates from all_candidates + best_cluster (no gating on clres['success'])
+                        candidates = []
+                        for c in all_candidates:
+                            if isinstance(c, dict) and c:
+                                candidates.append(c)
+                        if best_cluster and best_cluster not in candidates:
+                            candidates.append(best_cluster)
+
+                        # Normalize candidates: require finite enhanced_redshift and compute true Q_cluster.
+                        for c in candidates:
+                            try:
+                                zc = c.get('enhanced_redshift', None)
+                                if zc is None or not np.isfinite(float(zc)):
+                                    continue
+                                score = c.get('penalized_score', c.get('composite_score', None))
+                                if score is None:
+                                    # Defensive fallback: approximate penalized score if fields exist
+                                    try:
+                                        score = float(c.get('top_5_mean', 0.0) or 0.0) * float(c.get('penalty_factor', 1.0) or 1.0)
+                                    except Exception:
+                                        score = 0.0
+                                scored.append((float(score), c))
+                            except Exception:
+                                continue
+                except Exception:
+                    scored = []
+
+                scored.sort(key=lambda t: t[0], reverse=True)
+
+                # If we have multiple candidates and the best is weak, force the user to choose (or cancel).
+                if scored:
+                    best_score, best_c = scored[0]
+                    if best_c.get('enhanced_redshift', None) is not None:
+                        try:
+                            chosen_redshift = float(best_c.get('enhanced_redshift'))
+                        except Exception:
+                            chosen_redshift = None
+                    q_cluster = float(best_score)
+                    choice_source = f"{best_c.get('type', 'Galaxy')} cluster {best_c.get('cluster_id', 0)}"
+
+                    if best_score < 3.0 and len(scored) > 1:
+                        try:
+                            items = []
+                            for score, c in scored:
+                                try:
+                                    cid = c.get('cluster_id', 0)
+                                    z_show = float(c.get('enhanced_redshift', 0.0) or 0.0)
+                                    n_show = int(c.get('size', len(c.get('matches', []) or [])) or 0)
+                                    items.append(f"Cluster {cid}: z={z_show:.6f}   Q_cluster={float(score):.2f}   (N={n_show})")
+                                except Exception:
+                                    items.append(f"Cluster: z={float(c.get('enhanced_redshift', 0.0) or 0.0):.6f}   Q_cluster={float(score):.2f}")
+
+                            selected, ok = QtWidgets.QInputDialog.getItem(
+                                self,
+                                "Weak Host Redshift Clusters",
+                                "All host-redshift clusters are weak (Q_cluster < 3).\n\n"
+                                "Pick which cluster redshift to apply (or Cancel to do nothing):",
+                                items,
+                                0,
+                                False
+                            )
+                            if not ok:
+                                # User canceled: do nothing (leave existing redshift untouched)
+                                # Ensure the progress dialog is removed as well.
+                                try:
+                                    if 'progress' in locals():
+                                        progress.close()
+                                except Exception:
+                                    pass
+                                return
+
+                            sel_idx = items.index(selected) if selected in items else 0
+                            sel_score, sel_c = scored[max(0, min(sel_idx, len(scored) - 1))]
+                            chosen_redshift = float(sel_c.get('enhanced_redshift'))
+                            q_cluster = float(sel_score)
+                            choice_source = f"{sel_c.get('type', 'Galaxy')} cluster {sel_c.get('cluster_id', 0)}"
+
+                            # UX: the chooser is the explicit user decision point for weak multi-cluster cases.
+                            # Apply immediately and exit without showing an additional "Weak Match Found" dialog.
+                            try:
+                                if 'progress' in locals():
+                                    progress.close()
+                            except Exception:
+                                pass
+
+                            try:
+                                self.redshift_input.setValue(float(chosen_redshift))
+                                self._on_redshift_changed(float(chosen_redshift))
+                                if hasattr(self.parent_gui, 'redshift_status_label'):
+                                    try:
+                                        self.parent_gui.redshift_status_label.setText(
+                                            f"Auto-detected redshift: z = {float(chosen_redshift):.6f}"
+                                        )
+                                    except Exception:
+                                        pass
+                                _LOGGER.info(
+                                    f"Applied user-selected weak host cluster redshift: z = {float(chosen_redshift):.6f} "
+                                    f"({choice_source}; Q_cluster: {float(q_cluster):.2f})"
+                                )
+                            finally:
+                                # Clean up temporary data
+                                processed_spectrum = None
+                                results = None
+                                analysis_trace = None
+                            return
+                        except Exception:
+                            pass
+
+                # Fallback to consensus redshift, then best-match.
+                if chosen_redshift is None:
+                    try:
+                        zc = getattr(results, 'consensus_redshift', None)
+                        if zc is not None and np.isfinite(float(zc)):
+                            chosen_redshift = float(zc)
+                            choice_source = "consensus redshift"
+                    except Exception:
+                        pass
+                if chosen_redshift is None:
+                    chosen_redshift = float(best_match.get('redshift', 0.0) or 0.0)
+                    choice_source = "best match"
+                # Match dicts coming from run_snid_analysis store the template metadata under `match["template"]`.
+                try:
+                    template_name = (best_match.get('template', {}) or {}).get('name', None) or best_match.get('template_name', 'Unknown')
+                except Exception:
+                    template_name = best_match.get('template_name', 'Unknown')
+
+                # Prefer Q_cluster (penalized_score) when available; otherwise fall back to the best-match metric.
+                if q_cluster is not None:
+                    metric_score = float(q_cluster)
+                    metric_label = "Q_cluster"
+                else:
+                    metric_label = "Metric"
+                    try:
+                        from snid_sage.shared.utils.math_utils import get_best_metric_value
+                        metric_score = float(get_best_metric_value(best_match))
+                    except Exception:
+                        metric_score = best_match.get('hsigma_lap_ccc', best_match.get('hlap', 0.0))
                 
                 progress.close()
                 
                 # Auto-apply threshold:
                 # Match-quality categories in the pipeline use Q_cluster thresholds:
                 #   Very Low < 3, Low 3–<6, Medium 6–≤9, High > 9
-                # Here we use a simple per-best-match heuristic consistent with "not Very Low":
-                #   auto-apply when metric_score >= 3.0, otherwise ask for confirmation.
-                if float(metric_score) >= 3.0:
+                # Here we use Q_cluster when available; if Q_cluster < 3, always treat as weak (never auto-apply).
+                if metric_label == "Q_cluster" and float(metric_score) < 3.0:
+                    force_weak = True
+                else:
+                    force_weak = False
+
+                if (not force_weak) and float(metric_score) >= 3.0:
                     # Directly apply the redshift without asking
-                    self.redshift_input.setValue(best_redshift)
+                    self.redshift_input.setValue(chosen_redshift)
                     # Trigger the redshift change which will update the line positions
-                    self._on_redshift_changed(best_redshift)
+                    self._on_redshift_changed(chosen_redshift)
                     
                     # Update status
                     if hasattr(self.parent_gui, 'redshift_status_label'):
                         self.parent_gui.redshift_status_label.setText(
-                            f"Auto-detected redshift: z = {best_redshift:.6f}")
+                            f"Auto-detected redshift: z = {chosen_redshift:.6f}")
                     
-                    _LOGGER.info(f"Applied automatic galaxy redshift: z = {best_redshift:.6f} from template {template_name} (metric: {metric_score:.2f})")
+                    _LOGGER.info(
+                        f"Applied automatic galaxy redshift: z = {chosen_redshift:.6f} "
+                        f"({choice_source}; {metric_label}: {metric_score:.2f}) from template {template_name}"
+                    )
                     
                     # Clean up temporary data
                     processed_spectrum = None
@@ -1033,20 +1251,24 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                     reply = QtWidgets.QMessageBox.question(self, "Weak Match Found",
                         f"⚠️ Weak galaxy template match found:\n\n"
                         f"📋 Template: {template_name}\n"
-                        f"🌌 Redshift: z = {best_redshift:.6f}\n"
-                        f"📊 Metric: {float(metric_score):.2f} (<3; weak)\n\n"
+                        f"🌌 Redshift: z = {chosen_redshift:.6f}\n"
+                        f"📊 {metric_label}: {float(metric_score):.2f} (<3; weak)\n"
+                        f"🧩 Source: {choice_source}\n\n"
                         f"Apply this redshift anyway?",
                         QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
                     
                     if reply == QtWidgets.QMessageBox.Yes:
-                        self.redshift_input.setValue(best_redshift)
-                        self._on_redshift_changed(best_redshift)
+                        self.redshift_input.setValue(chosen_redshift)
+                        self._on_redshift_changed(chosen_redshift)
                         
                         if hasattr(self.parent_gui, 'redshift_status_label'):
                             self.parent_gui.redshift_status_label.setText(
-                                f"Auto-detected redshift: z = {best_redshift:.6f}")
+                                f"Auto-detected redshift: z = {chosen_redshift:.6f}")
                         
-                        _LOGGER.info(f"Applied weak galaxy redshift match: z = {best_redshift:.6f} from template {template_name}")
+                        _LOGGER.info(
+                            f"Applied weak galaxy redshift match: z = {chosen_redshift:.6f} "
+                            f"({choice_source}; {metric_label}: {metric_score:.2f}) from template {template_name}"
+                        )
                     else:
                         # User declined weak match: do not change existing redshift status
                         pass
@@ -1064,8 +1286,7 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                     (
                         "No good galaxy template matches found.\n\n"
                         "This could mean:\n"
-                        "• The spectrum is not a galaxy\n"
-                        "• The galaxy type is not in the template library\n"
+                        "• The spectrum has no clear galaxy features\n"
                         "• The spectrum quality is too low\n\n"
                         "Try manual redshift adjustment instead."
                     )
@@ -1403,8 +1624,13 @@ How to use this tool:
             _LOGGER.info("Normal mode activated - Standard sensitivity")
 
 
-def show_manual_redshift_dialog(parent, spectrum_data, current_redshift=0.0, 
-                               include_auto_search=False):
+def show_manual_redshift_dialog(
+    parent,
+    spectrum_data,
+    current_redshift=0.0,
+    include_auto_search=False,
+    auto_search_callback=None,
+):
     """
     Show manual redshift dialog and return the determined redshift.
     
@@ -1418,7 +1644,11 @@ def show_manual_redshift_dialog(parent, spectrum_data, current_redshift=0.0,
         Determined redshift or None if cancelled
     """
     dialog = PySide6ManualRedshiftDialog(
-        parent, spectrum_data, current_redshift, include_auto_search
+        parent,
+        spectrum_data,
+        current_redshift,
+        include_auto_search,
+        auto_search_callback=auto_search_callback,
     )
     
     if dialog.exec() == QtWidgets.QDialog.Accepted:
