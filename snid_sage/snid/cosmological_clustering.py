@@ -1088,7 +1088,7 @@ def choose_subtype_weighted_voting(
     
     # Calculate top-5 mean for each subtype using the SAME scoring rule as cluster selection:
     # simple mean of the top-5 best-metric values, with a linear penalty when fewer than 5
-    # templates are available. No uncertainty-based weighting is used for Q_cluster.
+    # templates are available.
     subtype_scores = {}
     for subtype, members in subtype_groups.items():
         # Sort by metric value (best available) descending
@@ -1097,7 +1097,7 @@ def choose_subtype_weighted_voting(
         # Take top 5 (or all if less than 5)
         top_members = sorted_members[:5]
         top_values = [m['metric_value'] for m in top_members]
-        # Simple mean (no uncertainty weighting)
+        # Simple mean
         metrics_array = np.asarray(top_values, dtype=float)
         metrics_array = metrics_array[np.isfinite(metrics_array)]
         mean_top = float(np.mean(metrics_array)) if metrics_array.size else 0.0
@@ -1230,7 +1230,7 @@ def find_winning_cluster_top5_method(
     
     This method:
     1. Takes the top 5 best metric values from each cluster (using get_best_metric_value()).
-    2. Calculates the SIMPLE mean of these top-5 values (no uncertainty weighting).
+    2. Calculates the SIMPLE mean of these top-5 values.
     3. Penalizes clusters with fewer than 5 points (linear penalty = N_top/5).
     4. Selects the cluster with the highest mean
     5. Provides confidence assessment vs other clusters
@@ -1282,7 +1282,7 @@ def find_winning_cluster_top5_method(
         # Take top 5 (or all if fewer than 5)
         top_5_values = metric_vals[:5]
 
-        # Simple mean of top-5 (no uncertainty weighting).
+        # Simple mean of top-5.
         top_1_share = 0.0
         if top_5_values:
             metrics_array = np.asarray(top_5_values, dtype=float)
@@ -1419,12 +1419,16 @@ def _calculate_cluster_confidence(cluster_scores: List[Dict[str, Any]], metric_n
 
     # Discrete flag from percent thresholds
     if isinstance(confidence_pct, float) and not np.isnan(confidence_pct):
-        # Updated thresholds: High ≥ 100%, Medium ≥ 30%, Low ≥ 10%, else Very Low
-        if confidence_pct >= 100.0:
+        # Thresholds (percent improvement vs second best):
+        #   High   ≥ 75%
+        #   Medium ≥ 25%
+        #   Low    ≥ 5%
+        #   else     Very Low
+        if confidence_pct >= 75.0:
             confidence_level = 'High'
-        elif confidence_pct >= 30.0:
+        elif confidence_pct >= 25.0:
             confidence_level = 'Medium'
-        elif confidence_pct >= 10.0:
+        elif confidence_pct >= 5.0:
             confidence_level = 'Low'
         else:
             confidence_level = 'Very Low'

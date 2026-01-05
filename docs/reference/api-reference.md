@@ -82,8 +82,8 @@ def run_snid(
     template_filter: Optional[List[str]] = None,
     exclude_templates: Optional[List[str]] = None,
     forced_redshift: Optional[float] = None,
-    peak_window_size: int = 10,
     lapmin: float = 0.3,
+    hsigma_lap_ccc_threshold: float = 1.5,
     # Output options
     output_dir: Optional[str] = None,
     output_main: bool = False,
@@ -100,7 +100,9 @@ def run_snid(
     # Plotting options
     show_plots: bool = True,
     save_plots: bool = False,
-    plot_dir: Optional[str] = None
+    plot_dir: Optional[str] = None,
+    # Profile selection
+    profile_id: Optional[str] = None
 ) -> Tuple[SNIDResult, Dict[str, Any]]
 ```
 
@@ -128,8 +130,8 @@ def run_snid(
 | template_filter | list or None | None | Specific templates to use |
 | exclude_templates | list or None | None | Templates to exclude |
 | forced_redshift | float or None | None | Force analysis at specific redshift |
-| peak_window_size | int | 10 | Window size for peak detection |
 | lapmin | float | 0.3 | Minimum overlap fraction |
+| hsigma_lap_ccc_threshold | float | 1.5 | Threshold for clustering quality (HσLAP-CCC: (height × lap × CCC) / sigma_z) |
 | output_dir | str or None | None | Directory for output files |
 | output_main | bool | False | Generate main output file |
 | output_fluxed | bool | False | Generate fluxed spectrum file |
@@ -145,6 +147,7 @@ def run_snid(
 | show_plots | bool | True | Display plots |
 | save_plots | bool | False | Save plots to files |
 | plot_dir | str or None | None | Directory for saved plots |
+| profile_id | str or None | None | Analysis profile selection (optical or onir) |
 
 **Returns:**
 - `SNIDResult`: Analysis results object
@@ -247,9 +250,8 @@ def run_snid_analysis(
     template_filter: Optional[List[str]] = None,
     exclude_templates: Optional[List[str]] = None,
     forced_redshift: Optional[float] = None,
-    peak_window_size: int = 10,
     lapmin: float = 0.3,
-    hsigma_lap_ccc_threshold: float = 15.0,
+    hsigma_lap_ccc_threshold: float = 1.5,
     max_output_templates: int = 5,
     verbose: bool = False,
     show_plots: bool = True,
@@ -272,12 +274,11 @@ def run_snid_analysis(
 | template_filter | list or None | None | Template name filter |
 | exclude_templates | list or None | None | Templates to exclude |
 | forced_redshift | float or None | None | Force specific redshift |
-| peak_window_size | int | 10 | Peak detection window |
 | lapmin | float | 0.3 | Minimum overlap |
-| hsigma_lap_ccc_threshold | float | 15.0 | Threshold for clustering quality (HσLAP-CCC: (height × lap × CCC) / sigma_z) |
+| hsigma_lap_ccc_threshold | float | 1.5 | Threshold for clustering quality (HσLAP-CCC: (height × lap × CCC) / sigma_z) |
 | max_output_templates | int | 5 | Maximum output templates |
 | verbose | bool | False | Verbose output |
-| show_plots | bool | True | Show plots |
+|     show_plots | bool | True | Show plots |
 | save_plots | bool | False | Save plots |
 | plot_dir | str or None | None | Plot directory |
 | progress_callback | callable or None | None | Progress callback |

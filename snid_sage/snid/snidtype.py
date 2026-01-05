@@ -224,8 +224,6 @@ class SNIDResult:
     consensus_age_error: float = 0.0
     consensus_type: str = "Unknown"
     best_subtype: str = "Unknown"
-    type_confidence: float = 0.0
-    subtype_confidence: float = 0.0  # NEW: Probabilistic subtype confidence from cluster-aware method
 
     
     # Statistics
@@ -282,15 +280,7 @@ class SNIDResult:
             type_str = self.consensus_type
             
             # Add subtype with confidence if available
-            if (self.best_subtype and self.best_subtype != "Unknown" and 
-                hasattr(self, 'subtype_confidence') and self.subtype_confidence > 0):
-                # Display the numeric confidence directly (no hardcoded High/Medium/Low cutoffs).
-                try:
-                    conf_val = float(self.subtype_confidence)
-                except Exception:
-                    conf_val = 0.0
-                type_str += f" / {self.best_subtype} (p={conf_val:.2f})"
-            elif self.best_subtype and self.best_subtype != "Unknown":
+            if self.best_subtype and self.best_subtype != "Unknown":
                 type_str += f" / {self.best_subtype}"
             
 

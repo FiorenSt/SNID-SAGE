@@ -1112,8 +1112,6 @@ def generate_plot_metadata(result: Any, output_dir: str, base_filename: str,
         metadata['analysis_info']['consensus_type'] = result.consensus_type
     if hasattr(result, 'consensus_redshift'):
         metadata['analysis_info']['consensus_redshift'] = result.consensus_redshift
-    if hasattr(result, 'type_confidence'):
-        metadata['analysis_info']['type_confidence'] = result.type_confidence
     
     metadata_file = Path(output_dir) / f"{base_filename}_analysis_metadata.json"
     with open(metadata_file, 'w') as f:

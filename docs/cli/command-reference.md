@@ -116,7 +116,7 @@ sage batch --list-csv input.csv --path-column "Spectrum Path" --redshift-column 
 | `--path-column NAME` | Column for paths in `--list-csv` (default: path) |
 | `--redshift-column NAME` | Column for redshift in `--list-csv` (default: redshift) |
 | `--lapmin FLOAT` | Minimum overlap fraction (default: 0.3) |
-| `--hsigma-lap-ccc-threshold FLOAT` | HσLAP-CCC clustering threshold (default: 15.0) |
+| `--hsigma-lap-ccc-threshold FLOAT` | HσLAP-CCC clustering threshold (default: 1.5) |
 | `--type-filter TYPE...` | Restrict templates to these types |
 | `--template-filter NAME...` | Only use specified template names |
 | `--exclude-templates NAME...` | Exclude specified template names |
@@ -126,7 +126,7 @@ sage batch --list-csv input.csv --path-column "Spectrum Path" --redshift-column 
 | `--savgol-order INT` | Savitzky–Golay polynomial order |
 | `--aband-remove` | Remove telluric O2 A-band (7550–7700 Å) |
 | `--skyclip` | Clip sky emission lines (±emwidth Å) |
-| `--emclip` | Auto host emission clipping using per-entry/forced z when provided (does not force analysis redshift) |
+| `--emclip` | Auto host emission clipping using per-entry/forced z when provided (available for identify and batch commands; does not force analysis redshift) |
 | `--emclip-z FLOAT` | Fixed redshift for emission clipping (-1 disables; masking only, does not force analysis redshift) |
 | `--emwidth FLOAT` | Emission/sky clipping half-width in Å (default: 40) |
 | `--wavelength-masks WMIN:WMAX ...` | Additional mask ranges (e.g., 6550:6600) |

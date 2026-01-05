@@ -857,7 +857,7 @@ class UnifiedResultsFormatter:
                 pass
 
             # Subtype ranking score must match selection logic:
-            # mean(top-5 best metric values) × (n_top/5). No uncertainty weighting.
+            # mean(top-5 best metric values) × (n_top/5).
             metrics_arr = np.array(agg['metrics'], dtype=float)
             sigmas_arr = np.array([e if (e is not None and np.isfinite(e) and e > 0) else np.nan for e in agg['z_errs']], dtype=float)
             if metrics_arr.size:
@@ -911,11 +911,11 @@ class UnifiedResultsFormatter:
                     denom = runner_score if (isinstance(runner_score, float) and runner_score > 0) else 1e-8
                     pct = 100.0 * margin / denom
                     # Thresholds align with type confidence mapping
-                    if pct >= 100.0:
+                    if pct >= 75.0:
                         level = "High"
-                    elif pct >= 30.0:
+                    elif pct >= 25.0:
                         level = "Medium"
-                    elif pct >= 10.0:
+                    elif pct >= 5.0:
                         level = "Low"
                     else:
                         level = "Very Low"
@@ -1125,11 +1125,11 @@ class UnifiedResultsFormatter:
             m = s.get('subtype_margin_over_second', None)
             if _finite(m):
                 pct = float(m)
-                if pct >= 100.0:
+                if pct >= 75.0:
                     subtype_conf = 'High'
-                elif pct >= 30.0:
+                elif pct >= 25.0:
                     subtype_conf = 'Medium'
-                elif pct >= 10.0:
+                elif pct >= 5.0:
                     subtype_conf = 'Low'
                 else:
                     subtype_conf = 'Very Low'

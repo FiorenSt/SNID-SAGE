@@ -989,7 +989,7 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                     summary['winning_subtype_age_err'] = age_err
 
                 # Penalized score for winning subtype:
-                # Q = mean(top-5 best metric values) × (N_top/5). No uncertainty weighting.
+                # Q = mean(top-5 best metric values) × (N_top/5).
                 if metrics:
                     import numpy as _np
                     mets_arr = _np.array(metrics, dtype=float)
@@ -1033,11 +1033,11 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                         # Percent improvement relative to competitor score (runner as denominator)
                         denom = runner_score if runner_score > 0 else 1e-8
                         pct = 100.0 * (winner_score - runner_score) / denom
-                        if pct >= 100.0:
+                        if pct >= 75.0:
                             level = 'High'
-                        elif pct >= 30.0:
+                        elif pct >= 25.0:
                             level = 'Medium'
-                        elif pct >= 10.0:
+                        elif pct >= 5.0:
                             level = 'Low'
                         else:
                             level = 'Very Low'

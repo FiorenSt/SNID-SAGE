@@ -1,4 +1,4 @@
-## Parameters Reference
+# Parameters Reference
 
 Unified reference of configurable parameters across GUI and CLI.
 
@@ -7,20 +7,33 @@ Unified reference of configurable parameters across GUI and CLI.
 | Name | Type | Default | CLI Flag | Description |
 |---|---|---:|---|---|
 | zmin | float | -0.01 | `--zmin` | Minimum redshift to search |
-| zmax | float | 1.0 | `--zmax` | Maximum redshift to search |
+| zmax | float | 1.0 (optical), 2.5 (ONIR) | `--zmax` | Maximum redshift to search (profile-dependent default) |
 | lapmin | float | 0.3 | `--lapmin` | Minimum overlap fraction between spectrum and template |
 | age_min | float or null | None | `--age-min` | Minimum template age (days) |
 | age_max | float or null | None | `--age-max` | Maximum template age (days) |
 | max_output_templates | int | 10 | `--max-output-templates` | Maximum templates included in outputs (CLI/UI summaries) |
-| hsigma_lap_ccc_threshold | float | 15.0 | `--hsigma-lap-ccc-threshold` (batch) | Threshold used when clustering by HσLAP-CCC ((height × lap × CCC) / sigma_z) |
+| hsigma_lap_ccc_threshold | float | 1.5 | `--hsigma-lap-ccc-threshold` | Threshold used when clustering by HσLAP-CCC ((height × lap × CCC) / sigma_z) |
 | forced_redshift | float or null | None | `--forced-redshift` | Force analysis at a fixed redshift; skips redshift search |
 | type_filter | list[str] or null | None | `--type-filter` | Allowed supernova types (Ia, Ib, Ic, II, …) |
 | template_filter | list[str] or null | None | `--template-filter` | Only use specified template names |
 | exclude_templates | list[str] or null | None | `--exclude-templates` | Exclude specified template names |
+| profile | str | optical | `--profile` | Analysis profile selection (optical or onir) |
 | wavelength_tolerance | float | 10.0 | — | Matching tolerance in Å for config-based workflows |
-| emclip | bool | False | `--emclip` (batch) | Auto host emission clipping using per-entry redshift (skips if none) |
+| emclip | bool | False | `--emclip` (CLI) | Auto host emission clipping using per-entry redshift (skips if none) |
 | emclip_z | float | -1.0 | `--emclip-z` | Redshift for emission line clipping (-1 disables; masking only, does not force analysis redshift) |
 | emwidth | float | 40.0 | `--emwidth` | Emission line clipping width (Å) |
+
+### Batch Processing
+
+| Name | Type | Default | CLI Flag | Description |
+|---|---|---:|---|---|
+| list_csv | str | — | `--list-csv` | CSV file listing spectra to analyze (must contain path column; optional redshift column) |
+| path_column | str | "path" | `--path-column` | Column name in `--list-csv` containing spectrum paths |
+| redshift_column | str | "redshift" | `--redshift-column` | Column name in `--list-csv` containing forced redshift values |
+| brief | bool | True | `--brief` | Minimal console output: terse per-spectrum status and final summary |
+| full | bool | False | `--full` | Detailed console output (disables brief mode) |
+| workers | int | 0 | `--workers` | Number of worker processes (0 = sequential, -1 = use all CPU cores, N = fixed number) |
+| stop_on_error | bool | False | `--stop-on-error` | Stop processing if any spectrum fails |
 
 ### Processing
 

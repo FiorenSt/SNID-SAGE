@@ -157,6 +157,7 @@ dist/
 
 # ===== DOCUMENTATION MANAGEMENT =====
 # Main README is now included in version control 
+docs/DOCUMENTATION_IMPROVEMENT_PLAN.md
 
 # ===== ADDITIONAL PATTERNS FOR SNID SAGE =====
 

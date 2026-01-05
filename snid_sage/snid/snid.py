@@ -2564,8 +2564,6 @@ def run_snid_analysis(
             result.correlation = best_match['correlation'].get('correlation_full', np.array([]))
             result.redshift_axis = best_match['correlation'].get('z_axis_full', np.array([]))
         
-        # Using cluster/top-5 penalized scoring and relative comparisons.
-        result.type_confidence = 0.0
             
         _LOG.info(f"Analysis complete: {result.consensus_type}")
         result.success = True
@@ -2576,8 +2574,6 @@ def run_snid_analysis(
         result.lap = 0.0
         result.hsigma_lap_ccc = 0.0
         result.consensus_type = 'Unknown'
-        result.type_confidence = 0.0
-
         result.success = False
         report_progress("No good matches found")
 

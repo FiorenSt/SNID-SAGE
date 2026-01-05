@@ -1221,11 +1221,31 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                         else:
                             # No clustering - tailor message based on match quality and keep open briefly
                             results = getattr(self.app_controller, 'snid_results', None)
-                            type_conf = getattr(results, 'type_confidence', 0.0) if results else 0.0
+                            # Legacy `type_confidence` (0–1) removed; use unified confidence/quality signals instead.
+                            def _is_weak_match(_results) -> bool:
+                                try:
+                                    if _results is None:
+                                        return True
+                                    from snid_sage.shared.utils.results_formatter import create_unified_formatter
+                                    fmt = create_unified_formatter(
+                                        _results,
+                                        getattr(_results, 'spectrum_name', None),
+                                        getattr(_results, 'spectrum_path', None),
+                                    )
+                                    s = fmt.get_export_data() or {}
+                                    lvl = (s.get('cluster_confidence_level') or '').strip().lower()
+                                    if lvl:
+                                        return lvl == 'very low'
+                                    qlvl = (s.get('cluster_quality_level') or '').strip().lower()
+                                    if qlvl:
+                                        return qlvl == 'very low'
+                                except Exception:
+                                    return True
+                                return False
                             # Weak if low confidence OR no matches above best-metric threshold
                             fm = getattr(results, 'filtered_matches', []) if results else []
                             is_above_threshold = bool(fm and len(fm) > 0)
-                            is_weak = (type_conf < 0.30) or (not is_above_threshold)
+                            is_weak = _is_weak_match(results) or (not is_above_threshold)
                             msg = (
                                 "Only a weak match was found – try Advanced Preprocessing (smoothing, masking, continuum) to improve results."
                                 if is_weak else
@@ -1271,12 +1291,31 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                 self.app_controller.update_workflow_state(WorkflowState.ANALYSIS_COMPLETE)
                 # Update status label based on result quality
                 results = getattr(self.app_controller, 'snid_results', None)
-                type_conf = getattr(results, 'type_confidence', 0.0) if results else 0.0
+                def _is_weak_match(_results) -> bool:
+                    try:
+                        if _results is None:
+                            return True
+                        from snid_sage.shared.utils.results_formatter import create_unified_formatter
+                        fmt = create_unified_formatter(
+                            _results,
+                            getattr(_results, 'spectrum_name', None),
+                            getattr(_results, 'spectrum_path', None),
+                        )
+                        s = fmt.get_export_data() or {}
+                        lvl = (s.get('cluster_confidence_level') or '').strip().lower()
+                        if lvl:
+                            return lvl == 'very low'
+                        qlvl = (s.get('cluster_quality_level') or '').strip().lower()
+                        if qlvl:
+                            return qlvl == 'very low'
+                    except Exception:
+                        return True
+                    return False
                 fm = getattr(results, 'filtered_matches', []) if results else []
                 if (not has_good_cluster):
                     if not fm:
                         self.status_label.setText("Analysis inconclusive – no reliable matches above threshold")
-                    elif type_conf < 0.30:
+                    elif _is_weak_match(results):
                         self.status_label.setText("Analysis weak – only low-quality matches above threshold")
                     else:
                         # Show best type/subtype without confidence
@@ -1318,7 +1357,6 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                 else:
                     # No clustering - provide quality-aware guidance instead of success prompt
                     results = getattr(self.app_controller, 'snid_results', None)
-                    type_conf = getattr(results, 'type_confidence', 0.0) if results else 0.0
                     fm = getattr(results, 'filtered_matches', []) if results else []
                     if not fm:
                         QtWidgets.QMessageBox.information(
@@ -1329,7 +1367,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
                                 "Try Advanced Preprocessing (smoothing, wavelength masks, continuum adjustments) to improve the results."
                             )
                         )
-                    elif type_conf < 0.30:
+                    elif _is_weak_match(results):
                         QtWidgets.QMessageBox.information(
                             self,
                             "Weak Matches",
