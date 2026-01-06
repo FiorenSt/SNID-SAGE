@@ -498,13 +498,13 @@ class UnifiedResultsFormatter:
                         penalty = min(len(top_metrics) / 5.0, 1.0)
                         penalized = mean_top * penalty
                 if penalized is not None:
-                    if penalized > 9:
+                    if penalized >= 8.0:
                         q_cat = 'High'
                         q_desc = f'Excellent match quality (HσLAP-CCC: {penalized:.2f})'
-                    elif penalized >= 6:
+                    elif penalized >= 5.0:
                         q_cat = 'Medium'
                         q_desc = f'Good match quality (HσLAP-CCC: {penalized:.2f})'
-                    elif penalized >= 3:
+                    elif penalized >= 2.5:
                         q_cat = 'Low'
                         q_desc = f'Poor match quality (HσLAP-CCC: {penalized:.2f})'
                     else:
@@ -545,13 +545,13 @@ class UnifiedResultsFormatter:
                     penalty = min(len(top_metrics) / 5.0, 1.0)
                     penalized = mean_top * penalty
                     # Map to quality
-                    if penalized > 9:
+                    if penalized >= 8.0:
                         q_cat = 'High'
                         q_desc = f'Excellent match quality (HσLAP-CCC: {penalized:.2f})'
-                    elif penalized >= 6:
+                    elif penalized >= 5.0:
                         q_cat = 'Medium'
                         q_desc = f'Good match quality (HσLAP-CCC: {penalized:.2f})'
-                    elif penalized >= 3:
+                    elif penalized >= 2.5:
                         q_cat = 'Low'
                         q_desc = f'Poor match quality (HσLAP-CCC: {penalized:.2f})'
                     else:

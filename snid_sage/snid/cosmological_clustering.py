@@ -1455,17 +1455,17 @@ def _calculate_absolute_quality(winning_cluster_info: Dict[str, Any], metric_nam
     cluster_size = winning_cluster_info['cluster_size']
     
     # Quality categories based on penalized top-5 score (Q_cluster; global rule)
-    #  - Very Low: < 3
-    #  - Low: 3 to < 6
-    #  - Medium: 6 to ≤ 9
-    #  - High: > 9
-    if penalized_score > 9:
+    #  - Very Low: < 2.5
+    #  - Low: 2.5 to < 5
+    #  - Medium: 5 to < 8
+    #  - High: ≥ 8
+    if penalized_score >= 8.0:
         quality_category = 'High'
         quality_description = f'Excellent match quality (HσLAP-CCC: {penalized_score:.2f})'
-    elif penalized_score >= 6:
+    elif penalized_score >= 5.0:
         quality_category = 'Medium'
         quality_description = f'Good match quality (HσLAP-CCC: {penalized_score:.2f})'
-    elif penalized_score >= 3:
+    elif penalized_score >= 2.5:
         quality_category = 'Low'
         quality_description = f'Poor match quality (HσLAP-CCC: {penalized_score:.2f})'
     else:

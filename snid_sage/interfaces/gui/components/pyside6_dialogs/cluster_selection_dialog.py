@@ -119,7 +119,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self._unique_types: Optional[List[str]] = None
         self._type_to_index: Optional[Dict[str, int]] = None
 
-        # Plot filter state: hide "Very Low" clusters by default (Q_cluster < 3)
+        # Plot filter state: hide "Very Low" clusters by default (Q_cluster < 2.5)
         self.show_very_low: bool = False
         self._very_low_checkbox: Optional[QtWidgets.QCheckBox] = None
         self._dropdown_index_to_candidate_index: List[Optional[int]] = []
@@ -214,10 +214,10 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
             return float('nan')
 
     def _is_very_low(self, candidate: Dict[str, Any]) -> bool:
-        """Very Low is defined as Q_cluster < 3, matching backend thresholds."""
+        """Very Low is defined as Q_cluster < 2.5, matching backend thresholds."""
         try:
             q = self._get_candidate_q_score(candidate)
-            return bool(np.isfinite(q) and q < 3)
+            return bool(np.isfinite(q) and q < 2.5)
         except Exception:
             return False
 
@@ -611,7 +611,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         self._dropdown_index_to_candidate_index = []
         self._candidate_index_to_dropdown_index = {}
 
-        # Find where Very Low starts (first candidate with Q_cluster < 3)
+        # Find where Very Low starts (first candidate with Q_cluster < 2.5)
         very_low_start = None
         for idx, cand in enumerate(self.all_candidates):
             if self._is_very_low(cand):
@@ -643,7 +643,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
             # Insert a visual separator just before the first Very Low cluster entry.
             if very_low_start is not None and idx == very_low_start and idx != 0:
                 try:
-                    header_text = "──────── Very Low clusters (Q<3) ────────"
+                    header_text = "──────── Very Low clusters (Q<2.5) ────────"
                     self.cluster_dropdown.addItem(header_text)
                     header_combo_idx = self.cluster_dropdown.count() - 1
                     self._dropdown_index_to_candidate_index.append(None)

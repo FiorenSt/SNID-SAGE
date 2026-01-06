@@ -280,15 +280,26 @@ class LineDetectionController:
                     except Exception:
                         last_kwargs = {}
 
-                    # Host/galaxy redshift search should use the same "looser parameters" policy as the GUI rerun helper:
-                    #   lapmin = 0.25, hsigma_lap_ccc_threshold = 1.0
-                    # This keeps host redshift behavior consistent and avoids surprising misses for galaxy features.
-                    lapmin = 0.25
+                    # Match the normal GUI analysis knobs (prefer last run, then config, then defaults).
+                    try:
+                        lapmin = float(last_kwargs.get('lapmin', analysis_cfg.get('lapmin', 0.3)) or 0.3)
+                    except Exception:
+                        lapmin = 0.3
+                    # Clamp overlap fraction defensively
+                    try:
+                        lapmin = max(0.0, min(1.0, float(lapmin)))
+                    except Exception:
+                        lapmin = 0.3
                     try:
                         peak_window_size = int(last_kwargs.get('peak_window_size', analysis_cfg.get('peak_window_size', 10)) or 10)
                     except Exception:
                         peak_window_size = 10
-                    hsigma_thr = 1.0
+                    try:
+                        hsigma_thr = float(
+                            last_kwargs.get('hsigma_lap_ccc_threshold', analysis_cfg.get('hsigma_lap_ccc_threshold', 1.5)) or 1.5
+                        )
+                    except Exception:
+                        hsigma_thr = 1.5
                     try:
                         max_out = int(last_kwargs.get('max_output_templates', analysis_cfg.get('max_output_templates', 10)) or 10)
                     except Exception:

@@ -1111,13 +1111,13 @@ def _create_cluster_aware_summary(result: SNIDResult, spectrum_name: str, spectr
                 penalty = min(mets.size / 5.0, 1.0) if mets.size else 0.0
                 penalized = mean_top * penalty
                 summary['cluster_penalized_score'] = penalized
-                if penalized > 9:
+                if penalized >= 8.0:
                     summary['cluster_quality_category'] = 'High'
                     summary['cluster_quality_description'] = f'Excellent match quality (HσLAP-CCC: {penalized:.2f})'
-                elif penalized >= 6:
+                elif penalized >= 5.0:
                     summary['cluster_quality_category'] = 'Medium'
                     summary['cluster_quality_description'] = f'Good match quality (HσLAP-CCC: {penalized:.2f})'
-                elif penalized >= 3:
+                elif penalized >= 2.5:
                     summary['cluster_quality_category'] = 'Low'
                     summary['cluster_quality_description'] = f'Poor match quality (HσLAP-CCC: {penalized:.2f})'
                 else:

@@ -1032,6 +1032,41 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
 
             # Fallback: run locally (still uses the normal pipeline incl. clustering)
             if results is None:
+                # Match the normal GUI analysis knobs (prefer last run, then config, then defaults).
+                analysis_cfg = {}
+                last_kwargs = {}
+                try:
+                    if hasattr(self, 'parent_gui') and hasattr(self.parent_gui, 'app_controller'):
+                        app = self.parent_gui.app_controller
+                        if getattr(app, 'current_config', None):
+                            analysis_cfg = (app.current_config.get('analysis', {}) or {})
+                        if getattr(app, 'last_analysis_kwargs', None):
+                            last_kwargs = (app.last_analysis_kwargs or {})
+                except Exception:
+                    analysis_cfg = {}
+                    last_kwargs = {}
+
+                try:
+                    lapmin_val = float(last_kwargs.get('lapmin', analysis_cfg.get('lapmin', 0.3)) or 0.3)
+                except Exception:
+                    lapmin_val = 0.3
+                try:
+                    lapmin_val = max(0.0, min(1.0, float(lapmin_val)))
+                except Exception:
+                    lapmin_val = 0.3
+
+                try:
+                    hsigma_thr_val = float(
+                        last_kwargs.get('hsigma_lap_ccc_threshold', analysis_cfg.get('hsigma_lap_ccc_threshold', 1.5)) or 1.5
+                    )
+                except Exception:
+                    hsigma_thr_val = 1.5
+
+                try:
+                    peak_window_size_val = int(last_kwargs.get('peak_window_size', analysis_cfg.get('peak_window_size', 10)) or 10)
+                except Exception:
+                    peak_window_size_val = 10
+
                 results, analysis_trace = run_snid_analysis(
                     processed_spectrum=processed_spectrum,
                     templates_dir=templates_dir,
@@ -1040,9 +1075,10 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                     # Redshift range suitable for galaxies
                     zmin=-0.01,
                     zmax=float(zmax_profile),
-                    # Use the same "looser parameters" policy as the main GUI rerun prompt
-                    lapmin=0.25,
-                    hsigma_lap_ccc_threshold=1.0,
+                    # Correlation parameters (normal/default GUI behavior)
+                    lapmin=lapmin_val,
+                    hsigma_lap_ccc_threshold=hsigma_thr_val,
+                    peak_window_size=peak_window_size_val,
                     # Output control: respect configured max_output_templates when available
                     max_output_templates=(
                         int(self.parent_gui.app_controller.current_config.get('analysis', {}).get('max_output_templates', 20))
@@ -1116,7 +1152,7 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                     q_cluster = float(best_score)
                     choice_source = f"{best_c.get('type', 'Galaxy')} cluster {best_c.get('cluster_id', 0)}"
 
-                    if best_score < 3.0 and len(scored) > 1:
+                    if best_score < 2.5 and len(scored) > 1:
                         try:
                             items = []
                             for score, c in scored:
@@ -1131,7 +1167,7 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                             selected, ok = QtWidgets.QInputDialog.getItem(
                                 self,
                                 "Weak Host Redshift Clusters",
-                                "All host-redshift clusters are weak (Q_cluster < 3).\n\n"
+                                "All host-redshift clusters are weak (Q_cluster < 2.5).\n\n"
                                 "Pick which cluster redshift to apply (or Cancel to do nothing):",
                                 items,
                                 0,
@@ -1218,14 +1254,14 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                 
                 # Auto-apply threshold:
                 # Match-quality categories in the pipeline use Q_cluster thresholds:
-                #   Very Low < 3, Low 3–<6, Medium 6–≤9, High > 9
-                # Here we use Q_cluster when available; if Q_cluster < 3, always treat as weak (never auto-apply).
-                if metric_label == "Q_cluster" and float(metric_score) < 3.0:
+                #   Very Low < 2.5, Low 2.5–<5, Medium 5–<8, High ≥ 8
+                # Here we use Q_cluster when available; if Q_cluster < 2.5, always treat as weak (never auto-apply).
+                if metric_label == "Q_cluster" and float(metric_score) < 2.5:
                     force_weak = True
                 else:
                     force_weak = False
 
-                if (not force_weak) and float(metric_score) >= 3.0:
+                if (not force_weak) and float(metric_score) >= 2.5:
                     # Directly apply the redshift without asking
                     self.redshift_input.setValue(chosen_redshift)
                     # Trigger the redshift change which will update the line positions
@@ -1252,7 +1288,7 @@ class PySide6ManualRedshiftDialog(QtWidgets.QDialog):
                         f"⚠️ Weak galaxy template match found:\n\n"
                         f"📋 Template: {template_name}\n"
                         f"🌌 Redshift: z = {chosen_redshift:.6f}\n"
-                        f"📊 {metric_label}: {float(metric_score):.2f} (<3; weak)\n"
+                        f"📊 {metric_label}: {float(metric_score):.2f} (<2.5; weak)\n"
                         f"🧩 Source: {choice_source}\n\n"
                         f"Apply this redshift anyway?",
                         QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)

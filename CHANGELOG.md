@@ -2,6 +2,94 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
+## [1.0.0] - 2026-01-06
+
+### 🎉 First Stable Release
+
+This release marks the first stable production version of SNID SAGE, representing a mature, feature-complete tool for supernova spectral analysis.
+
+### Major Features
+
+- **New composite metric: HσLAP-CCC (BREAKING CHANGE)**
+  - Introduced HσLAP-CCC = (height × lap × CCC) / sqrt(sigma_z) as the primary match quality metric
+  - Replaces the previous RLAP-CCC metric with improved statistical rigor
+  - Includes trimmed concordance correlation coefficient (CCC) with 99.5% trimming to reduce domination by extreme peaks
+  - Provides better discrimination of match quality through sigma_z normalization
+  - Weighting policy updated: w_i = (HσLAP-CCC_i)^2 for clustering and aggregation
+  - Automatic fallback to HLAP when sigma_z is unavailable
+  - All analysis outputs, clustering, and quality assessments now use HσLAP-CCC as the primary metric
+
+- **Enhanced uncertainty estimation**
+  - Replaced all "standard error (SE)" reporting with unbiased weighted standard deviation
+  - Improved cluster redshift uncertainty calculations using balanced inverse-variance weighting
+  - More statistically rigorous error propagation throughout the analysis pipeline
+
+- **Template library version 2.0**
+  - 603 optical templates covering all major supernova types and subtypes
+  - 467 ONIR (optical+near-IR) templates for extended redshift reach (up to z = 2.5)
+  - Comprehensive coverage including Ia, Ib, Ic, Ibn, Icn, II, SLSN, LFBOT, TDE, KN, GAP, AGN, Galaxy, Star, and CV types
+  - All templates rebinned to standardized logarithmic wavelength grids
+
+### Templates
+
+- Added three new GAP optical templates:
+  - `2008S` and `2008jd` as **GAP ILRT**
+  - `2021biy` as **GAP LRN**
+- Added three new Type II flash optical templates:
+  - `sn2023ixfEarly`, `sn2020pniEarly`, and `sn2024ggiEarly` as **II-flash**
+- Template metadata corrections applied across multiple subtypes
+
+### Infrastructure
+
+- **Template distribution system**
+  - Templates distributed via versioned GitHub Release archives for efficient installation
+  - Lazy download on first use with `snid-sage-download-templates` CLI for pre-download
+  - Centralized template management via `templates_manager` module
+  - Platform-appropriate storage locations with environment variable overrides
+
+- **Template Manager GUI**
+  - Full-featured GUI (`snid-sage-templates`) for creating and managing user templates
+  - Streamlined import, inspection, and metadata handling
+  - Support for both optical and ONIR profiles
+
+- **ONIR profile support**
+  - Extended optical+near-IR coverage for higher redshift analyses
+  - Redshift reach: up to z = 2.5 (vs. z = 1.0 for optical profile)
+  - Profile switching available in GUI
+
+### Analysis Improvements
+
+- **Clustering enhancements**
+  - Unweighted 1-D GMM as default for cosmological clustering (weighted GMM available via `--weighted-gmm` flag or `SNID_SAGE_WEIGHTED_GMM` environment variable)
+  - Elbow method for GMM model selection as default (BIC available via `SNID_SAGE_GMM_MODEL_SELECTION` environment variable)
+  - Enforced contiguity plus hard gap splitting at Δz > 0.025
+  - Comprehensive cluster quality assessment and categorization
+
+- **Preprocessing**
+  - Automatic cosmic-ray detection and correction (Step 0)
+  - Enhanced wavelength range validation (minimum 2000 Å overlap)
+  - Improved error handling across CLI, GUI, and core preprocessing
+
+- **Batch processing**
+  - Optimal parallel execution with configurable worker count
+  - CSV-based batch mode with per-row redshift support
+  - Comprehensive summary reports with quality metrics
+
+### Bug Fixes & Improvements
+
+- Fixed template metadata corrections across multiple subtypes
+- Improved handling of weak matches and edge cases
+- Enhanced error messages and diagnostics
+- Better distinction between "weak match" vs "no matches" scenarios
+- Improved plot graphics and display settings
+- Fixed various subtype display issues in CLI and GUI
+
+### Documentation
+
+- Complete documentation available at https://fiorenst.github.io/SNID-SAGE/
+- Comprehensive guides for first analysis, GUI usage, CLI reference, and AI integration
+- Troubleshooting guides and API documentation
+
 ## [0.11.4] - 2025-11-28
 
 - **Templates**
