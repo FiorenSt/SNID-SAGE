@@ -47,14 +47,17 @@ def get_unified_storage(template_dir: str | None, profile_id: str | None = None)
         except Exception:
             profile_id = 'optical'
 
-    # Resolve default templates_dir automatically based on profile if not provided
+    # Resolve default templates_dir automatically if not provided.
+    # Prefer the centralized templates manager, which will lazily download the
+    # managed bank on first use. This avoids relying on legacy packaged paths.
     if not template_dir:
         try:
-            from importlib import resources
-            with resources.as_file(resources.files('snid_sage') / 'templates') as _dir:
-                template_dir = str(_dir)
+            from snid_sage.shared.templates_manager import get_templates_dir
+
+            template_dir = str(get_templates_dir())
         except Exception:
-            template_dir = 'templates'
+            # Last-resort fallback for dev/edge cases: relative "templates"
+            template_dir = "templates"
 
     key = (str(template_dir), str(profile_id))
 

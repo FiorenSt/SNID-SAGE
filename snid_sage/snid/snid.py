@@ -2112,7 +2112,7 @@ def run_snid_analysis(
                 matches,
                 processed_spectrum_for_metrics,
                 verbose=verbose,
-                trim_percentile=99.5,
+                trim_percentile=99.0,
                 residual_clip_percentile=99.0,
             )
 
@@ -2124,7 +2124,7 @@ def run_snid_analysis(
                 matches,
                 processed_spectrum_for_metrics,
                 verbose=verbose,
-                trim_percentile=99.5,
+                trim_percentile=99.0,
             )
 
             _LOG.info(f"Phase-2 metrics computed for {len(matches)} matches")

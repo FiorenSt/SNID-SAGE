@@ -9,11 +9,13 @@ try:
     from snid_sage.shared.utils.paths.user_templates import (
         discover_legacy_user_templates,
         get_default_user_templates_dir,
+        clear_user_templates_dir_override,
         set_user_templates_dir,
     )
 except Exception:
     discover_legacy_user_templates = None  # type: ignore
     get_default_user_templates_dir = None  # type: ignore
+    clear_user_templates_dir_override = None  # type: ignore
     set_user_templates_dir = None  # type: ignore
 
 
@@ -63,7 +65,7 @@ class UserTemplatesFolderDialog(QtWidgets.QDialog):
         self.candidates_list.clear()
         paths: List[Path] = []
 
-        # 1) Recommended sibling to managed built-ins: <managed>/User_templates
+        # 1) Recommended sibling to managed built-ins
         try:
             if get_default_user_templates_dir is not None:
                 default_dir = get_default_user_templates_dir()
@@ -105,8 +107,21 @@ class UserTemplatesFolderDialog(QtWidgets.QDialog):
         if not path:
             return
         try:
-            if set_user_templates_dir is not None:
-                set_user_templates_dir(Path(path))
+            chosen = Path(path)
+            default_dir = None
+            try:
+                if get_default_user_templates_dir is not None:
+                    default_dir = get_default_user_templates_dir()
+            except Exception:
+                default_dir = None
+
+            # Picking the recommended default keeps auto-follow (clear manual override).
+            if default_dir is not None and Path(default_dir).resolve() == chosen.resolve():
+                if clear_user_templates_dir_override is not None:
+                    clear_user_templates_dir_override()
+            else:
+                if set_user_templates_dir is not None:
+                    set_user_templates_dir(chosen)
             self.folder_selected.emit(str(path))
             self.accept()
         except Exception as e:
@@ -121,8 +136,21 @@ class UserTemplatesFolderDialog(QtWidgets.QDialog):
         if not path:
             return
         try:
-            if set_user_templates_dir is not None:
-                set_user_templates_dir(Path(path))
+            chosen = Path(path)
+            default_dir = None
+            try:
+                if get_default_user_templates_dir is not None:
+                    default_dir = get_default_user_templates_dir()
+            except Exception:
+                default_dir = None
+
+            # Adopting the recommended default keeps auto-follow (clear manual override).
+            if default_dir is not None and Path(default_dir).resolve() == chosen.resolve():
+                if clear_user_templates_dir_override is not None:
+                    clear_user_templates_dir_override()
+            else:
+                if set_user_templates_dir is not None:
+                    set_user_templates_dir(chosen)
             self.folder_selected.emit(path)
             self.accept()
         except Exception as e:

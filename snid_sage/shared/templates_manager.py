@@ -11,8 +11,9 @@ This module is responsible for:
 Design notes
 ------------
 - Download source is a single ZIP archive hosted as a GitHub Release asset.
-- Storage location is, by default, a per-user data directory obtained via
-  :func:`platformdirs.user_data_dir`.
+- Storage location is resolved via :func:`get_templates_base_dir` and is designed
+  to be stable across working directories after first use (via a small per-user
+  pointer file), while still supporting explicit overrides.
 - Advanced users can override the storage location by setting the
   ``SNID_SAGE_TEMPLATE_DIR`` environment variable. This may be an absolute or
   relative path; relative paths are resolved from the current working directory.
@@ -33,6 +34,7 @@ import zipfile
 import time
 
 import requests
+from platformdirs import user_config_dir
 
 from snid_sage.shared.utils.logging import get_logger
 from snid_sage.shared.utils.paths.state_root import get_state_root_dir
@@ -83,6 +85,114 @@ TEMPLATES_FILES: List[str] = [
 _ENV_DIR_OVERRIDE: str = "SNID_SAGE_TEMPLATE_DIR"
 _ENV_ARCHIVE_URL_OVERRIDE: str = "SNID_SAGE_TEMPLATES_ARCHIVE_URL"
 _META_FILENAME: str = "templates_meta.json"
+_POINTER_FILENAME: str = "templates_pointer.json"
+_PLATFORMDIRS_APPNAME: str = "SNID-SAGE"
+_PLATFORMDIRS_APPAUTHOR_LEGACY: str = "SNID-SAGE"
+
+
+def _pointer_file_path() -> Path:
+    """
+    Return the per-user pointer file path that remembers the managed templates dir.
+    """
+    # appauthor=False avoids Windows paths like "...\\SNID-SAGE\\SNID-SAGE\\...".
+    base = Path(
+        user_config_dir(
+            _PLATFORMDIRS_APPNAME,
+            appauthor=False,
+            roaming=False,
+            ensure_exists=True,
+        )
+    )
+    return base / _POINTER_FILENAME
+
+
+def _legacy_pointer_file_path() -> Path:
+    """Legacy pointer location (kept for migration/backwards compatibility)."""
+    base = Path(
+        user_config_dir(
+            _PLATFORMDIRS_APPNAME,
+            _PLATFORMDIRS_APPAUTHOR_LEGACY,
+            roaming=False,
+            ensure_exists=True,
+        )
+    )
+    return base / _POINTER_FILENAME
+
+
+def _load_templates_dir_pointer() -> Optional[Path]:
+    """
+    Load the templates base directory from the per-user pointer file, if valid.
+
+    Valid means:
+    - The pointer file can be parsed
+    - The target exists and is a directory
+    - The directory is writable (needed for first-time download / refresh)
+    """
+    p = _pointer_file_path()
+    legacy_p = _legacy_pointer_file_path()
+    try:
+        if not p.exists() and legacy_p.exists():
+            # Migrate legacy pointer forward to the new location (best-effort)
+            try:
+                with legacy_p.open("r", encoding="utf-8") as f:
+                    legacy_data = json.load(f) or {}
+                tmp = p.with_suffix(p.suffix + ".part")
+                with tmp.open("w", encoding="utf-8") as f:
+                    json.dump(legacy_data, f, indent=2, sort_keys=True)
+                tmp.replace(p)
+            except Exception:
+                pass
+
+        if not p.exists():
+            return None
+        with p.open("r", encoding="utf-8") as f:
+            data = json.load(f) or {}
+        raw = (data.get("templates_base_dir") or data.get("path") or "").strip()
+        if not raw:
+            return None
+        target = Path(raw).expanduser()
+        if not target.exists() or not target.is_dir():
+            return None
+        if not os.access(str(target), os.W_OK):
+            return None
+        return target
+    except Exception:
+        return None
+
+
+def _save_templates_dir_pointer(base_dir: Path) -> None:
+    """
+    Persist the templates base directory to the per-user pointer file.
+
+    Uses an atomic write to avoid corrupting the pointer on interruption.
+    """
+    base_dir = base_dir.expanduser()
+    pointer_path = _pointer_file_path()
+    try:
+        pointer_path.parent.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        # If we cannot create the pointer dir, we simply don't persist (non-fatal)
+        return
+
+    payload = {
+        "templates_base_dir": str(base_dir),
+        "bank_version": TEMPLATE_BANK_VERSION,
+        "files": list(TEMPLATES_FILES),
+    }
+
+    tmp = pointer_path.with_suffix(pointer_path.suffix + ".part")
+    try:
+        with tmp.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, sort_keys=True)
+        tmp.replace(pointer_path)
+    except Exception:
+        try:
+            if tmp.exists():
+                tmp.unlink()
+        except Exception:
+            pass
+        # Pointer persistence is best-effort only; never fail template resolution because of it.
+        return
 
 
 def _ensure_writable_dir(path: Path) -> Path:
@@ -156,7 +266,8 @@ def get_templates_base_dir() -> Path:
 
     Resolution order:
     1. If ``SNID_SAGE_TEMPLATE_DIR`` is set, use that (absolute or relative).
-    2. Otherwise, place templates under ``<state_root>/templates`` where
+    2. Otherwise, if a per-user pointer file exists and is valid, use that.
+    3. Otherwise, place templates under ``<state_root>/templates`` where
        ``state_root`` is resolved via
        :func:`snid_sage.shared.utils.paths.state_root.get_state_root_dir`.
     """
@@ -166,6 +277,15 @@ def get_templates_base_dir() -> Path:
         _LOG.debug(f"Using override template directory from {_ENV_DIR_OVERRIDE}: {base}")
         return _ensure_writable_dir(base)
 
+    # Prefer the per-user pointer file if present. This makes the templates bank
+    # independent of the current working directory once it has been initialized.
+    remembered = _load_templates_dir_pointer()
+    if remembered is not None:
+        _LOG.debug(f"Using remembered templates directory from pointer file: {remembered}")
+        # We still validate writability/dir-ness here (and create if needed) to
+        # keep behavior consistent with other paths.
+        return _ensure_writable_dir(remembered)
+
     # Default: use the shared state root so that, on a fresh installation,
     # the first directory from which SNID SAGE is run becomes the anchor
     # for all state (config, templates, user templates, etc.). Existing
@@ -173,7 +293,10 @@ def get_templates_base_dir() -> Path:
     root = get_state_root_dir()
     base = root / "templates"
     _LOG.debug(f"Using state-root template directory: {base}")
-    return _ensure_writable_dir(base)
+    base = _ensure_writable_dir(base)
+    # Persist this resolved directory so future runs (from any cwd) reuse it.
+    _save_templates_dir_pointer(base)
+    return base
 
 
 def _meta_path(base_dir: Path) -> Path:

@@ -7,7 +7,7 @@ Primary metric: HσLAP-CCC
 Where:
 - height = peak height
 - lap = lap parameter
-- CCC = concordance correlation coefficient (99.5% trimmed, capped to [0, 1])
+- CCC = concordance correlation coefficient (99.0% trimmed, capped to [0, 1])
 - sigma_z = width × residual_noise_std
 
 This is a BREAKING change replacing the previous composite metric definition.
@@ -27,7 +27,7 @@ def concordance_correlation_coefficient_trimmed(
     spec1: np.ndarray,
     spec2: np.ndarray,
     *,
-    trim_percentile: float = 99.5,
+    trim_percentile: float = 99.0,
 ) -> float:
     """
     Compute Lin's CCC after trimming (dropping) the top (100-trim_percentile)% bins
@@ -416,13 +416,13 @@ def compute_phase2_overlap_diagnostics(
     processed_spectrum: Dict[str, Any],
     verbose: bool = False,
     *,
-    trim_percentile: float = 99.5,
+    trim_percentile: float = 99.0,
     residual_clip_percentile: float = 99.0,
     apodize_percent: float = 10.0,
     compute_ccc: bool = True,
     compute_noise: bool = True,
 ) -> List[Dict[str, Any]]:
-    """Compute CCC (99.5% trimmed) and/or residual-noise diagnostics on the phase-2 overlap windows.
+    """Compute CCC (99.0% trimmed) and/or residual-noise diagnostics on the phase-2 overlap windows.
 
     This reuses a single prepared overlap window per match for both CCC and residual-noise.
     """
@@ -528,7 +528,7 @@ def compute_hsigma_lap_ccc_metric(
     processed_spectrum: Dict[str, Any],
     verbose: bool = False,
     *,
-    trim_percentile: float = 99.5,
+    trim_percentile: float = 99.0,
     residual_clip_percentile: float = 99.0,
 ) -> List[Dict[str, Any]]:
     """Compute HσLAP-CCC = (height × lap × CCC) / sqrt(sigma_z) for each match.

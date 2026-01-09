@@ -271,24 +271,36 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
         
         layout.addWidget(metadata_group)
         
-        # Preprocessing controls
-        preprocess_group = QtWidgets.QGroupBox("Preprocessing Options")
+        # Preprocessing controls (Create Template will auto-run quick preprocessing)
+        preprocess_group = QtWidgets.QGroupBox("Preprocessing")
         self.layout_manager.setup_group_box(preprocess_group)
         preprocess_layout = QtWidgets.QVBoxLayout(preprocess_group)
         
+        note = QtWidgets.QLabel("Optional: use Advanced preprocessing to tweak masking/continuum before saving.")
+        try:
+            note.setStyleSheet("color: #6b7280; font-size: 9pt;")
+            note.setWordWrap(True)
+        except Exception:
+            pass
+        preprocess_layout.addWidget(note)
+
         self.preprocess_btn = self.layout_manager.create_action_button("Advanced Preprocessing", "🔧")
+        try:
+            self.preprocess_btn.setToolTip("Optional: open the full wizard to tweak masking/continuum before saving.")
+        except Exception:
+            pass
         self.preprocess_btn.clicked.connect(self.open_preprocessing_dialog)
         
-        self.quick_preprocess_btn = self.layout_manager.create_action_button("Quick Preprocessing", "⚡")
-        self.quick_preprocess_btn.clicked.connect(self.run_quick_preprocessing)
-        
         preprocess_layout.addWidget(self.preprocess_btn)
-        preprocess_layout.addWidget(self.quick_preprocess_btn)
         
         layout.addWidget(preprocess_group)
         
         # Create template button
         self.create_btn = self.layout_manager.create_create_button()
+        try:
+            self.create_btn.setToolTip("Creates the template. If you did not preprocess, this will run quick preprocessing automatically (in rest frame).")
+        except Exception:
+            pass
         self.create_btn.clicked.connect(self.create_template)
         
         layout.addWidget(self.create_btn)
@@ -462,12 +474,18 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
         }
         
         try:
-            # Use preprocessed spectrum if available, otherwise load and preprocess
+            # Use preprocessed spectrum if available, otherwise load and (quick) preprocess.
             if self.current_spectrum is not None:
                 spectrum_data = self.current_spectrum
             else:
-                # Load spectrum and apply quick preprocessing
+                # Load spectrum, de-redshift to rest frame, and apply quick preprocessing
                 wave, flux = self._load_spectrum(self.file_path_edit.text())
+                try:
+                    z_input = float(self.redshift_spinbox.value())
+                except Exception:
+                    z_input = 0.0
+                if z_input != 0.0 and wave.size > 0:
+                    wave = wave / (1.0 + z_input)
                 
                 if SNID_AVAILABLE:
                     # Resolve active profile from the template service when available
@@ -481,6 +499,9 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
                         verbose=False,
                         profile_id=active_pid or 'optical'
                     )
+                    # Tag as rest-frame so we don't de-redshift again later
+                    if isinstance(processed_spectrum, dict):
+                        processed_spectrum['is_rest_frame'] = True
                     spectrum_data = processed_spectrum
                 else:
                     # Simple dictionary structure if SNID not available
@@ -491,7 +512,8 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
                         'flat': flux / np.median(flux)
                     }
             
-            # Extract wave/flux arrays (support keys from SNID preprocess and dialog) without using boolean-or on arrays
+            # Extract wave/flux arrays (support keys from SNID preprocess and advanced dialog).
+            # Prefer SNID-ready flattened/apodized flux views to match quick preprocessing.
             wave = None
             flux = None
             if isinstance(spectrum_data, dict):
@@ -500,7 +522,8 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
                     if v is not None:
                         wave = v
                         break
-                for key in ['tapered_flux', 'flat_flux', 'log_flux', 'processed_flux', 'flat', 'flux']:
+                # Prefer flattened/apodized views first (SNID-ready), then fall back.
+                for key in ['tapered_flux', 'flat_view', 'flat_flux', 'flat', 'log_flux', 'processed_flux', 'flux']:
                     v = spectrum_data.get(key)
                     if v is not None:
                         flux = v
@@ -579,7 +602,10 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
             # De-redshift to rest-frame if needed (skip if already rest frame)
             already_rest = False
             try:
-                if isinstance(self.current_spectrum, dict) and self.current_spectrum.get('is_rest_frame', False):
+                # Prefer the spectrum data we are about to save; fall back to current_spectrum
+                if isinstance(spectrum_data, dict) and spectrum_data.get('is_rest_frame', False):
+                    already_rest = True
+                elif isinstance(self.current_spectrum, dict) and self.current_spectrum.get('is_rest_frame', False):
                     already_rest = True
             except Exception:
                 already_rest = False
@@ -630,7 +656,14 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
                 # Clear form for next template
                 self._clear_form()
             else:
-                QtWidgets.QMessageBox.critical(self, "Error", "Failed to create template. Check logs for details.")
+                QtWidgets.QMessageBox.critical(
+                    self,
+                    "Error",
+                    "Failed to create template.\n\n"
+                    "If you used Advanced preprocessing, this is often caused by saving an invalid/empty spectrum view "
+                    "(e.g., masked to emptiness). Try easing the masking/continuum settings, or simply skip Advanced preprocessing.\n\n"
+                    "Details are in the logs.",
+                )
                 
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, "Error", f"Error creating template: {str(e)}")
@@ -772,7 +805,6 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
         ready = self._is_ready_for_preprocessing()
         try:
             self.preprocess_btn.setEnabled(ready)
-            self.quick_preprocess_btn.setEnabled(ready)
             # Allow create when ready as well
             self.create_btn.setEnabled(ready)
         except Exception:

@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1751831068.0201683,
-  "template_count": 603,
+  "template_count": 627,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -502,7 +502,7 @@
     },
     "sn2016drl": {
       "type": "II",
-      "subtype": "IIn",
+      "subtype": "IIP",
       "redshift": 0.0,
       "epochs": 3,
       "storage_file": "templates_II.hdf5"
@@ -4230,17 +4230,193 @@
       "redshift": 0.2868,
       "epochs": 5,
       "storage_file": "templates_SLSN.hdf5"
+    },
+    "Ell2": {
+      "type": "Galaxy",
+      "subtype": "Gal-E",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Ell5": {
+      "type": "Galaxy",
+      "subtype": "Gal-E",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Ell13": {
+      "type": "Galaxy",
+      "subtype": "Gal-E",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "S0": {
+      "type": "Galaxy",
+      "subtype": "Gal-S0",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Sa": {
+      "type": "Galaxy",
+      "subtype": "Gal-Sa",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Sb": {
+      "type": "Galaxy",
+      "subtype": "Gal-Sb",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Sc": {
+      "type": "Galaxy",
+      "subtype": "Gal-Sc",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Sd": {
+      "type": "Galaxy",
+      "subtype": "Gal-Sc",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Sdm": {
+      "type": "Galaxy",
+      "subtype": "Gal-Sc",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Spi4": {
+      "type": "Galaxy",
+      "subtype": "Gal-Sc",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "NGC6090": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "M82": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Arp220": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "IRAS20551-4250": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "IRAS22491-1808": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "NGC6240": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Sey2": {
+      "type": "AGN",
+      "subtype": "AGN-Sey2",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_AGN.hdf5"
+    },
+    "IRAS19254-7245_South": {
+      "type": "AGN",
+      "subtype": "AGN-Sey2",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_AGN.hdf5"
+    },
+    "QSO2": {
+      "type": "AGN",
+      "subtype": "QSO2",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_AGN.hdf5"
+    },
+    "Torus": {
+      "type": "AGN",
+      "subtype": "QSO2",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_AGN.hdf5"
+    },
+    "Mrk231": {
+      "type": "AGN",
+      "subtype": "QSO-BAL",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_AGN.hdf5"
+    },
+    "QSO1": {
+      "type": "AGN",
+      "subtype": "QSO",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_AGN.hdf5"
+    },
+    "BQSO1": {
+      "type": "AGN",
+      "subtype": "QSO",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_AGN.hdf5"
+    },
+    "TQSO1": {
+      "type": "AGN",
+      "subtype": "QSO",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_AGN.hdf5"
     }
   },
   "by_type": {
     "AGN": {
-      "count": 4,
+      "count": 12,
       "storage_file": "templates_AGN.hdf5",
       "template_names": [
-        "ASASSN-14ko",
         "agn",
+        "ASASSN-14ko",
+        "BQSO1",
+        "IRAS19254-7245_South",
+        "Mrk231",
         "qso",
-        "qso2"
+        "QSO1",
+        "qso2",
+        "QSO2",
+        "Sey2",
+        "Torus",
+        "TQSO1"
       ]
     },
     "II": {
@@ -4814,20 +4990,36 @@
       ]
     },
     "Galaxy": {
-      "count": 11,
+      "count": 27,
       "storage_file": "templates_Galaxy.hdf5",
       "template_names": [
+        "Arp220",
+        "Ell13",
+        "Ell2",
+        "Ell5",
+        "IRAS20551-4250",
+        "IRAS22491-1808",
         "kcE",
         "kcS0",
+        "kcSa",
+        "kcSb",
         "kcSB1",
         "kcSB2",
         "kcSB3",
         "kcSB4",
         "kcSB5",
         "kcSB6",
-        "kcSa",
-        "kcSb",
-        "kcSc"
+        "kcSc",
+        "M82",
+        "NGC6090",
+        "NGC6240",
+        "S0",
+        "Sa",
+        "Sb",
+        "Sc",
+        "Sd",
+        "Sdm",
+        "Spi4"
       ]
     },
     "Ic": {

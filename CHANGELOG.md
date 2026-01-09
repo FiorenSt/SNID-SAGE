@@ -2,6 +2,19 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
+## [1.1.0] - 2026-01-09
+
+### Analysis Improvements
+
+- Changed CCC (concordance correlation coefficient) trim percentile from 99.5% to 99.0% for improved match quality discrimination
+
+### Templates
+
+- Templates download location now persists across working directories via per-user pointer file; templates are reused when `snid-sage` is launched from different folders (override with `SNID_SAGE_TEMPLATE_DIR`)
+- User Templates selection persisted in per-user config location (no longer depends on working directory); defaults to sibling of templates bank (`.../templates` → `.../user_templates`)
+- Template metadata correction: reclassified `sn2016drl` from **II/IIn** to **II/IIP** in optical and ONIR template banks
+
+
 ## [1.0.0] - 2026-01-06
 
 ### 🎉 First Stable Release

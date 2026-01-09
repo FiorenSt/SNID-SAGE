@@ -5,8 +5,8 @@ Template Service (HDF5-only)
 Centralized service for HDF5-only template storage and index management.
 
 Responsibilities:
-- Manage a user-writable template library in the user's config directory
-  (e.g., `<config_dir>/templates/User_templates/`)
+- Manage a user-writable template library directory (typically a `user_templates`
+  sibling next to the managed built-in templates bank).
 - Append templates to per-type HDF5 files (rebinned to the standard grid)
 - Maintain a user index (`template_index.user.json`) and merge with built-in index
 - Provide a small API for the GUI (creator, browser, manager)
@@ -41,11 +41,10 @@ def _get_builtin_dir() -> Path:
     Resolve the built-in templates directory.
 
     Preferred behaviour is to delegate to the centralized templates manager,
-    which will lazily download the GitHub Release archive into the managed
-    state-root bank (typically ``<cwd>/SNID-SAGE/templates``). For
-    development/editable installs we fall back to the repo-relative top-level
-    ``templates`` folder in the Git checkout, and only as a last resort to
-    any bundled ``snid_sage/templates`` package data.
+    which resolves the managed bank and lazily downloads it on first use.
+    For development/editable installs we fall back to a repo-relative top-level
+    ``templates`` folder, and only as a last resort to any bundled
+    ``snid_sage/templates`` package data.
     """
     try:
         from snid_sage.shared.templates_manager import get_templates_dir
@@ -100,7 +99,9 @@ class TemplateService:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        # Do not auto-create user template directories; user must select a valid folder
+        # User templates directory policy:
+        # - Default: sibling of the managed built-in templates bank (auto-follow)
+        # - Manual override: persisted when user explicitly chooses a custom folder
         # Active profile and derived standard grid
         self._active_profile_id: str = 'optical'
         self._standard_grid = StandardGrid()
@@ -332,6 +333,25 @@ class TemplateService:
 
                 # Rebin to the target grid
                 rebinned_flux = self._rebin_to_standard_grid(wave, flux, grid=target_grid)
+                # Refuse to store effectively empty/all-zero spectra (usually masked-to-emptiness).
+                try:
+                    finite = np.isfinite(rebinned_flux)
+                    finite_count = int(np.count_nonzero(finite))
+                    amp = float(np.nanmax(np.abs(rebinned_flux[finite]))) if finite_count else 0.0
+                except Exception:
+                    finite_count = 0
+                    amp = 0.0
+                if finite_count < max(8, int(0.05 * rebinned_flux.size)) or amp <= 0.0:
+                    try:
+                        import logging
+                        logging.getLogger(__name__).error(
+                            "Refusing to save template '%s': rebinned spectrum is empty/all-zeros (finite=%d/%d, amp=%g). "
+                            "This usually indicates an invalid spectrum view was passed (e.g., masked to emptiness).",
+                            name, finite_count, int(rebinned_flux.size), amp
+                        )
+                    except Exception:
+                        pass
+                    return False
                 fft = np.fft.fft(rebinned_flux)
 
                 # Write (append/combine or create) to HDF5

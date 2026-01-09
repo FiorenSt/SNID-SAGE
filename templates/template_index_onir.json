@@ -2519,7 +2519,7 @@
     },
     "sn2016drl": {
       "type": "II",
-      "subtype": "IIn",
+      "subtype": "IIP",
       "redshift": 0.0,
       "epochs": 3,
       "storage_file": "templates_II_onir.hdf5"
