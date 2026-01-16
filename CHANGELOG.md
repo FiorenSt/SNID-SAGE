@@ -2,6 +2,17 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
+## [1.1.1] - 2026-01-13
+
+### Analysis Improvements
+
+- Cosmological clustering: tightened the 1-D GMM post-processing hard gap split threshold from Δz > 0.025 to Δz > 0.01 (still scaled by (1+z))
+
+### Templates
+
+- Removed the built-in template `sn2017ben` ("2017ben") from the official optical and ONIR template banks (wrong redshift)
+- Template metadata correction: reclassified `LSQ15adm` from **Ia/Ia-pec** to **Ia/Ia-csm** in optical and ONIR template banks
+
 ## [1.1.0] - 2026-01-09
 
 ### Analysis Improvements

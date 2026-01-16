@@ -808,7 +808,7 @@ def _perform_direct_gmm_clustering(
 
         final_clusters = []
         # Hard gap split base (will be scaled by (1+z) for z>0).
-        BASE_MAX_GAP_Z = 0.025
+        BASE_MAX_GAP_Z = 0.01
 
         # Helper: split a sorted-by-z absolute index run by redshift gaps
         def _split_by_gap(abs_idx: np.ndarray, z: np.ndarray) -> List[np.ndarray]:

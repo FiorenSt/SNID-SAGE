@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1751831068.0201683,
-  "template_count": 627,
+  "template_count": 626,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -563,13 +563,6 @@
       "epochs": 5,
       "storage_file": "templates_II.hdf5"
     },
-    "sn2017ben": {
-      "type": "II",
-      "subtype": "IIn",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_II.hdf5"
-    },
     "sn2017gir": {
       "type": "II",
       "subtype": "IIn",
@@ -803,7 +796,7 @@
     },
     "LSQ15adm": {
       "type": "Ia",
-      "subtype": "Ia-pec",
+      "subtype": "Ia-csm",
       "redshift": 0.0,
       "epochs": 6,
       "storage_file": "templates_Ia.hdf5"
@@ -4420,7 +4413,7 @@
       ]
     },
     "II": {
-      "count": 109,
+      "count": 108,
       "storage_file": "templates_II.hdf5",
       "template_names": [
         "ASASSN-14ha",
@@ -4499,7 +4492,6 @@
         "sn2016x",
         "sn2017abw",
         "sn2017aww",
-        "sn2017ben",
         "sn2017gir",
         "sn2017gmr",
         "sn2017hbj",

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SNID-SAGE – WISEREP Results Viewer (Local)</title>
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand__title">SNID-SAGE – WISEREP Results Viewer</div>
+        <div class="brand__subtitle">Local-only (no deployment)</div>
+      </div>
+      <div class="topbar__actions">
+        <button id="btnReload" class="btn btn--ghost">Reload data</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="content">
+        <div class="filtersBar">
+          <div class="filtersBar__title">Filters</div>
+
+          <div class="filtersGrid">
+            <div class="field">
+              <label class="label" for="filterType">Type</label>
+              <select id="filterType" class="select"></select>
+            </div>
+
+            <div class="field">
+              <label class="label" for="filterSubtype">Subtype</label>
+              <select id="filterSubtype" class="select"></select>
+            </div>
+
+            <div class="field">
+              <label class="label" for="filterName">IAU/TNS name contains</label>
+              <input
+                id="filterName"
+                class="input"
+                type="text"
+                placeholder="contains..."
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="group">
+              <div class="group__title">Match Quality</div>
+              <div id="filterQuality" class="checks checks--wide"></div>
+            </div>
+
+            <div class="group">
+              <div class="group__title">Type Confidence</div>
+              <div id="filterTypeConf" class="checks checks--wide"></div>
+            </div>
+
+            <div class="group">
+              <div class="group__title">Subtype Confidence</div>
+              <div id="filterSubtypeConf" class="checks checks--wide"></div>
+            </div>
+          </div>
+
+          <div class="filtersActions">
+            <button id="btnApply" class="btn btn--primary">Apply filters</button>
+            <button id="btnClear" class="btn btn--ghost">Clear filters</button>
+            <button id="btnDownload" class="btn btn--success" disabled>
+              Download filtered CSV
+            </button>
+            <button id="btnHighlight" class="btn btn--warn" disabled>
+              Highlight matches
+            </button>
+
+            <div class="hint hint--compact">
+              <div class="hint__row">
+                <span class="dot dot--known"></span>
+                <span>orange = self-template</span>
+              </div>
+              <div class="hint__row">
+                <span class="dot dot--new"></span>
+                <span>green = new object</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary">
+          <div id="summaryText" class="summary__text">
+            Loading data...
+          </div>
+          <div class="summary__right">
+            <div class="pager">
+              <button id="btnPrev" class="btn btn--ghost btn--sm" disabled>
+                Prev
+              </button>
+              <div id="pageInfo" class="pager__info">—</div>
+              <button id="btnNext" class="btn btn--ghost btn--sm" disabled>
+                Next
+              </button>
+              <select id="pageSize" class="select select--sm" title="Rows per page">
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="200">200</option>
+                <option value="500">500</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="tableWrap">
+          <table class="table" id="resultsTable">
+            <thead id="tableHead"></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="assets/app.js"></script>
+  </body>
+</html>
+
