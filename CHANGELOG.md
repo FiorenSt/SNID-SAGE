@@ -2,7 +2,7 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
-## [1.1.1] - 2026-01-13
+## [1.1.1] - 2026-01-16
 
 ### Analysis Improvements
 
@@ -12,6 +12,11 @@ All notable changes to SNID SAGE will be documented in this file.
 
 - Removed the built-in template `sn2017ben` ("2017ben") from the official optical and ONIR template banks (wrong redshift)
 - Template metadata correction: reclassified `LSQ15adm` from **Ia/Ia-pec** to **Ia/Ia-csm** in optical and ONIR template banks
+- Added 12 templates to the official default optical template banks:
+  - Ia: `PTF11kx`, `2020qxz`, `2010ae`, `2012Z`, `PTF09dav`, `1999aa`
+  - SLSN: `2017egm`, `2016eay`, `2018jkq`, `2023gpw`
+  - Ibn: `2010al`, `2011hw`
+- Added 4 new Type Ib **Ib-Ca-rich** templates to the optical template banks: `PTF11kmb`, `PTF12bho`, `2016hgs`, `2005E`
 
 ## [1.1.0] - 2026-01-09
 
