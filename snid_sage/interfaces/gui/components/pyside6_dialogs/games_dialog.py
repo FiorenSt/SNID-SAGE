@@ -3,13 +3,13 @@ SNID SAGE - Games Selection Dialog - PySide6 Version
 ===================================================
 
 Games selection dialog for the PySide6 GUI that provides access to
-pygame-based games while SNID analysis runs in the background.
+Qt-based mini-games while SNID analysis runs in the background.
 
 Features:
 - Space Debris Cleanup game integration
 - Modern PySide6 styling matching the main GUI
-- Proper error handling for pygame availability
-- Threaded game execution to avoid blocking the main GUI
+- Proper error handling for games availability
+- Non-blocking Qt-native game launch
 
 Developed by Fiorenzo Stoppa for SNID SAGE
 """
@@ -18,7 +18,6 @@ import PySide6.QtCore as QtCore
 import PySide6.QtGui as QtGui
 import PySide6.QtWidgets as QtWidgets
 from typing import Optional
-import threading
 
 try:
     from snid_sage.shared.utils.logging import get_logger
@@ -38,8 +37,8 @@ class PySide6GamesDialog(QtWidgets.QDialog):
     """
     Games selection dialog for PySide6 GUI.
     
-    Provides access to pygame-based games that can run while SNID
-    analysis is in progress, matching the functionality from the old GUI.
+    Provides access to the Qt-based mini-game that can run while SNID
+    analysis is in progress.
     """
     
     def __init__(self, parent=None):
@@ -54,7 +53,7 @@ class PySide6GamesDialog(QtWidgets.QDialog):
         
         self._setup_dialog()
         self._create_interface()
-        self._check_pygame_availability()
+        self._check_games_availability()
     
     def _setup_dialog(self):
         """Setup dialog properties"""
@@ -195,9 +194,9 @@ class PySide6GamesDialog(QtWidgets.QDialog):
         except Exception as e:
             _LOGGER.warning(f"Failed to apply enhanced button styling: {e}")
     
-    def _check_pygame_availability(self):
-        """Update UI without importing pygame in this process."""
-        # Assume ready; the subprocess will own pygame initialization and report errors separately
+    def _check_games_availability(self):
+        """Update UI without importing optional modules in this process."""
+        # Games are Qt-native; if the games module imports, we're good.
         self.availability_label.setText("Ready to play!")
         self.availability_label.setStyleSheet("color: #059669; font-weight: bold;")
         self.play_button.setEnabled(True)
@@ -205,26 +204,10 @@ class PySide6GamesDialog(QtWidgets.QDialog):
     def _start_game(self):
         """Start the selected game"""
         try:
-            import sys
-            import subprocess
             # Close dialog first
             self.accept()
-            if sys.platform == 'darwin':
-                # macOS: adjust resolution and enable HiDPI
-                cmd = (
-                    "import os; "
-                    "os.environ.setdefault('SDL_HINT_VIDEO_HIGHDPI','1'); "
-                    "os.environ.setdefault('SDL_VIDEO_HIGHDPI','1'); "
-                    "from snid_sage.snid import games as g; "
-                    "g.DEBRIS_WIDTH=960; g.DEBRIS_HEIGHT=640; "
-                    "g.run_debris_game()"
-                )
-                subprocess.Popen([sys.executable, "-c", cmd], close_fds=True)
-            else:
-                # Other platforms: keep prior behavior within this process using a thread
-                from snid_sage.snid.games import run_debris_game
-                import threading
-                threading.Thread(target=run_debris_game, daemon=True).start()
+            from snid_sage.snid.games import run_debris_game
+            run_debris_game()
             _LOGGER.info("Space Debris Cleanup game started from PySide6 dialog")
         except Exception as e:
             _LOGGER.error(f"Error starting game from dialog: {e}")

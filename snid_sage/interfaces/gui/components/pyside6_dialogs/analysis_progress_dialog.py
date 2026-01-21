@@ -3,7 +3,7 @@ SNID SAGE - Analysis Progress Dialog - PySide6 Version
 ====================================================
 
 Comprehensive progress dialog for SNID analysis with live step updates.
-Matches the functionality of the old GUI progress window.
+Provides live progress updates during analysis.
 """
 
 import PySide6.QtCore as QtCore
@@ -38,7 +38,7 @@ class AnalysisProgressDialog(QtWidgets.QDialog):
     - Analysis stage indicators
     - Cancel functionality
     - Auto-scrolling text area
-    - Modern styling matching the old GUI
+    - Modern styling consistent with the application
     """
     
     # Signals
@@ -239,12 +239,12 @@ class AnalysisProgressDialog(QtWidgets.QDialog):
         # Button controls
         button_layout = QtWidgets.QHBoxLayout()
         
-        # Games button on the left (like in the old GUI)
+        # Games button on the left
         self.games_btn = QtWidgets.QPushButton("Play Space Debris Game")
         self.games_btn.setObjectName("games_btn")
         self.games_btn.clicked.connect(self._start_space_debris_game)
         self.games_btn.setToolTip("Play Space Debris Cleanup while SNID analysis runs")
-        self._check_games_availability()  # Check if pygame is available
+        self._check_games_availability()
         button_layout.addWidget(self.games_btn)
         
         button_layout.addStretch()
@@ -493,17 +493,17 @@ class AnalysisProgressDialog(QtWidgets.QDialog):
         self.activateWindow()
     
     def _check_games_availability(self):
-        """Check if pygame is available and update games button accordingly"""
+        """Check if games are available and update games button accordingly"""
         try:
-            from snid_sage.snid.games import PYGAME_AVAILABLE
+            from snid_sage.snid.games import GAMES_AVAILABLE
             
-            if PYGAME_AVAILABLE:
+            if GAMES_AVAILABLE:
                 self.games_btn.setEnabled(True)
                 self.games_btn.setToolTip("Play Space Debris Cleanup while SNID analysis runs")
             else:
                 self.games_btn.setEnabled(False)
-                self.games_btn.setText("Install Pygame for Games")
-                self.games_btn.setToolTip("Pygame is required for games. Install with: pip install pygame")
+                self.games_btn.setText("Games Not Available")
+                self.games_btn.setToolTip("Games are not available in this build.")
                 
         except ImportError:
             self.games_btn.setEnabled(False)
@@ -511,24 +511,12 @@ class AnalysisProgressDialog(QtWidgets.QDialog):
             self.games_btn.setToolTip("Games module not available")
     
     def _start_space_debris_game(self):
-        """Start the Space Debris Cleanup game in a separate process (macOS-safe)."""
+        """Start the Space Debris Cleanup game (Qt-native)."""
         try:
-            import sys
-            import subprocess
-            if sys.platform == 'darwin':
-                cmd = (
-                    "import os; "
-                    "os.environ.setdefault('SDL_HINT_VIDEO_HIGHDPI','1'); "
-                    "os.environ.setdefault('SDL_VIDEO_HIGHDPI','1'); "
-                    "from snid_sage.snid import games as g; "
-                    "g.DEBRIS_WIDTH=960; g.DEBRIS_HEIGHT=640; "
-                    "g.run_debris_game()"
-                )
-                subprocess.Popen([sys.executable, "-c", cmd], close_fds=True)
-            else:
-                from snid_sage.snid.games import run_debris_game
-                import threading
-                threading.Thread(target=run_debris_game, daemon=True).start()
+            from snid_sage.snid.games import run_debris_game
+            # Keep the game window usable during analysis: ensure it comes to the front
+            # relative to this progress dialog, and auto-size for the current screen.
+            run_debris_game(parent_window=self, force_on_top=True)
             self.add_progress_line("🎮 Space Debris Cleanup game started!", "info")
             _LOGGER.info("Space Debris Cleanup game started from analysis progress dialog")
         except Exception as e:

@@ -65,7 +65,7 @@ class PySide6AnalysisPlotter:
         self.matplotlib_canvas = matplotlib_canvas
         self.app_controller = main_window.app_controller
         
-        # Default subtype color mapping - use old GUI custom palette
+        # Default subtype color mapping (custom palette)
         try:
             from snid_sage.snid.plotting import get_custom_color_palette
             custom_palette = get_custom_color_palette()
@@ -95,7 +95,7 @@ class PySide6AnalysisPlotter:
         }
     
     def create_subtype_proportions_plot(self):
-        """Create subtype proportions plot in matplotlib with 3 panels like old GUI"""
+        """Create subtype proportions plot in matplotlib with 3 panels."""
         try:
             if not MATPLOTLIB_AVAILABLE:
                 self._show_error("Matplotlib not available for analysis plots")
@@ -106,7 +106,7 @@ class PySide6AnalysisPlotter:
                 self._show_error("No analysis results available.\nPlease run the SNID analysis first.")
                 return
             
-            # Clear figure and create subplots like old GUI (2x2 grid with bottom spanning)
+            # Clear figure and create subplots (2x2 grid with bottom spanning)
             self.matplotlib_figure.clear()
             gs = self.matplotlib_figure.add_gridspec(2, 2, height_ratios=[1, 1], width_ratios=[1, 1])
             
@@ -188,10 +188,10 @@ class PySide6AnalysisPlotter:
             
             ax1.set_title(f'Subtype Distribution\n{cluster_type} Cluster', fontsize=11, fontweight='bold', pad=10)
             
-            # Plot 2: Statistics table (like old GUI)
+            # Plot 2: Statistics table
             self._create_statistics_table(ax2, subtype_counts, subtype_metric_values, subtype_redshifts, cluster_type)
             
-            # Plot 3: metric threshold analysis (like old GUI)
+            # Plot 3: metric threshold analysis
             self.create_threshold_analysis(ax3, subtype_metric_values, color_mapping)
             
             # Tight layout and refresh
@@ -232,7 +232,7 @@ class PySide6AnalysisPlotter:
             for point in plot_data:
                 subtype_data[point['subtype']].append(point)
             
-            # Assign colors using custom palette from old GUI
+            # Assign colors using the custom palette
             color_mapping = self._assign_subtype_colors(subtype_data.keys())
             
             for subtype, points in subtype_data.items():
@@ -265,9 +265,9 @@ class PySide6AnalysisPlotter:
             self._show_error(f"Error creating plot: {str(e)}")
     
     def create_threshold_analysis(self, ax, subtype_metric_values, subtype_colors):
-        """Create metric threshold analysis plot (bottom panel like old GUI)."""
+        """Create metric threshold analysis plot (bottom panel)."""
         try:
-            # Need cluster matches for proportion calculation like old GUI
+            # Need cluster matches for proportion calculation
             if not hasattr(self.app_controller, 'snid_results') or not self.app_controller.snid_results:
                 ax.text(0.5, 0.5, "No analysis results available", 
                        ha='center', va='center', transform=ax.transAxes)
@@ -318,7 +318,7 @@ class PySide6AnalysisPlotter:
             # Get sorted subtypes for consistent processing
             sorted_subtypes = sorted(subtype_metric_values.keys())
             
-            # Calculate proportions at each threshold (like old GUI)
+            # Calculate proportions at each threshold
             subtype_proportions_by_threshold = {subtype: [] for subtype in sorted_subtypes}
             
             for threshold in thresholds:
@@ -372,7 +372,7 @@ class PySide6AnalysisPlotter:
                 ax.set_ylabel('Subtype Proportion', fontsize=10, fontweight='bold')
                 ax.grid(True, alpha=0.3)
                 ax.legend(fontsize=9, loc='upper right')
-                ax.set_ylim(-0.05, 1.05)  # Set y-axis limits like old GUI
+                ax.set_ylim(-0.05, 1.05)  # Set y-axis limits
                 
             else:
                 ax.text(0.5, 0.5, "Insufficient subtype diversity\nfor threshold analysis", 
@@ -480,7 +480,7 @@ class PySide6AnalysisPlotter:
             return None
     
     def _assign_subtype_colors(self, subtypes):
-        """Assign colors to all subtypes, using custom palette from old GUI"""
+        """Assign colors to all subtypes using a custom palette."""
         color_mapping = {}
         color_idx = 0
         
@@ -507,7 +507,7 @@ class PySide6AnalysisPlotter:
                    transform=ax.transAxes, fontsize=10)
             return
         
-        # Create table data similar to old GUI
+        # Create table data
         table_data = []
         headers = ['Subtype', 'Count', '%', 'Avg metric', 'Avg Z']
         

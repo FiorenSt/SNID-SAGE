@@ -8,6 +8,10 @@ All notable changes to SNID SAGE will be documented in this file.
 
 - Cosmological clustering: tightened the 1-D GMM post-processing hard gap split threshold from Δz > 0.025 to Δz > 0.01 (still scaled by (1+z))
 
+### GUI
+
+- Space Debris mini-game: `pygame` dependency removed; game is now implemented in Qt/PySide6
+
 ### Templates
 
 - Removed the built-in template `sn2017ben` ("2017ben") from the official optical and ONIR template banks (wrong redshift)

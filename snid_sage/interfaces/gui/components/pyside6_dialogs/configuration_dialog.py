@@ -3,7 +3,7 @@ SNID SAGE - Configuration Dialog - PySide6 Version
 ================================================
 
 Modern configuration dialog for SNID analysis parameters using PySide6.
-Provides comprehensive parameter configuration matching the old GUI functionality.
+Provides comprehensive parameter configuration.
 """
 
 import PySide6.QtCore as QtCore
@@ -65,7 +65,7 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
     """
     Comprehensive SNID configuration dialog for PySide6.
     
-    Provides all configuration options available in the old GUI including:
+    Provides all configuration options available in the GUI, including:
     - Redshift range parameters
     - Age filtering
     - Template type selection

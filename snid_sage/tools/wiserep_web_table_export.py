@@ -213,8 +213,213 @@ def _choose_ra_dec_columns(columns: List[str]) -> Tuple[Optional[str], Optional[
 def _stem_key_from_pathlike(raw_file: str) -> str:
     norm = raw_file.replace("\\", "/")
     base = norm.split("/")[-1]
-    stem = base.rsplit(".", 1)[0] if "." in base else base
-    return stem.strip().lower()
+    base = base.strip()
+    if not base:
+        return ""
+
+    # IMPORTANT:
+    # Some WISEREP batch exports store `file` WITHOUT a true extension but with
+    # timestamps that contain dots, e.g. "..._00-00-00.000000_P60_...".
+    # A naive "split on last dot" would incorrectly truncate these identifiers.
+    #
+    # Therefore we only strip the last segment when it *looks like* a real file
+    # extension for spectra files.
+    known_exts = {
+        "txt",
+        "dat",
+        "ascii",
+        "asci",
+        "asc",
+        "spec",
+        "flm",
+        "csv",
+        "fits",
+        "fit",
+        "clean",
+    }
+
+    if "." in base:
+        left, right = base.rsplit(".", 1)
+        ext = right.strip().lower()
+        # Treat as extension only if it is a short, clean token we recognize.
+        if ext in known_exts and left.strip():
+            return left.strip().lower()
+
+    # Otherwise, keep the full basename.
+    return base.lower()
+
+def _lookup_spectra_field(
+    filename: object,
+    *,
+    by_stem: Dict[str, str],
+    by_event_id: Dict[str, str],
+) -> str:
+    """
+    Lookup helper for spectra-catalog-derived fields (official/internal/type/etc).
+
+    Primary key: file stem (lowercased, extension stripped).
+    Fallback: event-id extracted from filename stem.
+    """
+    raw = _normalize_string(filename)
+    if not raw:
+        return ""
+
+    stem = _stem_key_from_pathlike(raw)
+    if stem and by_stem:
+        v = by_stem.get(stem, "")
+        if v:
+            return v
+
+    if by_event_id:
+        eid = _extract_event_id(stem)
+        if eid:
+            return by_event_id.get(eid, "") or ""
+
+    return ""
+
+
+def _maybe_float(v: object) -> object:
+    s = _normalize_string(v)
+    if not s:
+        return ""
+    try:
+        return float(s)
+    except Exception:
+        return s
+
+
+def build_spectra_mappings(
+    spectra_path: Path,
+) -> Tuple[
+    Dict[str, str],  # official_by_stem
+    Dict[str, str],  # internal_by_stem
+    Dict[str, str],  # tns_type_by_stem
+    Dict[str, object],  # ra_by_stem
+    Dict[str, object],  # dec_by_stem
+    Dict[str, str],  # official_by_event
+    Dict[str, str],  # internal_by_event
+    Dict[str, str],  # tns_type_by_event
+    Dict[str, object],  # ra_by_event
+    Dict[str, object],  # dec_by_event
+]:
+    """
+    Read WISEREP spectra_*.csv once and build robust lookup maps.
+
+    We store both:
+    - stem -> field
+    - event_id -> field (fallback when file stems don't match between CSVs)
+    """
+    official_by_stem: Dict[str, str] = {}
+    internal_by_stem: Dict[str, str] = {}
+    tns_type_by_stem: Dict[str, str] = {}
+    ra_by_stem: Dict[str, object] = {}
+    dec_by_stem: Dict[str, object] = {}
+
+    official_by_event: Dict[str, str] = {}
+    internal_by_event: Dict[str, str] = {}
+    tns_type_by_event: Dict[str, str] = {}
+    ra_by_event: Dict[str, object] = {}
+    dec_by_event: Dict[str, object] = {}
+
+    if not spectra_path.exists():
+        return (
+            official_by_stem,
+            internal_by_stem,
+            tns_type_by_stem,
+            ra_by_stem,
+            dec_by_stem,
+            official_by_event,
+            internal_by_event,
+            tns_type_by_event,
+            ra_by_event,
+            dec_by_event,
+        )
+
+    spectra_df = pd.read_csv(spectra_path, dtype=str, low_memory=False)
+    if spectra_df.empty:
+        return (
+            official_by_stem,
+            internal_by_stem,
+            tns_type_by_stem,
+            ra_by_stem,
+            dec_by_stem,
+            official_by_event,
+            internal_by_event,
+            tns_type_by_event,
+            ra_by_event,
+            dec_by_event,
+        )
+
+    ascii_col, official_col = _choose_spectra_columns(list(spectra_df.columns))
+    internal_col = _choose_internal_name_column(list(spectra_df.columns))
+    tns_type_col = _choose_spectra_type_column(list(spectra_df.columns))
+    ra_col, dec_col = _choose_ra_dec_columns(list(spectra_df.columns))
+
+    if not ascii_col:
+        return (
+            official_by_stem,
+            internal_by_stem,
+            tns_type_by_stem,
+            ra_by_stem,
+            dec_by_stem,
+            official_by_event,
+            internal_by_event,
+            tns_type_by_event,
+            ra_by_event,
+            dec_by_event,
+        )
+
+    for _, row in spectra_df.iterrows():
+        raw_file = _normalize_string(row.get(ascii_col, ""))
+        if not raw_file:
+            continue
+        stem = _stem_key_from_pathlike(raw_file)
+        if not stem:
+            continue
+
+        official = _normalize_string(row.get(official_col, "")) if official_col else ""
+        internal = _normalize_string(row.get(internal_col, "")) if internal_col else ""
+        tns_type = _normalize_string(row.get(tns_type_col, "")) if tns_type_col else ""
+        ra = _maybe_float(row.get(ra_col, "")) if ra_col else ""
+        dec = _maybe_float(row.get(dec_col, "")) if dec_col else ""
+
+        if official and stem not in official_by_stem:
+            official_by_stem[stem] = official
+        if internal and stem not in internal_by_stem:
+            internal_by_stem[stem] = internal
+        if tns_type and stem not in tns_type_by_stem:
+            tns_type_by_stem[stem] = tns_type
+        if ra != "" and stem not in ra_by_stem:
+            ra_by_stem[stem] = ra
+        if dec != "" and stem not in dec_by_stem:
+            dec_by_stem[stem] = dec
+
+        # Event-id fallback map: prefer explicit names, else filename-derived
+        eid = _extract_event_id(official) or _extract_event_id(internal) or _extract_event_id(stem)
+        if eid:
+            if official and eid not in official_by_event:
+                official_by_event[eid] = official
+            if internal and eid not in internal_by_event:
+                internal_by_event[eid] = internal
+            if tns_type and eid not in tns_type_by_event:
+                tns_type_by_event[eid] = tns_type
+            if ra != "" and eid not in ra_by_event:
+                ra_by_event[eid] = ra
+            if dec != "" and eid not in dec_by_event:
+                dec_by_event[eid] = dec
+
+    return (
+        official_by_stem,
+        internal_by_stem,
+        tns_type_by_stem,
+        ra_by_stem,
+        dec_by_stem,
+        official_by_event,
+        internal_by_event,
+        tns_type_by_event,
+        ra_by_event,
+        dec_by_event,
+    )
 
 
 def build_official_name_mapping(spectra_path: Path) -> Dict[str, str]:
@@ -459,30 +664,116 @@ def export_wiserep_web_table(
     df = df.copy()
     df["__index"] = list(range(len(df)))
 
-    # Build mappings from spectra catalog (if available)
-    official_map: Dict[str, str] = {}
-    internal_map: Dict[str, str] = {}
-    tns_type_map: Dict[str, str] = {}
-    ra_map: Dict[str, object] = {}
-    dec_map: Dict[str, object] = {}
-    if spectra_csv is not None and spectra_csv.exists():
-        official_map = build_official_name_mapping(spectra_csv)
-        internal_map = build_internal_name_mapping(spectra_csv)
-        tns_type_map = build_tns_type_mapping(spectra_csv)
-        ra_map, dec_map = build_ra_dec_mapping(spectra_csv)
+    # Normalize type/subtype into a consistent hierarchical form for the web table.
+    # This makes the table resilient to "flat" exports where `type` is a subtype
+    # (e.g. LRN/LBV/ILRT should appear under GAP when subtype is missing).
+    try:
+        from snid_sage.snid.snidtype import get_main_type_from_template
+    except Exception:  # pragma: no cover - defensive fallback
+        def get_main_type_from_template(x: str) -> str:  # type: ignore[misc]
+            return x
 
-    if "file" in df.columns:
-        df["official_name"] = df["file"].map(lambda x: _lookup_by_file_key(x, official_map))
-        df["internal_name"] = df["file"].map(lambda x: _lookup_by_file_key(x, internal_map))
-        df["tns_type"] = df["file"].map(lambda x: _lookup_by_file_key(x, tns_type_map))
-        df["ra"] = df["file"].map(lambda x: ra_map.get(_stem_key_from_pathlike(_normalize_string(x)), ""))
-        df["dec"] = df["file"].map(lambda x: dec_map.get(_stem_key_from_pathlike(_normalize_string(x)), ""))
-    else:
-        df["official_name"] = ""
-        df["internal_name"] = ""
-        df["tns_type"] = ""
-        df["ra"] = ""
-        df["dec"] = ""
+    if "type" in df.columns:
+        # Ensure subtype column exists so we can repair it if missing
+        if "subtype" not in df.columns:
+            df["subtype"] = ""
+
+        def _fix_one(t_raw: object, st_raw: object) -> Tuple[str, str]:
+            t = _normalize_string(t_raw)
+            st = _normalize_string(st_raw)
+            if not t:
+                return t, st
+            main = _normalize_string(get_main_type_from_template(t))
+            if not main:
+                main = t
+
+            # If `type` looks like a flat subtype and subtype is empty/unknown,
+            # treat the original `type` as subtype and promote main type.
+            if main != t and (not st or st.lower() in {"unknown", "nan", "none", "null"} or st == main):
+                return main, t
+
+            # If `type` is a flat subtype but subtype is present, still promote main type.
+            if main != t:
+                return main, st or t
+
+            return t, st
+
+        fixed = df.apply(lambda r: _fix_one(r.get("type"), r.get("subtype")), axis=1, result_type="expand")
+        df["type"] = fixed[0]
+        df["subtype"] = fixed[1]
+
+    # Build mappings from spectra catalog (if available) - read once, robust keys
+    (
+        official_by_stem,
+        internal_by_stem,
+        tns_type_by_stem,
+        ra_by_stem,
+        dec_by_stem,
+        official_by_event,
+        internal_by_event,
+        tns_type_by_event,
+        ra_by_event,
+        dec_by_event,
+    ) = (
+        build_spectra_mappings(spectra_csv)
+        if (spectra_csv is not None and spectra_csv.exists())
+        else (
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+            {},
+        )
+    )
+
+    # Prefer using `file` for lookup; fallback to `path` if needed.
+    file_ref_col = "file" if "file" in df.columns else ("path" if "path" in df.columns else None)
+
+    # Ensure these columns exist; fill missing values only (do not overwrite populated columns).
+    for col in ("official_name", "internal_name", "tns_type", "ra", "dec"):
+        if col not in df.columns:
+            df[col] = ""
+        # Normalize NaN-like values to empty strings for consistent filling
+        df[col] = df[col].map(_normalize_string)
+
+    if file_ref_col is not None:
+        refs = df[file_ref_col]
+
+        mapped_official = refs.map(
+            lambda x: _lookup_spectra_field(x, by_stem=official_by_stem, by_event_id=official_by_event)
+        )
+        mapped_internal = refs.map(
+            lambda x: _lookup_spectra_field(x, by_stem=internal_by_stem, by_event_id=internal_by_event)
+        )
+        mapped_tns = refs.map(
+            lambda x: _lookup_spectra_field(x, by_stem=tns_type_by_stem, by_event_id=tns_type_by_event)
+        )
+
+        def _lookup_coord(x: object, *, by_stem: Dict[str, object], by_event: Dict[str, object]) -> object:
+            raw = _normalize_string(x)
+            if not raw:
+                return ""
+            stem = _stem_key_from_pathlike(raw)
+            if stem and stem in by_stem:
+                return by_stem.get(stem, "")
+            eid = _extract_event_id(stem)
+            if eid and eid in by_event:
+                return by_event.get(eid, "")
+            return ""
+
+        mapped_ra = refs.map(lambda x: _lookup_coord(x, by_stem=ra_by_stem, by_event=ra_by_event))
+        mapped_dec = refs.map(lambda x: _lookup_coord(x, by_stem=dec_by_stem, by_event=dec_by_event))
+
+        df.loc[df["official_name"] == "", "official_name"] = mapped_official.map(_normalize_string)
+        df.loc[df["internal_name"] == "", "internal_name"] = mapped_internal.map(_normalize_string)
+        df.loc[df["tns_type"] == "", "tns_type"] = mapped_tns.map(_normalize_string)
+        df.loc[df["ra"] == "", "ra"] = mapped_ra
+        df.loc[df["dec"] == "", "dec"] = mapped_dec
 
     # Derive a short "Spectra file name" field from `path` (basename only).
     if "path" in df.columns:

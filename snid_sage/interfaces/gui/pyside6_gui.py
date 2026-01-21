@@ -160,8 +160,42 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
         
         # Initialize analysis menu manager
         self._init_analysis_menu_manager()
+
+        # Ensure ESC never closes result dialogs. ESC is reserved for closing the mini-game only.
+        self._install_escape_key_filter()
         
         _LOGGER.info("PySide6 SNID SAGE GUI initialized successfully")
+
+    def _install_escape_key_filter(self) -> None:
+        """Install a global filter so ESC only closes the game window."""
+        try:
+            app = QtWidgets.QApplication.instance()
+            if app is None:
+                return
+            if getattr(app, "_snid_sage_escape_filter_installed", False):
+                return
+
+            class _EscapeToGameFilter(QtCore.QObject):
+                def eventFilter(self, obj, event):  # type: ignore[override]
+                    try:
+                        if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Escape:
+                            try:
+                                from snid_sage.snid.games import close_game, is_game_running
+                                if is_game_running():
+                                    close_game()
+                            except Exception:
+                                pass
+                            # Always consume ESC so dialogs/results windows don't close unexpectedly.
+                            return True
+                    except Exception:
+                        pass
+                    return False
+
+            app._snid_sage_escape_filter = _EscapeToGameFilter(app)  # type: ignore[attr-defined]
+            app.installEventFilter(app._snid_sage_escape_filter)  # type: ignore[attr-defined]
+            app._snid_sage_escape_filter_installed = True  # type: ignore[attr-defined]
+        except Exception:
+            pass
     
     def _init_controllers_and_managers(self):
         """Initialize controllers and managers"""
@@ -278,7 +312,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
     
     # Parameter parsing methods (required by analysis controller)
     def _parse_template_filter(self):
-        """Parse template filter from parameters (compatibility with old GUI)"""
+        """Parse template filter from parameters (compatibility with earlier configs)."""
         try:
             # For PySide6, template filtering is handled by the configuration dialog
             # This method provides compatibility for the analysis controller
@@ -296,7 +330,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
             return None
     
     def _parse_type_filter(self):
-        """Parse type filter from parameters (compatibility with old GUI)"""
+        """Parse type filter from parameters (compatibility with earlier configs)."""
         try:
             # For PySide6, type filtering is handled by the configuration dialog
             # This method provides compatibility for the analysis controller
@@ -314,7 +348,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
             return None
     
     def _parse_age_range(self):
-        """Parse age range from parameters (compatibility with old GUI)"""
+        """Parse age range from parameters (compatibility with earlier configs)."""
         try:
             # For PySide6, age range is handled by the configuration dialog
             # This method provides compatibility for the analysis controller
@@ -328,7 +362,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
             _LOGGER.error(f"Error parsing age range: {e}")
             return None
     
-    # Safe parameter parsing helper methods (similar to old GUI)
+    # Safe parameter parsing helper methods
     def _safe_float(self, value, default=0.0):
         """Safely parse float value"""
         try:
@@ -998,7 +1032,7 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
             _LOGGER.error(f"Error starting GAMES: {e}")
     
     def start_games_menu(self):
-        """Start the games menu like in the old GUI"""
+        """Start the games menu."""
         try:
             import sys
             # On macOS start immediately; on other platforms show the dialog like before
@@ -1033,30 +1067,14 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
             )
     
     def _start_space_debris_game(self):
-        """Start the Space Debris Cleanup game in a separate process (macOS-safe)."""
+        """Start the Space Debris Cleanup game (Qt-native)."""
         try:
-            import sys
-            import subprocess
-            if sys.platform == 'darwin':
-                # Launch the game in a fresh process, tuning window size and HiDPI for macOS
-                cmd = (
-                    "import os; "
-                    "os.environ.setdefault('SDL_HINT_VIDEO_HIGHDPI','1'); "
-                    "os.environ.setdefault('SDL_VIDEO_HIGHDPI','1'); "
-                    "from snid_sage.snid import games as g; "
-                    "g.DEBRIS_WIDTH=960; g.DEBRIS_HEIGHT=640; "
-                    "g.run_debris_game()"
-                )
-                subprocess.Popen([sys.executable, "-c", cmd], close_fds=True)
-            else:
-                # Original behavior works on Windows/Linux
-                from snid_sage.snid.games import run_debris_game
-                import threading
-                threading.Thread(target=run_debris_game, daemon=True).start()
+            from snid_sage.snid.games import run_debris_game
+            run_debris_game()
             # Update status if available
             if hasattr(self, "status_label"):
                 self.status_label.setText("🎮 Space Debris Cleanup game started!")
-            _LOGGER.info("Space Debris Cleanup game started via subprocess")
+            _LOGGER.info("Space Debris Cleanup game started")
         except Exception as e:
             _LOGGER.error(f"Error starting Space Debris game: {e}")
             QtWidgets.QMessageBox.critical(
@@ -2292,6 +2310,12 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
     def _on_cluster_selection_needed(self, snid_result):
         """Handle cluster selection needed signal from app controller"""
         try:
+            try:
+                from snid_sage.snid.games import is_game_running, set_analysis_complete
+                game_running = bool(is_game_running())
+            except Exception:
+                game_running = False
+
             # Check if auto-selection is enabled for extended quick workflow
             if getattr(self.app_controller, 'auto_select_best_cluster', False):
                 _LOGGER.info("🤖 Auto-selecting best cluster for extended quick workflow")
@@ -2339,13 +2363,35 @@ class PySide6SNIDSageGUI(QtWidgets.QMainWindow):
             
             # Extract cluster candidates from clustering results
             clusters = clustering_results.get('all_candidates', [])
+
+            # If the user is playing the game, show a passive in-game badge so they know
+            # results are ready, while letting the selection dialog open behind the game.
+            if game_running:
+                try:
+                    set_analysis_complete()
+                except Exception:
+                    pass
+
+            # If the analysis progress dialog is open, use it as the parent for the cluster
+            # selection window. This ensures the cluster selection stays above the progress
+            # dialog (but still behind the always-on-top game window while you play).
+            dialog_parent = self
+            try:
+                progress_dialog = getattr(self, "progress_dialog", None)
+                if progress_dialog is not None and hasattr(progress_dialog, "isVisible") and progress_dialog.isVisible():
+                    dialog_parent = progress_dialog
+            except Exception:
+                dialog_parent = self
             
-            # Show cluster selection dialog with callback - it will handle the selection automatically
+            # Show cluster selection dialog. If the game is running, show it non-modally and
+            # without activating so it never steals focus (it will sit behind the always-on-top game).
             show_cluster_selection_dialog(
-                parent=self,
+                parent=dialog_parent,
                 clusters=clusters,
                 snid_result=snid_result,
-                callback=lambda cluster, index: self.app_controller.on_cluster_selected(cluster, index, snid_result)
+                callback=lambda cluster, index: self.app_controller.on_cluster_selected(cluster, index, snid_result),
+                modal=(not game_running),
+                show_without_activating=bool(game_running),
             )
             
         except Exception as e:

@@ -315,8 +315,17 @@ function applyFilters() {
       continue;
 
     if (nameContains) {
-      const name = normalizeStr(row.official_name).toLowerCase();
-      if (!name.includes(nameContains)) continue;
+      // Search across multiple identity fields (IAU name, internal names, filenames)
+      const haystack = [
+        row.official_name,
+        row.internal_name,
+        row.file,
+        row.spectra_file_name,
+      ]
+        .map((v) => normalizeStr(v).toLowerCase())
+        .filter(Boolean)
+        .join(" ");
+      if (!haystack.includes(nameContains)) continue;
     }
 
     out.push(row);

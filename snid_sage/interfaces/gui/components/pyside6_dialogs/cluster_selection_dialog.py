@@ -1025,12 +1025,12 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
             if idx < len(matches) and matches[idx]:
                 match = matches[idx]
                 
-                # Plot input spectrum (matching tkinter)
+                # Plot input spectrum
                 if input_wave is not None and input_flux is not None:
                     ax.plot(input_wave, input_flux, color='#0078d4', linewidth=1.0, alpha=0.8, 
                            label='Input Spectrum', zorder=2)
                 
-                # Plot template match (matching tkinter)
+                # Plot template match
                 try:
                     # Try different ways to access template spectrum
                     t_wave = t_flux = None
@@ -1065,7 +1065,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
                 except Exception as e:
                     _LOGGER.debug(f"Error plotting template match {idx+1}: {e}")
                 
-                # Simplified title showing subtype instead of metric (matching tkinter)
+                # Simplified title showing subtype instead of metric
                 template_name = clean_template_name(match.get('name', 'Unknown'))
                 template_info = match.get('template', {}) if isinstance(match.get('template', {}), dict) else {}
                 subtype = (
@@ -1078,24 +1078,24 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
                 ax.set_title(title_text, fontsize=10, color='#000000', 
                            fontweight='bold', pad=5)
                 
-                # Add legend for first plot only to save space (matching tkinter)
+                # Add legend for first plot only to save space
                 if idx == 0:
                     ax.legend(loc='upper right', fontsize=7, framealpha=0.9)
                     
             else:
-                # No match available (matching tkinter)
+                # No match available
                 ax.text(0.5, 0.5, f'No Match #{idx+1}', transform=ax.transAxes,
                        ha='center', va='center', fontsize=12, 
                        color='#666666', style='italic')
                 ax.set_title(f"#{idx+1}: No Template Available", fontsize=11, 
                            color='#666666')
             
-            # Set labels (only for bottom plot to save space) (matching tkinter)
+            # Set labels (only for bottom plot to save space)
             if idx == 1:  # Always the last (2nd) plot
                 ax.set_xlabel('Wavelength (Å)', fontsize=10, color='#666666')
             ax.set_ylabel('Flux', fontsize=9, color='#666666')
         
-        # Refresh the canvas (matching tkinter)
+        # Refresh the canvas
         try:
             if hasattr(self, 'matches_canvas') and self.matches_canvas:
                 self.matches_canvas.draw()
@@ -1107,7 +1107,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         return self.selected_cluster, self.selected_index
     
     def _confirm_selection(self):
-        """Confirm the current selection and automatically show results (matching old GUI behavior)"""
+        """Confirm the current selection and proceed with results."""
         if self.selected_cluster is None:
             QtWidgets.QMessageBox.warning(
                 self, "No Selection", 
@@ -1122,7 +1122,7 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         # Close the dialog
         self.accept()
         
-        # Automatically show results dialog (matching old GUI behavior)
+        # Results dialogs are shown by the normal application workflow.
         # The callback will handle the analysis completion and result display
         # through the normal workflow, so we don't need to explicitly call show_results here
         # The app controller will automatically show results after cluster selection
@@ -1153,7 +1153,10 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         event.accept()
 
 
-def show_cluster_selection_dialog(parent, clusters, snid_result=None, callback=None):
+_NONMODAL_DIALOGS = []
+
+
+def show_cluster_selection_dialog(parent, clusters, snid_result=None, callback=None, *, modal: bool = True, show_without_activating: bool = False):
     """
     Show the cluster selection dialog.
     
@@ -1162,14 +1165,39 @@ def show_cluster_selection_dialog(parent, clusters, snid_result=None, callback=N
         clusters: List of cluster candidates
         snid_result: Full SNID analysis result (for spectrum access)
         callback: Callback function for cluster selection
+        modal: If True (default), run as a modal dialog via exec().
+               If False, show() non-modally (important to avoid blocking the game window).
+        show_without_activating: If True and modal=False, request the OS/Qt not to activate
+               the dialog when shown (prevents brief focus-steal when the game is on top).
         
     Returns:
         Tuple of (selected_cluster, selected_index) or (None, -1) if cancelled
         Note: If callback is provided, it will be called immediately and this may return None
     """
     dialog = PySide6ClusterSelectionDialog(parent, clusters, snid_result, callback)
+
+    # Non-modal mode (used when the mini-game is running): do not block the Qt event loop.
+    if not modal:
+        try:
+            dialog.setModal(False)
+            dialog.setWindowModality(QtCore.Qt.NonModal)
+            dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
+            if show_without_activating:
+                dialog.setAttribute(QtCore.Qt.WA_ShowWithoutActivating, True)
+        except Exception:
+            pass
+
+        # Keep a reference so it isn't GC'd immediately.
+        _NONMODAL_DIALOGS.append(dialog)
+        try:
+            dialog.destroyed.connect(lambda *_: _NONMODAL_DIALOGS.remove(dialog) if dialog in _NONMODAL_DIALOGS else None)
+        except Exception:
+            pass
+
+        dialog.show()
+        return None, -1
     
-    # Show dialog - callback will be called automatically
+    # Modal mode (default): callback will be called automatically
     result = dialog.exec()
     
     # If no callback was provided, return the result for backward compatibility

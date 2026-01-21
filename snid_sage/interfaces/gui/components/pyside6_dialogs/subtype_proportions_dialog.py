@@ -88,7 +88,7 @@ class PySide6SubtypeProportionsDialog(QtWidgets.QDialog):
         self.figure = None
         self.axes = []  # Multiple subplots
         
-        # Subtype color mapping for consistency - use old GUI custom palette
+        # Subtype color mapping for consistency (custom palette)
         try:
             from snid_sage.snid.plotting import get_custom_color_palette
             custom_palette = get_custom_color_palette()
@@ -534,7 +534,7 @@ Please check your analysis results and try again.
             # Plot 1: Smaller pie chart
             self._create_pie_chart(ax1, subtype_counts)
             
-            # Plot 2: Statistics table (like old GUI)
+            # Plot 2: Statistics table
             self._create_statistics_table(ax2, subtype_counts, subtype_metric_values, subtype_redshifts)
             
             # Plot 3: metric threshold analysis
@@ -610,7 +610,7 @@ Please check your analysis results and try again.
 
     
     def _create_threshold_analysis(self, ax, subtype_metric_values):
-        """Create metric threshold analysis plot showing proportions like old GUI."""
+        """Create metric threshold analysis plot showing proportions."""
         if not subtype_metric_values or not self.cluster_matches:
             ax.text(0.5, 0.5, "No metric data available", 
                    ha='center', va='center', transform=ax.transAxes)
@@ -646,7 +646,7 @@ Please check your analysis results and try again.
             else:
                 subtype_color_map[subtype] = self.custom_palette[i % len(self.custom_palette)]
         
-        # Calculate proportions at each threshold (like old GUI)
+        # Calculate proportions at each threshold
         subtype_proportions_by_threshold = {subtype: [] for subtype in sorted_subtypes}
         
         for threshold in thresholds:
@@ -700,7 +700,7 @@ Please check your analysis results and try again.
             ax.set_ylabel('Subtype Proportion', fontsize=10, fontweight='bold')
             ax.grid(True, alpha=0.3)
             ax.legend(fontsize=9, loc='upper right')
-            ax.set_ylim(-0.05, 1.05)  # Set y-axis limits like old GUI
+            ax.set_ylim(-0.05, 1.05)  # Set y-axis limits
             
         else:
             ax.text(0.5, 0.5, "Insufficient subtype diversity\nfor threshold analysis", 
@@ -718,7 +718,7 @@ Please check your analysis results and try again.
                    transform=ax.transAxes, fontsize=10)
             return
         
-        # Create table data similar to old GUI
+        # Create table data
         table_data = []
         headers = ['Subtype', 'Count', '%', 'Avg metric', 'Avg Z']
         

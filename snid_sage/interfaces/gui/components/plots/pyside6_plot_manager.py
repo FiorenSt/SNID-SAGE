@@ -802,7 +802,7 @@ class PySide6PlotManager:
             traceback.print_exc()
     
     def plot_spectrum_with_template_overlay(self, view_type='flux'):
-        """Plot spectrum with template overlay (similar to old GUI)"""
+        """Plot spectrum with template overlay."""
         try:
             _LOGGER.info("🎯 Plotting spectrum with template overlay...")
             

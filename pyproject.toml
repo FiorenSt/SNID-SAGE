@@ -55,9 +55,6 @@ dependencies = [
     "PySide6>=6.7,<6.9.1",  # 6.9.0 works; allow slightly lower but block 6.9.1+
     "pyqtgraph>=0.13.0",    # High-performance plotting for PySide6
 
-    # Games and multimedia support – required for the built-in mini-games and sound handling
-    "pygame>=2.3.0",
-    
     # Version checking
     "packaging>=20.0",
     # Platform-appropriate user data/cache directories for templates
