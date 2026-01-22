@@ -44,7 +44,7 @@ _LOG = get_logger("snid_sage.shared.templates_manager")
 
 # Bump this when you intentionally change the template bank contents on GitHub.
 # This is *independent* from the JSON index's own "version" field.
-TEMPLATE_BANK_VERSION: str = "2.1"
+TEMPLATE_BANK_VERSION: str = "2.2"
 
 # Files that make up the built-in template bank. Update this list when
 # templates are added/removed/renamed in the GitHub repo.

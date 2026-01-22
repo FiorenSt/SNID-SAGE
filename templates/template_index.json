@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1751831068.0201683,
-  "template_count": 642,
+  "template_count": 643,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -2635,6 +2635,13 @@
       "epochs": 3,
       "storage_file": "templates_GAP.hdf5"
     },
+    "AT2015dl": {
+      "type": "GAP",
+      "subtype": "LRN",
+      "redshift": 0.000804,
+      "epochs": 10,
+      "storage_file": "templates_GAP.hdf5"
+    },
     "lbv1999bw": {
       "type": "GAP",
       "subtype": "LBV",
@@ -4935,12 +4942,13 @@
       ]
     },
     "GAP": {
-      "count": 9,
+      "count": 10,
       "storage_file": "templates_GAP.hdf5",
       "template_names": [
         "PS15dbp",
         "PSNJ15213475",
         "at2014ej",
+        "AT2015dl",
         "lbv1999bw",
         "lbv2001ac",
         "lbv2003hy",
