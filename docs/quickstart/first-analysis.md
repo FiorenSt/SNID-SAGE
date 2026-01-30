@@ -25,7 +25,7 @@ You'll need a supernova spectrum to follow along. We recommend SN 2018bfi:
 snid-sage
 ```
 
-![Initial Screen](../images/0.InitialScreen.png)
+![SNID SAGE welcome screen with empty plot area and Load Spectrum button highlighted](../images/0.InitialScreen.png)
 
 The main window opens with a clean interface ready for analysis. The toolbar at the top provides quick access to essential functions.
 
@@ -36,7 +36,7 @@ The main window opens with a clean interface ready for analysis. The toolbar at 
 4. **Alternative**: You can also drag and drop the spectrum file directly onto the plot area
 5. The spectrum appears in the plot area
 
-![Loaded Spectrum](../images/1.LoadedSpectrum.png)
+![Loaded SN2018bif spectrum showing flux vs wavelength from 3500 to 9500 Angstroms](../images/1.LoadedSpectrum.png)
 
 Once loaded, your spectrum appears in the main plot area. The interface shows:
 - **Raw spectrum** in the main plot
@@ -49,11 +49,11 @@ Once loaded, your spectrum appears in the main plot area. The interface shows:
 3. **Left-click** for **"Advanced Manual Preprocessing"** (custom settings)
 4. Review the cleaned spectrum
 
-![Quick Preprocessing - Flattened](../images/2.QuickPreprocessing_Flattened.png)
+![Preprocessed spectrum in flattened view showing continuum-removed absorption and emission features](../images/2.QuickPreprocessing_Flattened.png)
 
 The flattened view shows the continuum-removed spectrum, making absorption and emission features more prominent. This is the direct output of preprocessing.
 
-![Quick Preprocessing - Flux](../images/2.QuickPreprocessing_Flux.png)
+![Preprocessed spectrum in flux view showing cleaned spectrum ready for analysis](../images/2.QuickPreprocessing_Flux.png)
 
 The preprocessing dialog shows your spectrum with preprocessing options:
 - **Filtering**: Remove noise and artifacts
@@ -69,8 +69,8 @@ You can switch to the flux view by clicking the **Flux** button in the top-left 
 3. **Left-click** for **specific analysis settings**
 4. Wait 10-30 seconds for analysis to complete
 
-![Analysis Progress 1](../images/3.AnalysisProgress1.png)
-![Analysis Progress 2](../images/3.AnalysisProgress2.png)
+![Analysis progress dialog at 36% showing template loading phase](../images/3.AnalysisProgress1.png)
+![Analysis complete dialog showing all template types processed with checkmarks](../images/3.AnalysisProgress2.png)
 
 The analysis dialog shows:
 - **Progress bar**: Current analysis stage
@@ -82,7 +82,7 @@ The analysis dialog shows:
 ### Step 5: Choose Your Cluster (If Available)
 If SNID SAGE finds multiple viable clusters, a **Cluster Selection Dialog** will appear:
 
-![Clustering](../images/4.Clustering.png)
+![GMM cluster selection dialog with 3D redshift-type-correlation plot and top template matches](../images/4.Clustering.png)
 
 What you'll see:
 - **3D Interactive Plot**: Shows all clusters in redshift vs type vs correlation space
@@ -107,7 +107,7 @@ Tips:
 
 The analysis provides a clear classification:
 
-![Match Template Flux](../images/5.MatchTemplateFlux.png)
+![Classification result showing Type II IIP match with input spectrum and template sn1999em overlay](../images/5.MatchTemplateFlux.png)
 
 This view shows your spectrum overlaid with the best-matching template:
 - **Your spectrum** (blue line)
@@ -115,7 +115,7 @@ This view shows your spectrum overlaid with the best-matching template:
 - **Match quality** indicators
 - **Redshift information**
 
-![Match Summary](../images/6.MatchSummary.png)
+![Analysis results summary showing Type II IIP classification with ranked template matches and scores](../images/6.MatchSummary.png)
 
 The summary provides:
 - **Top matches** with scores
@@ -138,7 +138,7 @@ A ranked list of best matching templates showing:
 - HσLAP-CCC score (final metric)
 - Individual redshift and age estimates
 
-![Redshift vs Age](../images/7.RedshiftVsAge.png)
+![Scatter plot of redshift vs age distribution colored by subtype showing IIP, IIn, IIb clusters](../images/7.RedshiftVsAge.png)
 
 This plot shows:
 - **Redshift distribution** across templates
@@ -146,7 +146,7 @@ This plot shows:
 - **Confidence regions**
 - **Best-fit parameters**
 
-![Subtypes](../images/8.Subtypes.png)
+![Subtype distribution pie chart showing IIP dominant at 58% with proportion vs threshold plot](../images/8.Subtypes.png)
 
 The subtype analysis reveals:
 - **Detailed classifications**

@@ -2,42 +2,18 @@
 
 This guide provides instructions for installing SNID SAGE on your system.
 
-## System Requirements
+## Requirements
 
-### Minimum Requirements
-- **Python**: 3.8 or higher
-- **RAM**: 4GB (8GB recommended)
-- **Storage**: 2GB free space
-- **OS**: Windows 10+, macOS 10.14+, or Linux (Ubuntu 18.04+)
-
-### Recommended Requirements
-- **Python**: 3.9 or 3.10
-- **RAM**: 16GB for optimal performance
-- **Storage**: 5GB+ for templates and results
-- **GPU**: CUDA-compatible for local LLM support (optional)
+- **Python**: 3.8+ (3.10 recommended)
+- **OS**: Windows, macOS, or Linux
 
 ## Quick Installation
-
-Install the latest stable release from PyPI:
 
 ```bash
 pip install snid-sage
 ```
 
-On first use of any feature that needs the built-in template library (CLI or GUI),
-SNID SAGE will automatically download the templates from GitHub into a local cache
-directory. By default this is a per-user data folder (for example on Windows:
-`%LOCALAPPDATA%\\snid-sage\\templates`).
-
-To override the location (for example to keep templates in the current working
-directory), set the `SNID_SAGE_TEMPLATE_DIR` environment variable before running:
-
-```powershell
-$env:SNID_SAGE_TEMPLATE_DIR="."
-sage identify spectrum.dat --output-dir results
-```
-
-Once downloaded, the templates are reused across runs and you can work offline.
+On first run, SNID SAGE downloads templates (~50 MB) into a `SNID-SAGE/templates` folder in your current directory. Once downloaded, templates are reused across runs.
 
 ### Virtual Environment Setup
 
@@ -184,6 +160,25 @@ sage templates list
 pip install --upgrade snid-sage
 ```
 
+**Windows: "Enterprise signing level requirements" / blocked snid-sage.exe**
+
+If Windows Smart App Control (SAC) or WDAC blocks `snid-sage.exe`:
+```powershell
+# Option 1: Run the module directly (bypasses blocked exe)
+python -m snid_sage.interfaces.gui.launcher
+
+# Option 2: Reinstall the package
+pip uninstall snid-sage
+pip install snid-sage
+```
+
+To make `snid-sage` work permanently, add this to your PowerShell profile (`notepad $PROFILE`):
+```powershell
+function snid-sage { python -m snid_sage.interfaces.gui.launcher @args }
+```
+
+**Tip**: If using Microsoft Store Python, consider switching to [python.org](https://python.org) Python to avoid Store/policy issues.
+
 ### Error Messages
 
 | Error | Solution |
@@ -192,6 +187,7 @@ pip install --upgrade snid-sage
 | `ImportError: DLL load failed` | Update Visual C++ Redistributable (Windows) |
 | `No module named 'PySide6'` | Install PySide6: `pip install PySide6` |
 | `Permission denied` | Use virtual environment or `pip install --user` |
+| `did not meet Enterprise signing level` | See "Windows: Enterprise signing" section above |
 
 ## Next Steps
 

@@ -1,6 +1,4 @@
-## Templates GUI
-
-Note: This page is a work in progress.
+## Templates Manager
 
 Interactive manager for exploring, creating, and organizing templates.
 
@@ -18,6 +16,7 @@ For step-by-step workflows and expanded CLI usage, see the [CLI Reference](../cl
 - The browser lists templates using a merged index:
   - Base index: the managed built-in bank (lazy-downloaded on first use)
   - User index: `<User Templates Folder>/template_index.user.json`
+- The `"version"` field inside `template_index*.json` describes the **index format**, not the bank contents version.
 - If a per-type user HDF5 exists (e.g., `<User Templates Folder>/templates_Ia.user.hdf5`), entries for that type come exclusively from the user file; base entries for the same type are hidden. This prevents duplicates in the UI and reflects user edits immediately.
 
 ### User Templates folder (prompt-once + remember)
