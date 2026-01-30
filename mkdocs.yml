@@ -86,7 +86,6 @@ nav:
     - Settings & Config: gui/settings-configuration.md
     - Templates Manager: gui/templates-manager.md
     - Lines Manager: gui/lines-manager.md
-    - AI Assistant: gui/ai-assistant.md
 
   - CLI:
     - Command Reference: cli/command-reference.md
@@ -97,8 +96,7 @@ nav:
     - Custom Templates: data/custom-templates.md
 
   - AI:
-    - Overview: ai/overview.md
-    - OpenRouter Setup: ai/openrouter-setup.md
+    - AI Assistant: ai/overview.md
 
   - Reference:
     - Supported Formats: reference/supported-formats.md
