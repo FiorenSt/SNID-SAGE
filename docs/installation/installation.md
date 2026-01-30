@@ -202,6 +202,6 @@ pip install --upgrade snid-sage
 
 ## Support
 
-- **Documentation**: [SNID SAGE Docs](https://snid-sage.readthedocs.io/)
+- **Documentation**: [SNID SAGE Docs](https://fiorenst.github.io/SNID-SAGE/)
 - **GitHub Issues**: Report bugs and request features
 - **Community**: Join discussions on GitHub 

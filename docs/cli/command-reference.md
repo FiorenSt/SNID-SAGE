@@ -22,15 +22,9 @@ Files can have header rows; CSVs with headers (e.g., wave,flux,flux_err) are sup
 
 ## Installation
 
-### Install SNID SAGE CLI
-```bash
+```powershell
 pip install snid-sage
-```
-
-### Verify Installation
-```bash
 sage --version
-sage --help
 ```
 
 ## Core Commands
@@ -105,37 +99,31 @@ sage batch --list-csv input.csv --path-column "Spectrum Path" --redshift-column 
 | Option | Description |
 |---|---|
 | `--output-dir DIR` | Output directory for results |
-| `--type-filter TYPE...` | Filter templates by type |
-| `--template-filter NAME...` | Restrict to specific templates |
-| `--zmin FLOAT` | Min redshift (default: -0.01) |
-| `--zmax FLOAT` | Max redshift (default: 1.0) |
+| `--zmin FLOAT` / `--zmax FLOAT` | Redshift range (default: -0.01 to 1.0) |
 | `--age-min FLOAT` / `--age-max FLOAT` | Template age bounds (days) |
 | `--forced-redshift FLOAT` | Force a fixed redshift for all spectra |
-| `--profile {optical,onir}` | Analysis profile (default: config/optical) |
-| `--list-csv FILE` | CSV list of spectra (columns: path[, redshift]) |
-| `--path-column NAME` | Column for paths in `--list-csv` (default: path) |
-| `--redshift-column NAME` | Column for redshift in `--list-csv` (default: redshift) |
+| `--profile {optical,onir}` | Analysis profile (default: optical) |
 | `--lapmin FLOAT` | Minimum overlap fraction (default: 0.3) |
 | `--hsigma-lap-ccc-threshold FLOAT` | HσLAP-CCC clustering threshold (default: 1.5) |
 | `--type-filter TYPE...` | Restrict templates to these types |
 | `--template-filter NAME...` | Only use specified template names |
 | `--exclude-templates NAME...` | Exclude specified template names |
+| `--list-csv FILE` | CSV list of spectra (columns: path[, redshift]) |
+| `--path-column NAME` | Column for paths in `--list-csv` (default: path) |
+| `--redshift-column NAME` | Column for redshift in `--list-csv` (default: redshift) |
 | `--workers INT` | Parallel workers: 0=sequential, -1=all cores, N=fixed |
-| `--no-plots` | Do not generate plots |
-| `--savgol-window INT` | Savitzky–Golay window (0 disables) |
-| `--savgol-order INT` | Savitzky–Golay polynomial order |
-| `--aband-remove` | Remove telluric O2 A-band (7550–7700 Å) |
-| `--skyclip` | Clip sky emission lines (±emwidth Å) |
-| `--emclip` | Auto host emission clipping using per-entry/forced z when provided (available for identify and batch commands; does not force analysis redshift) |
-| `--emclip-z FLOAT` | Fixed redshift for emission clipping (-1 disables; masking only, does not force analysis redshift) |
+| `--savgol-window INT` / `--savgol-order INT` | Savitzky–Golay smoothing |
+| `--aband-remove` | Remove telluric O2 A-band |
+| `--skyclip` | Clip sky emission lines |
+| `--emclip` | Auto host emission clipping using per-entry/forced z |
+| `--emclip-z FLOAT` | Fixed redshift for emission clipping (-1 disables) |
 | `--emwidth FLOAT` | Emission/sky clipping half-width in Å (default: 40) |
-| `--wavelength-masks WMIN:WMAX ...` | Additional mask ranges (e.g., 6550:6600) |
+| `--wavelength-masks WMIN:WMAX ...` | Additional mask ranges |
 | `--apodize-percent FLOAT` | Apodization percent (default: 10) |
 | `--minimal` / `--complete` | Output modes |
 | `--brief` / `--full` | Console verbosity modes |
-| `--no-progress` | Disable progress output |
-| `--stop-on-error` | Stop processing on first error |
-| `--verbose` | Verbose output |
+| `--no-plots` / `--no-progress` | Disable plots/progress output |
+| `--stop-on-error` / `--verbose` | Error handling and verbosity |
 
 Outputs: per-spectrum result files; summary includes a `zFixed` column indicating whether a fixed redshift was used for that spectrum.
 

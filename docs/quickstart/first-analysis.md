@@ -21,7 +21,7 @@ You'll need a supernova spectrum to follow along. We recommend SN 2018bfi:
 ## Step-by-Step Analysis
 
 ### Step 1: Launch SNID SAGE
-```bash
+```powershell
 snid-sage
 ```
 
@@ -43,10 +43,7 @@ Once loaded, your spectrum appears in the main plot area. The interface shows:
 - **File information** in the status bar
 - **Available actions** become enabled
 
-### Step 3: Set User Templates Folder (first use)
-If prompted in the Template Manager, choose your User Templates Folder (you can adopt an existing one or pick a new directory). This is required to create and manage your own templates.
-
-### Step 4: Preprocess Your Data
+### Step 3: Preprocess Your Data
 1. Click **"Preprocessing"** button (amber - now enabled)
 2. **Right-click** for **"Quick SNID Preprocessing"** (automatic)
 3. **Left-click** for **"Advanced Manual Preprocessing"** (custom settings)
@@ -66,7 +63,7 @@ The preprocessing dialog shows your spectrum with preprocessing options:
 
 You can switch to the flux view by clicking the **Flux** button in the top-left corner.
 
-### Step 5: Run Analysis
+### Step 4: Run Analysis
 1. Click **"SNID Analysis"** button (magenta - now enabled)
 2. **Right-click** for **default quick analysis**
 3. **Left-click** for **specific analysis settings**
@@ -82,7 +79,7 @@ The analysis dialog shows:
 
 5. Results appear automatically
 
-### Step 6: Choose Your Cluster (If Available)
+### Step 5: Choose Your Cluster (If Available)
 If SNID SAGE finds multiple viable clusters, a **Cluster Selection Dialog** will appear:
 
 ![Clustering](../images/4.Clustering.png)
@@ -174,91 +171,28 @@ The subtype analysis reveals:
 
 ## CLI Analysis (Alternative Method)
 
-You can also analyze the same spectrum using the command line interface, which provides the same functionality as the GUI with default settings.
+Prefer the command line? The CLI produces identical results with a single command:
 
-### Basic CLI Command
-```bash
-# Analyze the same spectrum using CLI
-sage data/SN2018bif.csv --output-dir results/
+```powershell
+sage data\SN2018bif.csv --output-dir results\
 ```
 
-### What This Does
-The CLI command performs the **exact same steps** as the GUI:
-1. **Automatic preprocessing** - Same default settings as GUI
-2. **Template matching** - Uses all available templates
-3. **GMM clustering** - Automatic cluster selection (no user dialog)
-4. **Results generation** - Same output format as GUI
+Common options:
 
-### CLI Output
-The command produces the same comprehensive results:
-
-Final classification:
-- **Type**: Main supernova type (e.g., II, Ia, Ib, Ic)
-- **Quality**: High/Medium/Low confidence level
-- **Subtype**: Detailed classification (e.g., IIn, IIP, norm)
-
-Measurements:
-- **Redshift**: Determined redshift with uncertainty
-- **Age**: Days from maximum light with uncertainty
-
-Match quality:
-- HσLAP-CCC scores and individual estimates
-
-Template matches:
-- Ranked list of best matching templates
-- HσLAP-CCC scores and individual estimates
-
-### CLI Options
-
-**Processing Modes:**
-```bash
-# Minimal mode - main result file only
-sage data/SN2018bif.csv --output-dir results/ --minimal
-
-# Complete mode - all outputs + plots
-sage data/SN2018bif.csv --output-dir results/ --complete
-
-# Default mode - balanced outputs 
-sage data/SN2018bif.csv --output-dir results/
+```powershell
+sage data\SN2018bif.csv --output-dir results\ --complete      # All outputs + plots
+sage data\SN2018bif.csv --output-dir results\ --minimal       # Summary only
+sage data\SN2018bif.csv --output-dir results\ --forced-redshift 0.02435
+sage data\SN2018bif.csv --output-dir results\ --type-filter Ia II
 ```
 
-**Preprocessing Options:**
-```bash
-# With smoothing
-sage data/SN2018bif.csv --output-dir results/ --savgol-window 11 --savgol-order 3
+| GUI | CLI |
+|-----|-----|
+| Interactive cluster selection | Automatic selection |
+| Step-by-step workflow | Single command |
+| Display + files | Files only |
 
-# Remove telluric features
-sage data/SN2018bif.csv --output-dir results/ --aband-remove --skyclip
-```
-
-**Analysis Options:**
-```bash
-# Custom redshift range
-sage data/SN2018bif.csv --output-dir results/ --zmin 0.0 --zmax 0.1
-
-# Force specific redshift
-sage data/SN2018bif.csv --output-dir results/ --forced-redshift 0.02435
-
-# Filter by type
-sage data/SN2018bif.csv --output-dir results/ --type-filter Ia II
-```
-
-### Key Differences from GUI
-
-| Feature | GUI | CLI |
-|---------|-----|-----|
-| **Cluster Selection** | Interactive dialog | Automatic selection |
-| **Progress Display** | Real-time progress bar | Progress bar + status |
-| **Visualization** | Interactive plots | Saved plot files |
-| **User Control** | Step-by-step workflow | Single command |
-| **Output** | Display + files | Files only |
-
-### CLI Advantages
-- **Automation** - Perfect for scripts and batch processing
-- **Consistency** - Same results every time
-- **Speed** - No interactive delays
-- **Server-friendly** - No GUI required
-- **Auto-discovery** - Automatically finds templates directory
+See the [CLI Reference](../cli/command-reference.md) for all options.
 
 ## Next Steps
 

@@ -40,13 +40,19 @@ Open via: Preprocessing → Manual wizard
 ### CLI parity
 GUI options map to `sage` flags:
 
-```bash
-sage spectrum.dat --output-dir results/ ; \
-  sage spectrum.dat --savgol-window 11 --savgol-order 3 ; \
-  sage spectrum.dat --aband-remove --skyclip ; \
-  sage spectrum.dat --emclip-z 0.02 --emwidth 40 ; \
-  # In batch, auto emission clipping uses per-row z when present
-  sage batch --list-csv list.csv --emclip --output-dir results/ ; \
-  sage spectrum.dat --wavelength-masks 6550:6600 7600:7700
+```powershell
+sage spectrum.dat --output-dir results\
+sage spectrum.dat --savgol-window 11 --savgol-order 3
+sage spectrum.dat --aband-remove --skyclip
+sage spectrum.dat --emclip-z 0.02 --emwidth 40
+# In batch, auto emission clipping uses per-row z when present
+sage batch --list-csv list.csv --emclip --output-dir results\
+sage spectrum.dat --wavelength-masks 6550:6600 7600:7700
 ```
+
+## See Also
+
+- [CLI Command Reference](../cli/command-reference.md) - All preprocessing CLI flags
+- [Parameters Reference](../reference/parameters.md) - Complete parameter documentation
+- [First Analysis Guide](../quickstart/first-analysis.md) - Step-by-step workflow
 

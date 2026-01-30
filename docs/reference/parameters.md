@@ -18,7 +18,6 @@ Unified reference of configurable parameters across GUI and CLI.
 | template_filter | list[str] or null | None | `--template-filter` | Only use specified template names |
 | exclude_templates | list[str] or null | None | `--exclude-templates` | Exclude specified template names |
 | profile | str | optical | `--profile` | Analysis profile selection (optical or onir) |
-| wavelength_tolerance | float | 10.0 | — | Matching tolerance in Å for config-based workflows |
 | emclip | bool | False | `--emclip` (CLI) | Auto host emission clipping using per-entry redshift (skips if none) |
 | emclip_z | float | -1.0 | `--emclip-z` | Redshift for emission line clipping (-1 disables; masking only, does not force analysis redshift) |
 | emwidth | float | 40.0 | `--emwidth` | Emission line clipping width (Å) |
@@ -95,14 +94,20 @@ Unified reference of configurable parameters across GUI and CLI.
 | config_dir | str | platform config path | — | Configuration directory |
 
 ### CLI mappings (identify)
-```bash
-sage spectrum.dat --output-dir results/ ; \
-  sage spectrum.dat --zmin 0.0 --zmax 0.1 ; \
-  sage spectrum.dat --lapmin 0.3 ; \
-  sage spectrum.dat --age-min -5 --age-max 30 ; \
-  sage spectrum.dat --savgol-window 11 --savgol-order 3 ; \
-  sage spectrum.dat --aband-remove --skyclip ; \
-  sage spectrum.dat --wavelength-masks 6550:6600 7600:7700 ; \
-  sage spectrum.dat --type-filter Ia Ib Ic
+```powershell
+sage spectrum.dat --output-dir results\
+sage spectrum.dat --zmin 0.0 --zmax 0.1
+sage spectrum.dat --lapmin 0.3
+sage spectrum.dat --age-min -5 --age-max 30
+sage spectrum.dat --savgol-window 11 --savgol-order 3
+sage spectrum.dat --aband-remove --skyclip
+sage spectrum.dat --wavelength-masks 6550:6600 7600:7700
+sage spectrum.dat --type-filter Ia Ib Ic
 ```
+
+## See Also
+
+- [CLI Command Reference](../cli/command-reference.md) - Complete CLI documentation
+- [Batch Processing](../cli/batch-processing.md) - Processing multiple spectra
+- [GUI Settings](../gui/settings-configuration.md) - GUI parameter configuration
 

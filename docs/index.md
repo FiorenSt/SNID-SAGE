@@ -75,4 +75,4 @@ Hands-on walkthroughs covering basic to advanced use-cases.
 
 ---
 
-*Last updated: January 2025 – covers SNID SAGE v0.4.0 (PySide6/Qt GUI).* 
+*Last updated: January 2026 – covers SNID SAGE v1.1.1 (PySide6/Qt GUI).* 

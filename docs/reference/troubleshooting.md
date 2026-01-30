@@ -5,24 +5,24 @@ This guide helps you diagnose and fix common issues with SNID SAGE installation,
 ## Emergency Quick Fixes
 
 ### GUI Won't Start
-```bash
+```powershell
 # Try CLI instead
 sage --version
 ```
 
 ### Analysis Fails Immediately
-```bash
+```powershell
 # Test with sample data
-sage data/SN2018bif.fits --output-dir test_results/
+sage data\SN2018bif.fits --output-dir test_results\
 ```
 
 ### No Results/Poor Classification
-```bash
+```powershell
 # Check input file format
-head -10 your_spectrum.dat
+Get-Content your_spectrum.dat -Head 10
 
 # Try with preprocessing
-sage spectrum.dat --output-dir results/ --savgol-window 11
+sage spectrum.dat --output-dir results\ --savgol-window 11
 ```
 
 ---
@@ -112,14 +112,15 @@ Error: No data found in file
 ```
 
 #### Diagnosis:
-```bash
-# Check file format
-head -20 your_spectrum.dat
-file your_spectrum.dat  # Check file type
+```powershell
+# Check file format (first 20 lines)
+Get-Content your_spectrum.dat -Head 20
 
-# Look for common issues
-wc -l your_spectrum.dat  # Line count
-grep -c "^#" your_spectrum.dat  # Comment lines
+# Check line count
+(Get-Content your_spectrum.dat).Count
+
+# Count comment lines
+(Get-Content your_spectrum.dat | Where-Object { $_ -match "^#" }).Count
 ```
 
 #### Solutions:
@@ -133,12 +134,13 @@ np.savetxt('spectrum_fixed.dat', data, fmt='%.6f %.6e')
 ```
 
 **2. Handle Special Characters**
-```bash
-# Check encoding
-file -bi your_spectrum.dat
-
-# Convert to UTF-8
-iconv -f ISO-8859-1 -t UTF-8 spectrum.dat > spectrum_utf8.dat
+```python
+# Check and convert encoding
+with open('spectrum.dat', 'rb') as f:
+    raw = f.read()
+# Re-encode to UTF-8
+with open('spectrum_utf8.dat', 'w', encoding='utf-8') as f:
+    f.write(raw.decode('iso-8859-1'))
 ```
 
 **3. FITS File Issues**

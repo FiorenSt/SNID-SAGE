@@ -54,9 +54,9 @@ sage spectrum.fits --band 1 --output-dir results/
 ### Expected Data Structure
 ```
 # Optional header line (auto-detected)
-# Wavelength  Flux  [Error]
-4000.0       1.234  0.123
-4001.0       1.245  0.124
+# Wavelength  Flux
+4000.0       1.234
+4001.0       1.245
 ...
 ```
 
@@ -64,7 +64,6 @@ sage spectrum.fits --band 1 --output-dir results/
 The loader recognizes these header keywords:
 - **Wavelength**: `WAVE`, `WAVELENGTH`, `LAMBDA`, `LAM`, `WL`, `ANGSTROM`, `ANG`
 - **Flux**: `FLUX`, `FNU`, `FLAM`, `COUNTS`, `SPEC`, `SPECTRUM`, `INTENSITY`
-- **Error**: `FLUX_ERR`, `ERROR`, `ERR`, `UNCERTAINTY`
 
 ### Example Usage
 ```powershell
@@ -86,7 +85,6 @@ sage spectrum.flm --output-dir results/
 - **Consistent format**: Same number of columns per row
 
 ### Optional Features
-- **Error column**: Third column for flux uncertainties
 - **Header information**: Descriptive header lines
 - **Comments**: Lines starting with `#` are ignored
 
@@ -175,7 +173,6 @@ np.savetxt('spectrum.dat', data, fmt='%.6f %.6e')
 ### Data Quality
 - **Clean data**: Remove non-numeric lines
 - **Consistent units**: Ensure wavelength in Angstroms
-- **Error estimates**: Include flux uncertainties when available
 - **Metadata**: Add descriptive headers
 
 ### File Organization

@@ -79,26 +79,30 @@ nav:
     - Installation: installation/installation.md
     - First Analysis: quickstart/first-analysis.md
 
-  - Using SNID SAGE:
-    - GUI Overview: gui/interface-overview.md
+  - GUI:
+    - Overview: gui/interface-overview.md
     - Preprocessing: gui/preprocessing.md
     - Results & Plots: gui/results-and-plots.md
     - Settings & Config: gui/settings-configuration.md
     - Templates Manager: gui/templates-manager.md
     - Lines Manager: gui/lines-manager.md
-    - AI Assistant (GUI): gui/ai-assistant.md
-    - CLI Reference: cli/command-reference.md
+    - AI Assistant: gui/ai-assistant.md
+
+  - CLI:
+    - Command Reference: cli/command-reference.md
     - Batch Processing: cli/batch-processing.md
-    - AI Features: ai/overview.md
+
+  - AI:
+    - Overview: ai/overview.md
     - OpenRouter Setup: ai/openrouter-setup.md
 
   - Data & Templates:
-    - Supported Formats: reference/supported-formats.md
     - Data Preparation: data/data-preparation.md
     - Template Library: data/template-library.md
     - Custom Templates: data/custom-templates.md
 
   - Reference:
+    - Supported Formats: reference/supported-formats.md
     - Parameters: reference/parameters.md
     - Configuration Guide: reference/configuration-guide.md
     - API Reference: reference/api-reference.md
