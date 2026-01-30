@@ -32,3 +32,7 @@ Spin-off GUI to manage spectral lines and user presets, with a light spectrum pr
 - Keep names consistent; include notes when adding new lines
 - Use presets to streamline repeated analysis tasks
 
+## See Also
+
+- [Preprocessing Guide](preprocessing.md) - Spectrum preparation
+- [Interface Overview](interface-overview.md) - Main GUI features

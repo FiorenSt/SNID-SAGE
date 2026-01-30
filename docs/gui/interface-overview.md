@@ -84,11 +84,8 @@ GUI: PySide6 (Qt). Plotting: pyqtgraph.
 
 See [Troubleshooting](../reference/troubleshooting.md).
 
-## Next Steps
+## See Also
 
-- ??? tip "Common parameters"
-    Frequent controls and defaults are summarized in the [Parameters Reference](../reference/parameters.md). Use this as a quick cheat sheet while exploring the GUI.
-
-- [First Analysis](../quickstart/first-analysis.md) - Your first analysis
-- [CLI Reference](../cli/command-reference.md) - Deep dive into tools
-- [CLI Reference](../cli/command-reference.md) - Command-line alternative 
+- [First Analysis](../quickstart/first-analysis.md) - Step-by-step tutorial
+- [Parameters Reference](../reference/parameters.md) - All settings and defaults
+- [CLI Reference](../cli/command-reference.md) - Command-line alternative

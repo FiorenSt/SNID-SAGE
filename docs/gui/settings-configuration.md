@@ -28,5 +28,7 @@ Notes:
 ### Profiles
 - Save, load, and delete named profiles
 
- 
+## See Also
 
+- [Configuration Guide](../reference/configuration-guide.md) - Full settings reference
+- [Parameters Reference](../reference/parameters.md) - Analysis parameter details

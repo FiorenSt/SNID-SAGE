@@ -1,78 +1,65 @@
 # SNID SAGE Documentation
 
-Welcome to the **SNID SAGE** documentation – a complete guide to Supernova spectral identification and analysis.
-
-## Quick Links
- 
-!!! tip "New to SNID SAGE? Start here"
-    1) [Installation](installation/installation.md) → 2) [First Analysis](quickstart/first-analysis.md) → 3) [GUI Overview](gui/interface-overview.md)
- 
-!!! info "Power users"
-    Prefer scripting and automation? Jump to the [CLI Command Reference](cli/command-reference.md) and [Batch Processing](cli/batch-processing.md).
-
-<div class="grid cards" markdown>
-
-- **Getting Started**
-
-  ---
-  New to SNID SAGE? Install the package and run your first analysis.
-  
-  [First Analysis](quickstart/first-analysis.md)
-
-- **Installation**
-
-  ---
-  Platform-specific installation instructions.
-  
-  [Install Guide](installation/installation.md)
-
-
-- **User Interfaces**
-
-  ---
-  Work with the graphical user interface (GUI) or the command-line interface (CLI).
-  
-  [GUI Guide](gui/interface-overview.md) · [CLI Reference](cli/command-reference.md)
-
-
-
-- **AI Features**
-
-  ---
-  Configure and use the optional AI-assisted analysis utilities.
-  
-  [AI Integration](ai/overview.md)
-
-</div>
+**SNID SAGE** (SuperNova IDentification – Spectral Analysis and Guided Exploration) is a Python tool for automated supernova spectral classification using cross-correlation with a library of 643+ template spectra.
 
 ---
 
-## Documentation Sections
+## Quick Start
+
+**New to SNID SAGE?** Follow these three steps:
+
+1. **[Install](installation/installation.md)** – `pip install snid-sage`
+2. **[First Analysis](quickstart/first-analysis.md)** – Load a spectrum and classify it
+3. **[Explore Results](gui/results-and-plots.md)** – Understand your classification
+
+---
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **GUI** | Interactive PySide6/Qt interface with real-time plotting |
+| **CLI** | Single-spectrum and batch processing from the command line |
+| **643+ Templates** | Ia, Ib, Ic, II, IIn, SLSN, TDE, KN, and more |
+| **AI Assistant** | Optional LLM-powered analysis via OpenRouter |
+| **Multi-epoch** | Templates with time evolution for age estimation |
+
+---
+
+## Documentation
 
 ### Getting Started
-Essential information for a fast first analysis.
+- [Installation](installation/installation.md) – Setup on Windows, macOS, Linux
+- [First Analysis](quickstart/first-analysis.md) – Step-by-step tutorial with screenshots
 
-- **[Installation](installation/installation.md)** – Setup instructions
-- **[First Analysis](quickstart/first-analysis.md)** – A minimal end-to-end run
-- **[GUI Overview](gui/interface-overview.md)**
-- **[CLI Reference](cli/command-reference.md)**
+### User Interfaces
+- [GUI Overview](gui/interface-overview.md) – Main window, controls, workflow
+- [CLI Reference](cli/command-reference.md) – All commands and options
+- [Batch Processing](cli/batch-processing.md) – Process many spectra at once
 
-### User Guides
+### Templates & Data
+- [Template Library](data/template-library.md) – Built-in template bank
+- [Custom Templates](data/custom-templates.md) – Add your own spectra
+- [Supported Formats](reference/supported-formats.md) – FITS, ASCII, CSV, etc.
 
-- **Interfaces** – GUI and CLI usage
-- **Analysis** – [Data formats](reference/supported-formats.md), advanced workflows, template management
-- **AI Features** – Local and remote LLM integration
+### Reference
+- [Parameters](reference/parameters.md) – All settings and defaults
+- [Configuration Guide](reference/configuration-guide.md) – Profiles and paths
+- [API Reference](reference/api-reference.md) – Python integration
+- [Troubleshooting](reference/troubleshooting.md) – Common issues and fixes
 
-### Tutorials & Examples
-Hands-on walkthroughs covering basic to advanced use-cases.
+### AI Features
+- [AI Overview](ai/overview.md) – LLM-powered analysis
+- [OpenRouter Setup](ai/openrouter-setup.md) – API configuration
 
 ---
 
 ## Need Help?
 
-- **[Troubleshooting](reference/troubleshooting.md)** – Diagnosing issues
-- **[GitHub Issues](https://github.com/FiorenSt/SNID-SAGE/issues)** – Report bugs or request features
+- **[Troubleshooting Guide](reference/troubleshooting.md)** – Solutions to common problems
+- **[GitHub Issues](https://github.com/FiorenSt/SNID-SAGE/issues)** – Report bugs
+- **[GitHub Discussions](https://github.com/FiorenSt/SNID-SAGE/discussions)** – Ask questions
 
 ---
 
-*Last updated: January 2026 – covers SNID SAGE v1.1.1 (PySide6/Qt GUI).* 
+*SNID SAGE v1.1.1 · January 2026*

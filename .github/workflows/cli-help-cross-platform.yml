@@ -1950,7 +1950,6 @@ jobs:
           echo "Testing command-specific help..."
           sage identify --help
           sage batch --help
-          sage template --help
           sage config --help
         continue-on-error: true
 
@@ -1960,15 +1959,15 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "Testing basic help commands..."
-          sage --help
+          # Use python -m to ensure sage is found on Windows
+          python -m snid_sage.interfaces.cli.main --help
           
           # Skip snid-sage --help as it's a GUI launcher, not a CLI command
           
           Write-Host "Testing command-specific help..."
-          sage identify --help
-          sage batch --help
-          sage template --help
-          sage config --help
+          python -m snid_sage.interfaces.cli.main identify --help
+          python -m snid_sage.interfaces.cli.main batch --help
+          python -m snid_sage.interfaces.cli.main config --help
         continue-on-error: true
 
       - name: Test CLI spectrum analysis - Basic (bash)
@@ -1980,7 +1979,8 @@ jobs:
           mkdir -p results_basic
           
           echo "Testing basic spectrum identification..."
-          sage identify test_data/tns_2024ggi.dat --output-dir results_basic/ --minimal --verbose
+          # Note: --verbose is a global flag and must come BEFORE the subcommand
+          sage --verbose identify test_data/tns_2024ggi.dat --output-dir results_basic/ --minimal
           
           echo "Checking output files..."
           ls -la results_basic/
@@ -2005,7 +2005,9 @@ jobs:
           New-Item -ItemType Directory -Force -Path results_basic
           
           Write-Host "Testing basic spectrum identification..."
-          sage identify test_data/tns_2024ggi.dat --output-dir results_basic/ --minimal --verbose
+          # Note: --verbose is a global flag and must come BEFORE the subcommand
+          # Use python -m to ensure sage is found on Windows
+          python -m snid_sage.interfaces.cli.main --verbose identify test_data/tns_2024ggi.dat --output-dir results_basic/ --minimal
           
           Write-Host "Checking output files..."
           Get-ChildItem results_basic/
@@ -2031,19 +2033,20 @@ jobs:
           
           echo "Testing with redshift constraints..."
           mkdir -p results_redshift
-          sage identify test_data/tns_2024ggi.dat --output-dir results_redshift/ --minimal --zmin 0.0 --zmax 0.1 --verbose
+          # Note: --verbose is a global flag and must come BEFORE the subcommand
+          sage --verbose identify test_data/tns_2024ggi.dat --output-dir results_redshift/ --minimal --zmin 0.0 --zmax 0.1
           
           echo "Testing with preprocessing options..."
           mkdir -p results_preprocess
-          sage identify test_data/tns_2024ggi.dat --output-dir results_preprocess/ --minimal --aband-remove --skyclip --savgol-window 11 --verbose
+          sage --verbose identify test_data/tns_2024ggi.dat --output-dir results_preprocess/ --minimal --aband-remove --skyclip --savgol-window 11
           
           echo "Testing with type filtering..."
           mkdir -p results_typefilter
-          sage identify test_data/tns_2024ggi.dat --output-dir results_typefilter/ --minimal --type-filter Ia Ib Ic --verbose
+          sage --verbose identify test_data/tns_2024ggi.dat --output-dir results_typefilter/ --minimal --type-filter Ia Ib Ic
           
           echo "Testing complete mode (if time permits)..."
           mkdir -p results_complete
-          sage identify test_data/tns_2024ggi.dat --output-dir results_complete/ --complete --verbose || echo "Complete mode test completed or failed"
+          sage --verbose identify test_data/tns_2024ggi.dat --output-dir results_complete/ --complete || echo "Complete mode test completed or failed"
         continue-on-error: true
 
       - name: Test CLI with various parameters (PowerShell)
@@ -2053,21 +2056,23 @@ jobs:
         run: |
           Write-Host "Testing with redshift constraints..."
           New-Item -ItemType Directory -Force -Path results_redshift
-          sage identify test_data/tns_2024ggi.dat --output-dir results_redshift/ --minimal --zmin 0.0 --zmax 0.1 --verbose
+          # Note: --verbose is a global flag and must come BEFORE the subcommand
+          # Use python -m to ensure sage is found on Windows
+          python -m snid_sage.interfaces.cli.main --verbose identify test_data/tns_2024ggi.dat --output-dir results_redshift/ --minimal --zmin 0.0 --zmax 0.1
           
           Write-Host "Testing with preprocessing options..."
           New-Item -ItemType Directory -Force -Path results_preprocess
-          sage identify test_data/tns_2024ggi.dat --output-dir results_preprocess/ --minimal --aband-remove --skyclip --savgol-window 11 --verbose
+          python -m snid_sage.interfaces.cli.main --verbose identify test_data/tns_2024ggi.dat --output-dir results_preprocess/ --minimal --aband-remove --skyclip --savgol-window 11
           
           Write-Host "Testing with type filtering..."
           New-Item -ItemType Directory -Force -Path results_typefilter
-          sage identify test_data/tns_2024ggi.dat --output-dir results_typefilter/ --minimal --type-filter Ia Ib Ic --verbose
+          python -m snid_sage.interfaces.cli.main --verbose identify test_data/tns_2024ggi.dat --output-dir results_typefilter/ --minimal --type-filter Ia Ib Ic
           
           Write-Host "Testing complete mode (with timeout)..."
           New-Item -ItemType Directory -Force -Path results_complete
           $job = Start-Job -ScriptBlock {
             param($dataFile, $outputDir)
-            sage identify $dataFile --output-dir $outputDir --complete --verbose
+            python -m snid_sage.interfaces.cli.main --verbose identify $dataFile --output-dir $outputDir --complete
           } -ArgumentList "test_data/tns_2024ggi.dat", "results_complete/"
           
           if (Wait-Job $job -Timeout 300) {
@@ -2079,32 +2084,29 @@ jobs:
           Remove-Job $job
         continue-on-error: true
 
-      - name: Test template commands (bash)
+      - name: Test config commands (bash)
         id: test_template_bash
         if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euxo pipefail
           
-          echo "Testing template listing..."
-          sage template list --help
-          
           echo "Testing config commands..."
+          sage config --help
           sage config show --format json
           sage config show --format table
         continue-on-error: true
 
-      - name: Test template commands (PowerShell)
+      - name: Test config commands (PowerShell)
         id: test_template_powershell
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Write-Host "Testing template listing..."
-          sage template list --help
-          
           Write-Host "Testing config commands..."
-          sage config show --format json
-          sage config show --format table
+          # Use python -m to ensure sage is found on Windows
+          python -m snid_sage.interfaces.cli.main config --help
+          python -m snid_sage.interfaces.cli.main config show --format json
+          python -m snid_sage.interfaces.cli.main config show --format table
         continue-on-error: true
 
       - name: Test batch processing (bash)
@@ -2120,7 +2122,8 @@ jobs:
           cp test_data/tns_2024ggi.dat batch_input/spectrum2.dat
           
           echo "Testing batch processing..."
-          sage batch "batch_input/*.dat" --output-dir batch_output/ --minimal --verbose
+          # Note: --verbose is a global flag and must come BEFORE the subcommand
+          sage --verbose batch "batch_input/*.dat" --output-dir batch_output/ --minimal
           
           echo "Checking batch output..."
           ls -la batch_output/
@@ -2146,7 +2149,9 @@ jobs:
           Copy-Item "test_data/tns_2024ggi.dat" "batch_input/spectrum2.dat"
           
           Write-Host "Testing batch processing..."
-          sage batch "batch_input/*.dat" --output-dir batch_output/ --minimal --verbose
+          # Note: --verbose is a global flag and must come BEFORE the subcommand
+          # Use python -m to ensure sage is found on Windows
+          python -m snid_sage.interfaces.cli.main --verbose batch "batch_input/*.dat" --output-dir batch_output/ --minimal
           
           Write-Host "Checking batch output..."
           Get-ChildItem batch_output/
@@ -2193,8 +2198,9 @@ jobs:
           
           # Test GUI imports - only test core imports, not full GUI creation
           try:
-              # Test basic imports without creating GUI
-              from snid_sage.interfaces.gui import sage_gui
+              # Test the actual GUI modules that exist
+              from snid_sage.interfaces.gui.launcher import main as gui_main
+              from snid_sage.interfaces.gui.pyside6_gui import main as pyside6_main
               print('SUCCESS: GUI module import successful')
           except ImportError as e:
               print(f'ERROR: GUI import failed: {e}')
@@ -2228,8 +2234,9 @@ jobs:
           
           # Test GUI imports - only test core imports, not full GUI creation
           try:
-              # Test basic imports without creating GUI
-              from snid_sage.interfaces.gui import sage_gui
+              # Test the actual GUI modules that exist
+              from snid_sage.interfaces.gui.launcher import main as gui_main
+              from snid_sage.interfaces.gui.pyside6_gui import main as pyside6_main
               print('SUCCESS: GUI module import successful')
           except ImportError as e:
               print(f'ERROR: GUI import failed: {e}')
@@ -2263,8 +2270,9 @@ jobs:
           
           # Test GUI imports - only test core imports, not full GUI creation
           try:
-              # Test basic imports without creating GUI
-              from snid_sage.interfaces.gui import sage_gui
+              # Test the actual GUI modules that exist
+              from snid_sage.interfaces.gui.launcher import main as gui_main
+              from snid_sage.interfaces.gui.pyside6_gui import main as pyside6_main
               print('SUCCESS: GUI module import successful')
           except ImportError as e:
               print(f'ERROR: GUI import failed: {e}')
@@ -2312,8 +2320,9 @@ jobs:
           mkdir -p benchmark_results
           
           # Time the basic analysis
+          # Note: --verbose is a global flag and must come BEFORE the subcommand
           start_time=$(date +%s)
-          sage identify test_data/tns_2024ggi.dat --output-dir benchmark_results/ --minimal --verbose
+          sage --verbose identify test_data/tns_2024ggi.dat --output-dir benchmark_results/ --minimal
           end_time=$(date +%s)
           
           duration=$((end_time - start_time))
@@ -2411,12 +2420,12 @@ jobs:
           fi
           echo "| GUI Import Test | $gui_status |" >> "$GITHUB_STEP_SUMMARY"
           
-          # Template Commands Tests
+          # Config Commands Tests
           template_status=":x:"
           if [[ "${{ steps.test_template_bash.outcome }}" == "success" || "${{ steps.test_template_powershell.outcome }}" == "success" ]]; then
             template_status=":white_check_mark:"
           fi
-          echo "| Template Commands | $template_status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Config Commands | $template_status |" >> "$GITHUB_STEP_SUMMARY"
           
           # Performance Tests
           if [[ "${{ steps.test_performance.outcome }}" == "success" ]]; then
