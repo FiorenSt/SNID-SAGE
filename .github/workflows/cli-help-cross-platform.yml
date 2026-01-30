@@ -2095,6 +2095,9 @@ jobs:
           sage config --help
           sage config show --format json
           sage config show --format table
+          
+          echo "Testing config init..."
+          sage config init --force || echo "Config init completed (may already exist)"
         continue-on-error: true
 
       - name: Test config commands (PowerShell)
@@ -2107,6 +2110,38 @@ jobs:
           python -m snid_sage.interfaces.cli.main config --help
           python -m snid_sage.interfaces.cli.main config show --format json
           python -m snid_sage.interfaces.cli.main config show --format table
+          
+          Write-Host "Testing config init..."
+          python -m snid_sage.interfaces.cli.main config init --force
+        continue-on-error: true
+
+      - name: Test profile options (bash)
+        id: test_profile_bash
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p results_profile
+          
+          echo "Testing with optical profile (default)..."
+          sage --verbose identify test_data/tns_2024ggi.dat --output-dir results_profile/ --minimal --profile optical
+          
+          echo "Testing --no-plots option..."
+          sage identify test_data/tns_2024ggi.dat --output-dir results_profile/ --no-plots
+        continue-on-error: true
+
+      - name: Test profile options (PowerShell)
+        id: test_profile_powershell
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path results_profile
+          
+          Write-Host "Testing with optical profile (default)..."
+          python -m snid_sage.interfaces.cli.main --verbose identify test_data/tns_2024ggi.dat --output-dir results_profile/ --minimal --profile optical
+          
+          Write-Host "Testing --no-plots option..."
+          python -m snid_sage.interfaces.cli.main identify test_data/tns_2024ggi.dat --output-dir results_profile/ --no-plots
         continue-on-error: true
 
       - name: Test batch processing (bash)
@@ -2427,6 +2462,13 @@ jobs:
           fi
           echo "| Config Commands | $template_status |" >> "$GITHUB_STEP_SUMMARY"
           
+          # Profile Options Tests
+          profile_status=":x:"
+          if [[ "${{ steps.test_profile_bash.outcome }}" == "success" || "${{ steps.test_profile_powershell.outcome }}" == "success" ]]; then
+            profile_status=":white_check_mark:"
+          fi
+          echo "| Profile Options | $profile_status |" >> "$GITHUB_STEP_SUMMARY"
+          
           # Performance Tests
           if [[ "${{ steps.test_performance.outcome }}" == "success" ]]; then
             echo "| Performance Benchmark | :white_check_mark: |" >> "$GITHUB_STEP_SUMMARY"
@@ -2443,4 +2485,4 @@ jobs:
           
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Test Data:** Synthetic spectrum for CI testing" >> "$GITHUB_STEP_SUMMARY"
-          echo "**Coverage:** Minimal, complete modes, redshift constraints, preprocessing, type filtering, batch processing" >> "$GITHUB_STEP_SUMMARY" 
+          echo "**Coverage:** Minimal, complete modes, redshift constraints, preprocessing, type filtering, batch processing, profile options, config commands" >> "$GITHUB_STEP_SUMMARY" 

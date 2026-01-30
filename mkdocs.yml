@@ -97,7 +97,6 @@ nav:
     - OpenRouter Setup: ai/openrouter-setup.md
 
   - Data & Templates:
-    - Data Preparation: data/data-preparation.md
     - Template Library: data/template-library.md
     - Custom Templates: data/custom-templates.md
 
