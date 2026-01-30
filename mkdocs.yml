@@ -92,13 +92,13 @@ nav:
     - Command Reference: cli/command-reference.md
     - Batch Processing: cli/batch-processing.md
 
-  - AI:
-    - Overview: ai/overview.md
-    - OpenRouter Setup: ai/openrouter-setup.md
-
   - Data & Templates:
     - Template Library: data/template-library.md
     - Custom Templates: data/custom-templates.md
+
+  - AI:
+    - Overview: ai/overview.md
+    - OpenRouter Setup: ai/openrouter-setup.md
 
   - Reference:
     - Supported Formats: reference/supported-formats.md

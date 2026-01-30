@@ -135,8 +135,7 @@ site/
 
 # ===== LOCAL WISEREP TABLE VIEWER (PRIVATE DATA) =====
 # Viewer code under docs/table/ is tracked, but generated datasets must NOT be committed.
-docs/table/data/*
-!docs/table/data/.gitkeep
+docs/table/data/
 
 # ===== DOCUMENTATION SUBDIRECTORIES =====
 # Keep all documentation tracked; only ignore build output
@@ -198,8 +197,8 @@ space_debris_highscore.txt
 
 # ===== DATA FILES =====
 # Large data files that shouldn't be in version control
-# Ignore the entire data directory
-data/
+# Ignore the root data directory (but NOT docs/data/)
+/data/
 
 # ===== TEMPLATE FILES =====
 # Individual template files (large binary files) - exclude the entire folder
