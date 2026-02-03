@@ -18,6 +18,8 @@
 pip install snid-sage
 ```
 
+Python support: 3.8–3.13 (3.14 not yet supported due to dependency wheels).
+
 This installs both the CLI and the full GUI stack by default, as defined in `pyproject.toml`.
 
 ### Using a virtual environment (recommended)

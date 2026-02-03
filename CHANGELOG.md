@@ -2,6 +2,12 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
+## [1.1.2] - 2026-02-03
+
+### Analysis Improvements
+
+- Capped Star/CV redshift predictions to |z| ≤ 0.01 before Phase-2 metrics/clustering
+
 ## [1.1.1] - 2026-01-16
 
 ### Analysis Improvements
