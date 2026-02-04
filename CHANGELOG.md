@@ -2,6 +2,12 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
+## [1.1.3] - 2026-02-04
+
+### Compatibility (Breaking)
+
+- Dropped support for **Python 3.8** and **Python 3.9**. SNID SAGE now requires **Python ≥ 3.10**.
+
 ## [1.1.2] - 2026-02-03
 
 ### Analysis Improvements

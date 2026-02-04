@@ -1,6 +1,6 @@
 # SNID SAGE - Advanced Supernova Spectral Analysis
 
-[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://python.org)
+[![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)]()
 
@@ -18,7 +18,7 @@
 pip install snid-sage
 ```
 
-Python support: 3.8–3.13 (3.14 not yet supported due to dependency wheels).
+Python support: 3.10–3.13 (3.14 not yet supported due to dependency wheels).
 
 This installs both the CLI and the full GUI stack by default, as defined in `pyproject.toml`.
 

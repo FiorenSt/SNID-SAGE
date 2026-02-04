@@ -4,7 +4,7 @@ This guide provides instructions for installing SNID SAGE on your system.
 
 ## Requirements
 
-- **Python**: 3.8+ (3.10 recommended)
+- **Python**: 3.10+
 - **OS**: Windows, macOS, or Linux
 
 ## Quick Installation
@@ -110,12 +110,12 @@ python -c "import numpy, matplotlib, scipy, astropy; print('Dependencies OK')"
 ## Platform-Specific Notes
 
 ### Windows
-- **Python**: Use Python 3.9+ from python.org
+- **Python**: Use Python 3.10+ from python.org
 - **Virtual Environment**: Recommended for dependency management
 - **GUI**: PySide6-based interface with native Windows styling
 
 ### macOS
-- **Python**: Use Python 3.9+ from python.org or Homebrew
+- **Python**: Use Python 3.10+ from python.org or Homebrew
 - **Dependencies**: Some packages may require Xcode Command Line Tools
 - **GUI**: Native macOS integration with PySide6
 
@@ -139,7 +139,7 @@ pip3 install snid-sage
 python --version
 
 # Reinstall with specific Python version
-python3.9 -m pip install snid-sage
+python3.10 -m pip install snid-sage
 ```
 
 **GUI Not Launching**
