@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1761936657.5681412,
-  "template_count": 466,
+  "template_count": 465,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 2048,
@@ -415,13 +415,6 @@
       "subtype": "Ia-91T",
       "redshift": 0.0,
       "epochs": 26,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
-    "sn1999aa": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 42,
       "storage_file": "templates_Ia_onir.hdf5"
     },
     "sn1999ac": {
@@ -3316,7 +3309,7 @@
       ]
     },
     "Ia": {
-      "count": 150,
+      "count": 149,
       "storage_file": "templates_Ia_onir.hdf5",
       "template_names": [
         "ASASSN-15ga",
@@ -3355,7 +3348,6 @@
         "sn1998ab",
         "sn1998de",
         "sn1998es",
-        "sn1999aa",
         "sn1999ac",
         "sn1999aw",
         "sn1999bh",

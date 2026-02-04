@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1751831068.0201683,
-  "template_count": 643,
+  "template_count": 642,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -1163,13 +1163,6 @@
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999aa": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 42,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn1999ac": {
@@ -4646,7 +4639,7 @@
       ]
     },
     "Ia": {
-      "count": 268,
+      "count": 267,
       "storage_file": "templates_Ia.hdf5",
       "template_names": [
         "1999aa",
@@ -4715,7 +4708,6 @@
         "sn1998eg",
         "sn1998es",
         "sn1998V",
-        "sn1999aa",
         "sn1999ac",
         "sn1999aw",
         "sn1999bh",

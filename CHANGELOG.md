@@ -8,6 +8,10 @@ All notable changes to SNID SAGE will be documented in this file.
 
 - Dropped support for **Python 3.8** and **Python 3.9**. SNID SAGE now requires **Python ≥ 3.10**.
 
+### Templates
+
+- Template bank maintenance: removed the legacy duplicate SN 1999aa template entry `sn1999aa` (kept the newer `1999aa` metadata entry) from the official optical and ONIR banks.
+
 ## [1.1.2] - 2026-02-03
 
 ### Analysis Improvements
