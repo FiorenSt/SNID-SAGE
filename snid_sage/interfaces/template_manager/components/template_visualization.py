@@ -54,6 +54,12 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
         self.template_data = None
         self.plot_manager = None
         self.plot_widget = None
+        # One-shot autorange per template selection (like clicking the small "A" button).
+        # Needed because on some machines/Qt versions the first plot happens before the
+        # widget has a stable size, and the initial view range can end up "zoomed weirdly".
+        self._autorange_pending: bool = False
+        self._autorange_token: int = 0
+        self._autorange_data_ready_token: int = 0
         self.layout_manager = get_template_layout_manager()
         self.setup_ui()
         
@@ -170,6 +176,14 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
             
             # Get plot item for customization
             self.plot_item = self.plot_widget_pg.getPlotItem()
+
+            # If a template is plotted before the widget is fully sized, autoRange can be wrong.
+            # Hook the resize signal so we can apply a one-shot autorange once a real size exists.
+            try:
+                vb = self.plot_item.getViewBox()
+                vb.sigResized.connect(self._maybe_apply_autorange)  # type: ignore[attr-defined]
+            except Exception:
+                pass
             
             # Setup labels and grid (match main GUI vibe: subtle grid)
             self.plot_item.setLabel('left', 'Flux')
@@ -266,6 +280,14 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
             'name': template_name,
             'info': template_info
         }
+
+        # Request one-shot autorange for this newly selected template.
+        try:
+            self._autorange_token += 1
+        except Exception:
+            self._autorange_token = 1
+        self._autorange_pending = True
+        self._autorange_data_ready_token = 0
         
         # Info labels removed - template information now shown only in plot title
         
@@ -280,6 +302,81 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
         
         # Update plot
         self.update_plot()
+
+    def _maybe_apply_autorange(self) -> None:
+        """Apply a one-shot PyQtGraph auto-range when both data and widget size are ready."""
+        if not getattr(self, "_autorange_pending", False):
+            return
+        if getattr(self, "_autorange_data_ready_token", 0) != getattr(self, "_autorange_token", 0):
+            # We haven't plotted the data for the current template token yet.
+            return
+        if not hasattr(self, 'plot_item'):
+            return
+        try:
+            # Ensure the widget has a meaningful size (avoids 0x0 / tiny initial geometries).
+            if hasattr(self, 'plot_widget_pg') and self.plot_widget_pg is not None:
+                if self.plot_widget_pg.width() < 50 or self.plot_widget_pg.height() < 50:
+                    return
+        except Exception:
+            pass
+
+        try:
+            # Only autorange if there is actual curve data.
+            items = []
+            try:
+                items = self.plot_item.listDataItems()
+            except Exception:
+                items = []
+            if not items:
+                return
+
+            vb = self.plot_item.getViewBox()
+
+            # Mimic the "A" button behavior: enable, autorange to contents, then disable
+            try:
+                vb.enableAutoRange(axis='xy', enable=True)  # type: ignore[call-arg]
+            except Exception:
+                try:
+                    vb.enableAutoRange(x=True, y=True)  # type: ignore[call-arg]
+                except Exception:
+                    pass
+
+            try:
+                # Match the "A" button: let PyQtGraph choose its own padding/defaults
+                vb.autoRange()
+            except Exception:
+                try:
+                    self.plot_item.autoRange()  # type: ignore[call-arg]
+                except Exception:
+                    pass
+
+            # Ensure x-range includes fixed left label anchor (labels are placed left of spectra)
+            try:
+                anchor_x = self._compute_left_label_x()
+                xr, yr = vb.viewRange()
+                xmin, xmax = float(xr[0]), float(xr[1])
+                if anchor_x < xmin:
+                    # Extend only the x-range; keep PyQtGraph's default padding behavior
+                    x_lo = float(anchor_x)
+                    try:
+                        vb.setXRange(x_lo, float(xmax))  # uses default padding
+                    except Exception:
+                        try:
+                            vb.setRange(xRange=(x_lo, float(xmax)))  # type: ignore[call-arg]
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+            try:
+                vb.disableAutoRange()
+            except Exception:
+                pass
+
+            self._autorange_pending = False
+        except Exception:
+            # Never let autorange break plotting
+            return
         
     def _load_template_data(self):
         """Load template data from storage"""
@@ -510,12 +607,9 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
         
         if self.template_data and self.template_data.wave_data is not None:
             view_mode = self.view_mode_combo.currentText()
-            
-            # Collect flux arrays actually plotted so we can set a stable view range
-            plotted_flux_arrays = []
-            
+
             if view_mode == "All Epochs":
-                plotted_flux_arrays = self._plot_all_epochs_pg() or []
+                self._plot_all_epochs_pg()
                 # Show or hide subsampling info
                 try:
                     total_epochs = len(self.template_data.epochs)
@@ -528,19 +622,25 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                 except Exception:
                     self.cap_info_label.setVisible(False)
             elif view_mode == "Individual Epoch":
-                flux_arr = self._plot_individual_epoch_pg()
-                if flux_arr is not None:
-                    plotted_flux_arrays = [flux_arr]
+                self._plot_individual_epoch_pg()
                 # Hide subsampling info for individual view
                 try:
                     self.cap_info_label.setVisible(False)
                 except Exception:
                     pass
-            
-            # After plotting, reset the view so the template always fits the canvas
+
+            # Mark that data for the current template token is now plotted.
             try:
-                if plotted_flux_arrays:
-                    self._set_stable_view_range(self.template_data.wave_data, plotted_flux_arrays)
+                self._autorange_data_ready_token = self._autorange_token
+            except Exception:
+                pass
+
+            # Try autorange now, and again shortly after layout settles.
+            try:
+                self._maybe_apply_autorange()
+                QtCore.QTimer.singleShot(0, self._maybe_apply_autorange)
+                QtCore.QTimer.singleShot(50, self._maybe_apply_autorange)
+                QtCore.QTimer.singleShot(150, self._maybe_apply_autorange)
             except Exception:
                 pass
             
@@ -551,9 +651,14 @@ class TemplateVisualizationWidget(QtWidgets.QWidget):
                 xr, yr = vb.viewRange()
                 xmin, xmax = float(xr[0]), float(xr[1])
                 if anchor_x < xmin:
-                    # Extend to include anchor with a small margin
-                    margin = 0.02 * (xmax - xmin)
-                    vb.setRange(xRange=(anchor_x - margin, xmax), yRange=yr, padding=0)
+                    # Extend only the x-range; do not zero-out padding (keeps "A" feel)
+                    try:
+                        vb.setXRange(float(anchor_x), float(xmax))
+                    except Exception:
+                        try:
+                            vb.setRange(xRange=(float(anchor_x), float(xmax)))  # type: ignore[call-arg]
+                        except Exception:
+                            pass
             except Exception:
                 pass
             

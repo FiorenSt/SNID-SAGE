@@ -103,7 +103,7 @@
     },
     "sn1987A": {
       "type": "II",
-      "subtype": "II-pec",
+      "subtype": "II-87A",
       "redshift": 0.0,
       "epochs": 241,
       "storage_file": "templates_II.hdf5"
@@ -648,11 +648,11 @@
       "storage_file": "templates_II.hdf5"
     },
     "sn2018bsz": {
-      "type": "II",
-      "subtype": "IIP",
+      "type": "SLSN",
+      "subtype": "SLSN-I",
       "redshift": 0.0,
       "epochs": 6,
-      "storage_file": "templates_II.hdf5"
+      "storage_file": "templates_SLSN.hdf5"
     },
     "sn2018coq": {
       "type": "II",
@@ -747,7 +747,7 @@
     },
     "sn2019bao": {
       "type": "II",
-      "subtype": "II-pec",
+      "subtype": "IIb",
       "redshift": 0.0,
       "epochs": 2,
       "storage_file": "templates_II.hdf5"
@@ -2455,7 +2455,7 @@
     },
     "sn2016ije": {
       "type": "Ia",
-      "subtype": "Ia-91bg",
+      "subtype": "Ia-02es",
       "redshift": 0.0,
       "epochs": 5,
       "storage_file": "templates_Ia.hdf5"
@@ -4525,7 +4525,7 @@
       ]
     },
     "II": {
-      "count": 108,
+      "count": 107,
       "storage_file": "templates_II.hdf5",
       "template_names": [
         "ASASSN-14ha",
@@ -4616,7 +4616,6 @@
         "sn2017jei",
         "sn2017pn",
         "sn2018aad",
-        "sn2018bsz",
         "sn2018coq",
         "sn2018emt",
         "sn2018eph",
@@ -4991,7 +4990,7 @@
       ]
     },
     "SLSN": {
-      "count": 53,
+      "count": 54,
       "storage_file": "templates_SLSN.hdf5",
       "template_names": [
         "2010md",
@@ -5038,6 +5037,7 @@
         "sn2017bcc",
         "sn2017ens",
         "sn2017gci",
+        "sn2018bsz",
         "sn2018ffj",
         "sn2018gft",
         "sn2018hti",

@@ -35,8 +35,8 @@ TYPENAME = {
     # Type 3 - SN Ic (7 subtypes)
     3: {1: 'Ic', 2: 'Ic-norm', 3: 'Ic-pec', 4: 'Ic-broad', 5: 'Icn', 6: 'Ic-Ca-rich', 7: 'Ic-csm'},
     
-    # Type 4 - SN II (6 subtypes)
-    4: {1: 'II', 2: 'IIP', 3: 'II-pec', 4: 'IIn', 5: 'IIL', 6: 'IIn-pec'},
+    # Type 4 - SN II (7 subtypes)
+    4: {1: 'II', 2: 'IIP', 3: 'II-pec', 4: 'IIn', 5: 'IIL', 6: 'IIn-pec', 7: 'II-87A'},
     
     # Type 5 - NotSN (9 subtypes)
     5: {1: 'NotSN', 2: 'AGN', 3: 'Gal', 4: 'QSO', 5: 'M-star', 6: 'C-star', 

@@ -8,9 +8,19 @@ All notable changes to SNID SAGE will be documented in this file.
 
 - Dropped support for **Python 3.8** and **Python 3.9**. SNID SAGE now requires **Python ≥ 3.10**.
 
+### Analysis Improvements
+
+- Phase-2 redshift sanity: capped **GAP** (ILRT/LBV/LRN) redshift predictions to z ≤ 0.025 before Phase-2 metrics/clustering (similar to the existing Star/CV cap at z ≤ 0.01).
+
 ### Templates
 
 - Template bank maintenance: removed the legacy duplicate SN 1999aa template entry `sn1999aa` (kept the newer `1999aa` metadata entry) from the official optical and ONIR banks.
+- Template metadata corrections: reclassified **sn2018bsz** from II/IIP to **SLSN/SLSN-I** (moved into SLSN HDF5 banks in optical and ONIR); corrected **sn2016ije** subtype from Ia-91bg to **Ia-02es** in optical and ONIR banks.
+- Template metadata corrections: reclassified **sn2019bao** subtype from II-pec to **IIb**; assigned **sn1987A** its own dedicated Type II subtype **II-87A** (previously II-pec), in both optical and ONIR banks.
+
+### GUI
+
+- Template Manager (`snid-sage-templates`): fixed an initial autoscaling issue in the template viewer so that the first template plot now matches the behavior of the PyQtGraph “A” autoscale button consistently across local and pip-installed environments.
 
 ## [1.1.2] - 2026-02-03
 

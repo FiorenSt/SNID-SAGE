@@ -2084,41 +2084,26 @@ def run_snid_analysis(
     analysis_trace["phase2_redshift_filtered"] = int(phase2_redshift_filtered)
     analysis_trace["phase2_match_count_after_redshift_filter"] = int(len(matches))
 
-    # Phase-2 sanity: Star/CV must have |z| <= 0.01.
-    phase2_star_cv_redshift_filtered = 0
-    star_cv_zmax = 0.01
-    if matches:
-        _kept2: list[dict[str, Any]] = []
-        forced_too_high = (forced_redshift is not None) and (abs(float(forced_redshift)) > float(star_cv_zmax))
-        for _m in matches:
-            try:
-                _tpl = _m.get("template", {})
-                _tpl_type = _tpl.get("type", "Unknown") if isinstance(_tpl, dict) else "Unknown"
-            except Exception:
-                _tpl_type = "Unknown"
-            if _tpl_type not in ("Star", "CV"):
-                _kept2.append(_m)
-                continue
-            if forced_too_high:
-                phase2_star_cv_redshift_filtered += 1
-                continue
-            try:
-                _z = float(_m.get("redshift", float("nan")))
-            except Exception:
-                _z = float("nan")
-            if np.isfinite(_z) and (abs(_z) > float(star_cv_zmax)):
-                phase2_star_cv_redshift_filtered += 1
-                continue
-            _kept2.append(_m)
-        if phase2_star_cv_redshift_filtered:
-            _LOG.info(
-                "Phase 2: Filtered %d Star/CV matches with |z| > %.6f before metrics/clustering",
-                int(phase2_star_cv_redshift_filtered),
-                float(star_cv_zmax),
-            )
-        matches = _kept2
-    analysis_trace["phase2_star_cv_redshift_filtered"] = int(phase2_star_cv_redshift_filtered)
-    analysis_trace["phase2_match_count_after_star_cv_filter"] = int(len(matches))
+    # Phase-2 sanity gates (post strict [zmin,zmax], pre metrics/clustering).
+    try:
+        from .phase2_sanity_gating import apply_phase2_sanity_redshift_gates
+
+        matches, _sanity_trace = apply_phase2_sanity_redshift_gates(
+            matches,
+            forced_redshift=forced_redshift,
+            logger=_LOG,
+        )
+    except Exception:
+        _sanity_trace = {}
+
+    analysis_trace["phase2_star_cv_redshift_filtered"] = int(_sanity_trace.get("phase2_star_cv_redshift_filtered", 0))
+    analysis_trace["phase2_match_count_after_star_cv_filter"] = int(
+        _sanity_trace.get("phase2_match_count_after_star_cv_filter", len(matches))
+    )
+    analysis_trace["phase2_gap_lowz_redshift_filtered"] = int(_sanity_trace.get("phase2_gap_lowz_redshift_filtered", 0))
+    analysis_trace["phase2_match_count_after_gap_lowz_filter"] = int(
+        _sanity_trace.get("phase2_match_count_after_gap_lowz_filter", len(matches))
+    )
 
     # ============================================================================
     # PHASE-2 METRICS: overlap diagnostics (CCC + residual-noise), sigma_z, and HσLAP-CCC scoring

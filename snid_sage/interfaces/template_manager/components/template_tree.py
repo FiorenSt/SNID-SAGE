@@ -72,7 +72,17 @@ class TemplateTreeWidget(QtWidgets.QTreeWidget):
 
     def load_templates(self):
         """Load templates from the selected source index"""
+        was_blocked = False
         try:
+            # Important: on some Qt/PySide6 versions/platforms, populating a QTreeWidget can
+            # implicitly pick a "current item" and emit currentItemChanged while we're still
+            # building the tree. That can auto-select the first template and cause the viewer
+            # to plot immediately (and sometimes with a weird initial zoom).
+            #
+            # We want deterministic behavior: open with **no template selected** everywhere.
+            was_blocked = self.signalsBlocked()
+            self.blockSignals(True)
+
             try:
                 from snid_sage.interfaces.template_manager.services.template_service import get_template_service
                 svc = get_template_service()
@@ -152,6 +162,28 @@ class TemplateTreeWidget(QtWidgets.QTreeWidget):
         except Exception as e:
             _LOGGER.error(f"Error loading templates: {e}")
             self._create_sample_templates()
+        finally:
+            # Ensure we end with no template selected (empty viewer) regardless of Qt quirks.
+            try:
+                self.clearSelection()
+                # Some versions keep a "current item" even when selection is cleared.
+                # Force it onto the first top-level type header (no template data) if present.
+                root = self.invisibleRootItem()
+                if root is not None and root.childCount() > 0:
+                    try:
+                        self.setCurrentItem(root.child(0))
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            try:
+                self.blockSignals(was_blocked)
+            except Exception:
+                # If restoring fails, at least re-enable signals.
+                try:
+                    self.blockSignals(False)
+                except Exception:
+                    pass
     
     def _create_sample_templates(self):
         """Create sample templates for testing when index is not available"""
