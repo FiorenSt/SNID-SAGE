@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1751831068.0201683,
-  "template_count": 642,
+  "template_count": 646,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -4503,6 +4503,34 @@
       "redshift": 0.008986,
       "epochs": 6,
       "storage_file": "templates_Ib.hdf5"
+    },
+    "AT2012jc": {
+      "type": "GAP",
+      "subtype": "ILRT",
+      "redshift": 0.005607,
+      "epochs": 5,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "AT2013la": {
+      "type": "GAP",
+      "subtype": "ILRT",
+      "redshift": 0.00271,
+      "epochs": 8,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "2018aes": {
+      "type": "GAP",
+      "subtype": "ILRT",
+      "redshift": 0.00391,
+      "epochs": 2,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "2018hso": {
+      "type": "GAP",
+      "subtype": "LRN",
+      "redshift": 0.003536,
+      "epochs": 3,
+      "storage_file": "templates_GAP.hdf5"
     }
   },
   "by_type": {
@@ -4933,7 +4961,7 @@
       ]
     },
     "GAP": {
-      "count": 10,
+      "count": 14,
       "storage_file": "templates_GAP.hdf5",
       "template_names": [
         "PS15dbp",
@@ -4945,7 +4973,11 @@
         "lbv2003hy",
         "2008S",
         "2008jd",
-        "2021biy"
+        "2021biy",
+        "AT2012jc",
+        "AT2013la",
+        "2018aes",
+        "2018hso"
       ]
     },
     "KN": {
