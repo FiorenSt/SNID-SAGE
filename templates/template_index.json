@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1751831068.0201683,
-  "template_count": 646,
+  "template_count": 649,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -4531,6 +4531,27 @@
       "redshift": 0.003536,
       "epochs": 3,
       "storage_file": "templates_GAP.hdf5"
+    },
+    "SN2007N": {
+      "type": "Ia",
+      "subtype": "Ia-02es",
+      "redshift": 0.012879,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "SN2005P": {
+      "type": "Ia",
+      "subtype": "Ia-02es",
+      "redshift": 0.00948,
+      "epochs": 2,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "SN2013dn": {
+      "type": "Ia",
+      "subtype": "Ia-csm",
+      "redshift": 0.056,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
     }
   },
   "by_type": {
@@ -4666,7 +4687,7 @@
       ]
     },
     "Ia": {
-      "count": 267,
+      "count": 270,
       "storage_file": "templates_Ia.hdf5",
       "template_names": [
         "1999aa",
@@ -4935,7 +4956,10 @@
         "sn2019bka",
         "sn2019so",
         "sn2022vqz",
-        "SNLS03D3bb"
+        "SNLS03D3bb",
+        "SN2007N",
+        "SN2005P",
+        "SN2013dn"
       ]
     },
     "TDE": {

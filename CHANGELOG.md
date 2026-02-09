@@ -16,9 +16,11 @@ All notable changes to SNID SAGE will be documented in this file.
 ### Templates
 
 - Template bank maintenance: removed the legacy duplicate SN 1999aa template entry `sn1999aa` (kept the newer `1999aa` metadata entry) from the official optical and ONIR banks.
-- Template metadata corrections: reclassified **sn2018bsz** from II/IIP to **SLSN/SLSN-I** (moved into SLSN HDF5 banks in optical and ONIR); corrected **sn2016ije** subtype from Ia-91bg to **Ia-02es** in optical and ONIR banks.
+- Template metadata corrections: reclassified **sn2018bsz** from II/IIP to **SLSN/SLSN-I** (moved into SLSN HDF5 banks in optical and ONIR); corrected **sn2016ije** subtype from Ia-91bg to **Ia-02es**.
 - Template metadata corrections: reclassified **sn2019bao** subtype from II-pec to **IIb**; assigned **sn1987A** its own dedicated Type II subtype **II-87A** (previously II-pec), in both optical and ONIR banks.
 - Templates: added four **GAP** templates: `AT2012jc`, `AT2013la`, `2018aes`, `2018hso`.
+- Templates: added two new **Ia-02es** templates: `SN2005P`, `SN2007N`.
+- Templates: added a new **Ia-csm** template: `SN2013dn`.
 
 ### GUI
 
