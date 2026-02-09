@@ -4203,13 +4203,6 @@
       "epochs": 2,
       "storage_file": "templates_SLSN.hdf5"
     },
-    "SN2006gy": {
-      "type": "SLSN",
-      "subtype": "SLSN-II",
-      "redshift": 0.01919,
-      "epochs": 4,
-      "storage_file": "templates_SLSN.hdf5"
-    },
     "2003fg": {
       "type": "Ia",
       "subtype": "Ia-03fg",
@@ -4372,13 +4365,6 @@
       "storage_file": "templates_AGN.hdf5"
     },
     "QSO1": {
-      "type": "AGN",
-      "subtype": "QSO",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_AGN.hdf5"
-    },
-    "BQSO1": {
       "type": "AGN",
       "subtype": "QSO",
       "redshift": 0.0,
@@ -4552,16 +4538,29 @@
       "redshift": 0.056,
       "epochs": 10,
       "storage_file": "templates_Ia.hdf5"
+    },
+    "SN2006gy": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.01919,
+      "epochs": 16,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "2016aps": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.2657,
+      "epochs": 3,
+      "storage_file": "templates_SLSN.hdf5"
     }
   },
   "by_type": {
     "AGN": {
-      "count": 12,
+      "count": 11,
       "storage_file": "templates_AGN.hdf5",
       "template_names": [
         "agn",
         "ASASSN-14ko",
-        "BQSO1",
         "IRAS19254-7245_South",
         "Mrk231",
         "qso",
@@ -5046,7 +5045,7 @@
       ]
     },
     "SLSN": {
-      "count": 54,
+      "count": 55,
       "storage_file": "templates_SLSN.hdf5",
       "template_names": [
         "2010md",
@@ -5079,7 +5078,6 @@
         "PTF12dam",
         "SCP06F6",
         "sn2005ap",
-        "SN2006gy",
         "sn2006oz",
         "sn2007bi",
         "sn2011ke",
@@ -5102,7 +5100,9 @@
         "SN2019hge",
         "SNLS06D4eu",
         "SNLS07D2bv",
-        "SSS120810-23"
+        "SSS120810-23",
+        "SN2006gy",
+        "2016aps"
       ]
     },
     "Ib": {

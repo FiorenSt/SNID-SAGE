@@ -21,6 +21,7 @@ All notable changes to SNID SAGE will be documented in this file.
 - Templates: added four **GAP** templates: `AT2012jc`, `AT2013la`, `2018aes`, `2018hso`.
 - Templates: added two new **Ia-02es** templates: `SN2005P`, `SN2007N`.
 - Templates: added a new **Ia-csm** template: `SN2013dn`.
+- Templates: added **SLSN-II** spectra to `SN2006gy` and added the new `2016aps` template.
 
 ### GUI
 
