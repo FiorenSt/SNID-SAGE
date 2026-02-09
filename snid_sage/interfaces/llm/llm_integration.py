@@ -14,6 +14,12 @@ import json
 from typing import Dict, List, Optional, Any, Union
 import traceback
 
+# Context builder should be available even when OpenRouter is not configured.
+try:
+    from snid_sage.interfaces.llm.analysis.llm_utils import build_enhanced_context_with_metadata
+except Exception:
+    build_enhanced_context_with_metadata = None  # type: ignore[assignment]
+
 try:
     from snid_sage.interfaces.llm.openrouter.openrouter_llm import (
         call_openrouter_api,
@@ -22,7 +28,6 @@ try:
         get_openrouter_api_key,
         DEFAULT_MODEL,
     )
-    from snid_sage.interfaces.llm.analysis.llm_utils import build_enhanced_context_with_metadata
     OPENROUTER_AVAILABLE = True
 except ImportError as e:
     print(f"OpenRouter integration not available: {e}")
@@ -117,37 +122,7 @@ class LLMIntegration:
         
         try:
             # Format SNID results for LLM
-            formatted_data = self.format_snid_results_for_llm(snid_results)
-            
-            # Add user metadata if available (support multiple key variants from GUI)
-            if user_metadata and any(user_metadata.values()):
-                def first_nonempty(keys):
-                    for k in keys:
-                        v = user_metadata.get(k)
-                        if v:
-                            return v
-                    return None
-
-                metadata_parts = ["📋 OBSERVATION DETAILS:"]
-
-                object_name = first_nonempty(['object_name', 'target', 'source_name'])
-                telescope = first_nonempty(['telescope_instrument', 'telescope', 'instrument'])
-                obs_date = first_nonempty(['observation_date', 'date'])
-                reporting_group = first_nonempty(['reporting_group', 'group', 'team', 'observer', 'observer_name'])
-                notes = first_nonempty(['additional_notes', 'notes', 'specific_request'])
-
-                if object_name:
-                    metadata_parts.append(f"   Object Name: {object_name}")
-                if telescope:
-                    metadata_parts.append(f"   Telescope/Instrument: {telescope}")
-                if obs_date:
-                    metadata_parts.append(f"   Observation Date: {obs_date}")
-                if reporting_group:
-                    metadata_parts.append(f"   Reporting Group/Name: {reporting_group}")
-                if notes:
-                    metadata_parts.append(f"   Additional Notes: {notes}")
-
-                formatted_data += "\n\n" + "\n".join(metadata_parts)
+            formatted_data = self.format_snid_results_for_llm(snid_results, user_metadata=user_metadata)
             
             # Build directive prompt with explicit structure and constraints
             system_prompt = """You are AstroSage, a world-renowned expert in supernova spectroscopy with decades of experience in stellar evolution, spectral analysis, and observational astronomy. You have published extensively on Type Ia, Type II, and exotic supernovae classifications.
@@ -263,16 +238,16 @@ Strict response policy:
             if hasattr(self, 'gui') and self.gui:
                 # Prefer main-window attached results
                 if hasattr(self.gui, 'snid_results') and self.gui.snid_results:
-                    snid_context = self.format_snid_results_for_llm(self.gui.snid_results)
+                    snid_context = self.format_snid_results_for_llm(self.gui.snid_results, user_metadata=user_metadata)
                 # Fallback: dialog-attached results (e.g., current_snid_results on assistant dialog)
                 elif hasattr(self.gui, 'current_snid_results') and getattr(self.gui, 'current_snid_results'):
-                    snid_context = self.format_snid_results_for_llm(getattr(self.gui, 'current_snid_results'))
+                    snid_context = self.format_snid_results_for_llm(getattr(self.gui, 'current_snid_results'), user_metadata=user_metadata)
                 # Fallback: controller-held results
                 elif hasattr(self.gui, 'app_controller') and getattr(self.gui.app_controller, 'snid_results', None):
-                    snid_context = self.format_snid_results_for_llm(self.gui.app_controller.snid_results)
+                    snid_context = self.format_snid_results_for_llm(self.gui.app_controller.snid_results, user_metadata=user_metadata)
                 # Alternative name sometimes used
                 elif hasattr(self.gui, 'analysis_results') and getattr(self.gui, 'analysis_results', None):
-                    snid_context = self.format_snid_results_for_llm(self.gui.analysis_results)
+                    snid_context = self.format_snid_results_for_llm(self.gui.analysis_results, user_metadata=user_metadata)
             if snid_context:
                 context_parts.append("Available SNID-SAGE context (facts only):")
                 # Truncate overly long context to keep prompt size reasonable
@@ -353,9 +328,13 @@ Strict response policy:
 
         return cleaned
     
-    def format_snid_results_for_llm(self, snid_results: Union[Dict[str, Any], Any]) -> str:
+    def format_snid_results_for_llm(self, snid_results: Union[Dict[str, Any], Any], user_metadata: Optional[Dict[str, Any]] = None) -> str:
         """
-        Format SNID results for LLM consumption using unified formatter.
+        Format SNID results for LLM consumption.
+
+        Strict policy: the LLM should consume pipeline outputs only. This method
+        therefore avoids GUI display formatters and avoids running any additional
+        analysis/estimators (e.g., emission-line detection).
         
         Args:
             snid_results: SNID analysis results (can be Dict or SNIDResult object)
@@ -367,6 +346,38 @@ Strict response policy:
             return "No SNID results available."
         
         try:
+            # Best-effort conversion to JSON-safe types without expanding large arrays.
+            try:
+                import numpy as _np  # type: ignore
+            except Exception:  # pragma: no cover
+                _np = None  # type: ignore[assignment]
+
+            def _jsonable(obj, *, _depth: int = 0):
+                if _depth > 12:
+                    return str(obj)
+                if obj is None or isinstance(obj, (str, int, float, bool)):
+                    return obj
+                # numpy scalars / arrays
+                if _np is not None:
+                    try:
+                        if isinstance(obj, _np.generic):
+                            return obj.item()
+                        if isinstance(obj, _np.ndarray):
+                            return {'__ndarray__': True, 'shape': list(obj.shape), 'dtype': str(obj.dtype)}
+                    except Exception:
+                        pass
+                if isinstance(obj, dict):
+                    return {str(k): _jsonable(v, _depth=_depth + 1) for k, v in obj.items()}
+                if isinstance(obj, (list, tuple)):
+                    # Avoid huge payloads in prompts
+                    max_n = 50
+                    items = list(obj)[:max_n]
+                    out = [_jsonable(v, _depth=_depth + 1) for v in items]
+                    if len(obj) > max_n:
+                        out.append(f"... ({len(obj) - max_n} more items truncated)")
+                    return out
+                return str(obj)
+
             # Handle both dictionary and SNIDResult object inputs
             if hasattr(snid_results, 'consensus_type'):
                 # snid_results is a SNIDResult object
@@ -381,163 +392,61 @@ Strict response policy:
             # Check if it's a successful result
             if not hasattr(result, 'success') or not result.success:
                 return "SNID analysis was not successful or incomplete."
-            
-            # Use the unified formatter to get the display summary
-            # This ensures consistency with what the user sees in the GUI
+
+            # Collect GUI-provided line selections/annotations (created by the GUI tools),
+            # if available. This is treated as user-provided context (not newly inferred).
+            line_markers = None
             try:
-                from snid_sage.shared.utils.results_formatter import create_unified_formatter
-                spectrum_name = getattr(result, 'spectrum_name', 'Unknown')
-                formatter = create_unified_formatter(result, spectrum_name)
-                summary_text = formatter.get_display_summary()
-                
-                # Ensure we only show top 5 templates by truncating if needed
-                lines = summary_text.split('\n')
-                template_section_started = False
-                template_count = 0
-                filtered_lines = []
-                
-                for line in lines:
-                    if '🏆 TEMPLATE MATCHES' in line:
-                        template_section_started = True
-                        filtered_lines.append(line)
-                    elif template_section_started and line.strip() and not line.startswith('#') and not line.startswith('-'):
-                        # This is a template match line
-                        if template_count < 5:
-                            filtered_lines.append(line)
-                            template_count += 1
-                        # Skip remaining template lines after 5
-                    elif template_section_started and (line.startswith('#') or line.startswith('-')):
-                        # Header lines in template section
-                        filtered_lines.append(line)
-                    elif not template_section_started:
-                        # Lines before template section
-                        filtered_lines.append(line)
-                    elif template_section_started and not line.strip():
-                        # Empty line after template section - end of templates
-                        filtered_lines.append(line)
-                        template_section_started = False
-                    else:
-                        # Lines after template section
-                        filtered_lines.append(line)
-                
-                # Add emission lines context if available (if we have access to GUI)
                 if hasattr(self, 'gui') and self.gui:
-                    emission_lines_text = self._format_emission_lines_for_llm()
-                    if emission_lines_text:
-                        filtered_lines.extend(['', emission_lines_text])
-                
-                return '\n'.join(filtered_lines)
-                
-            except ImportError:
-                # Fallback if unified formatter not available
-                from snid_sage.shared.utils.math_utils import get_best_metric_value, get_best_metric_name
-                return f"SNID analysis completed for {getattr(result, 'spectrum_name', 'Unknown')}\n" \
-                       f"Type: {result.consensus_type}\n" \
-                       f"Redshift: {result.redshift:.6f}\n" \
-                       f"Quality: {get_best_metric_value(best_match):.2f} {get_best_metric_name(best_match)}"
+                    if hasattr(self.gui, 'line_markers') and getattr(self.gui, 'line_markers'):
+                        line_markers = getattr(self.gui, 'line_markers')
+                    elif hasattr(self.gui, 'line_detection_results') and isinstance(getattr(self.gui, 'line_detection_results'), dict):
+                        line_markers = (getattr(self.gui, 'line_detection_results') or {}).get('markers')
+            except Exception:
+                line_markers = None
+
+            # Merge any GUI-side "user decisions" that the pipeline may not encode (e.g. manual galaxy redshift).
+            merged_user_metadata: Optional[Dict[str, Any]] = None
+            try:
+                if user_metadata and isinstance(user_metadata, dict):
+                    merged_user_metadata = dict(user_metadata)
+                elif user_metadata is None:
+                    merged_user_metadata = None
+                else:
+                    merged_user_metadata = {'value': user_metadata}
+                if hasattr(self, 'gui') and self.gui and hasattr(self.gui, 'galaxy_redshift_result'):
+                    gr = getattr(self.gui, 'galaxy_redshift_result')
+                    if gr:
+                        if merged_user_metadata is None:
+                            merged_user_metadata = {}
+                        merged_user_metadata['galaxy_redshift_result'] = gr
+            except Exception:
+                merged_user_metadata = user_metadata
+
+            # Build structured pipeline context (JSON) for the LLM.
+            try:
+                if build_enhanced_context_with_metadata is None:
+                    raise RuntimeError("LLM context builder unavailable")
+                ctx = build_enhanced_context_with_metadata(
+                    result,
+                    user_metadata=merged_user_metadata,
+                    line_markers=line_markers,
+                )
+            except Exception:
+                # Minimal fallback if context builder is unavailable for some reason
+                ctx = {
+                    'pipeline_outputs': {
+                        'consensus_type': getattr(result, 'consensus_type', 'Unknown'),
+                        'best_subtype': getattr(result, 'best_subtype', 'Unknown'),
+                        'redshift': getattr(result, 'redshift', 0.0),
+                        'redshift_error': getattr(result, 'redshift_error', 0.0),
+                        'consensus_redshift': getattr(result, 'consensus_redshift', 0.0),
+                        'consensus_redshift_error': getattr(result, 'consensus_redshift_error', 0.0),
+                    }
+                }
+
+            return "SNID-SAGE pipeline context (JSON):\n" + json.dumps(_jsonable(ctx), indent=2, ensure_ascii=False)
             
         except Exception as e:
             return f"Error formatting SNID results: {str(e)}"
     
-    def _format_emission_lines_for_llm(self):
-        """Format detected emission lines for LLM context
-        
-        Returns:
-            str: Formatted emission lines text or empty string if none detected
-        """
-        try:
-            # This method requires access to GUI instance for spectrum data
-            if not hasattr(self, 'gui') or not self.gui:
-                return ""
-            
-            gui = self.gui
-            
-            # Try to get spectrum data from SNID results
-            spectrum_data = None
-            if hasattr(gui, 'snid_results') and gui.snid_results:
-                if hasattr(gui.snid_results, 'processed_spectrum') and gui.snid_results.processed_spectrum:
-                    processed = gui.snid_results.processed_spectrum
-                    if 'log_wave' in processed and 'flat_flux' in processed:
-                        # Convert log wavelength to linear
-                        import numpy as np
-                        wavelength = np.power(10, processed['log_wave'])
-                        flux = processed['flat_flux']
-                        spectrum_data = {'wavelength': wavelength, 'flux': flux}
-            
-            # Fallback to GUI processed spectrum
-            if spectrum_data is None and hasattr(gui, 'processed_spectrum') and gui.processed_spectrum:
-                if 'log_wave' in gui.processed_spectrum and 'flat_flux' in gui.processed_spectrum:
-                    import numpy as np
-                    wavelength = np.power(10, gui.processed_spectrum['log_wave'])
-                    flux = gui.processed_spectrum['flat_flux']
-                    spectrum_data = {'wavelength': wavelength, 'flux': flux}
-            
-            if spectrum_data is None:
-                return ""
-            
-            # Detect emission lines using Tk-free detection utilities
-            try:
-                from snid_sage.shared.utils.line_detection.detection import detect_and_fit_lines
-                
-                wavelength = spectrum_data['wavelength']
-                flux = spectrum_data['flux']
-                
-                # Filter out zero/invalid regions
-                import numpy as np
-                valid_mask = (flux != 0) & np.isfinite(flux) & np.isfinite(wavelength)
-                if not np.any(valid_mask):
-                    return ""
-                
-                wavelength = wavelength[valid_mask]
-                flux = flux[valid_mask]
-                
-                # Detect lines with conservative parameters
-                detected_lines = detect_and_fit_lines(
-                    wavelength, flux, 
-                    min_width=2, max_width=15, min_snr=3.0,
-                    max_fit_window=30, smoothing_window=5, use_smoothing=True
-                )
-                
-                if not detected_lines:
-                    return ""
-                
-                # Format detected lines for LLM
-                emission_lines = [line for line in detected_lines if line.get('type') == 'emission']
-                absorption_lines = [line for line in detected_lines if line.get('type') == 'absorption']
-                
-                if not emission_lines and not absorption_lines:
-                    return ""
-                
-                lines_text = ["🌟 DETECTED SPECTRAL LINES:"]
-                
-                if emission_lines:
-                    lines_text.append("   Emission Lines:")
-                    # Sort by SNR (strongest first) and limit to top 10
-                    emission_lines.sort(key=lambda x: x.get('snr', 0), reverse=True)
-                    for i, line in enumerate(emission_lines[:10], 1):
-                        wavelength_val = line.get('wavelength', 0)
-                        snr = line.get('snr', 0)
-                        lines_text.append(f"   {i:2d}. {wavelength_val:7.1f} Å  (S/N: {snr:.1f})")
-                
-                if absorption_lines:
-                    lines_text.append("   Absorption Lines:")
-                    # Sort by SNR (strongest first) and limit to top 5
-                    absorption_lines.sort(key=lambda x: x.get('snr', 0), reverse=True)
-                    for i, line in enumerate(absorption_lines[:5], 1):
-                        wavelength_val = line.get('wavelength', 0)
-                        snr = line.get('snr', 0)
-                        lines_text.append(f"   {i:2d}. {wavelength_val:7.1f} Å  (S/N: {snr:.1f})")
-                
-                return '\n'.join(lines_text)
-                
-            except ImportError:
-                # Line detection utilities not available
-                return ""
-            except Exception as e:
-                # Log debug message but don't fail
-                return ""
-                
-        except Exception as e:
-            # Log debug message but don't fail
-            return ""
-

@@ -393,13 +393,6 @@ Examples:
         default=10, 
         help="Maximum number of templates to output"
     )
-    advanced_group.add_argument(
-        "--weighted-gmm",
-        dest="weighted_gmm",
-        action="store_true",
-        help=argparse.SUPPRESS  # Internal toggle for using weighted GMM + weighted BIC
-    )
-
     # Display options
     display_group = parser.add_argument_group("Display Options")
     display_group.add_argument(
@@ -1022,7 +1015,6 @@ def main(args: argparse.Namespace) -> int:
             save_plots=False,  # Avoid internal saving to prevent duplicates; CLI handles all plots
             plot_dir=None,
             progress_callback=progress_callback,  # Add progress callback
-            use_weighted_gmm=getattr(args, 'weighted_gmm', False),
             profile_id=active_profile_id
         )
         

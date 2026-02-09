@@ -2,7 +2,7 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
-## [1.1.3] - 2026-02-04
+## [1.2.0] - 2026-02-09
 
 ### Compatibility (Breaking)
 
@@ -11,6 +11,7 @@ All notable changes to SNID SAGE will be documented in this file.
 ### Analysis Improvements
 
 - Phase-2 redshift sanity: capped **GAP** (ILRT/LBV/LRN) redshift predictions to z ≤ 0.025 before Phase-2 metrics/clustering (similar to the existing Star/CV cap at z ≤ 0.01).
+- Weighting: updated canonical aggregation weights from `metric²` to `exp(metric)` (τ=1, absolute metric).
 
 ### Templates
 

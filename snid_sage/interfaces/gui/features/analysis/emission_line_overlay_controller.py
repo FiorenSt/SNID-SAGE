@@ -8,7 +8,7 @@ Handles integration with the main GUI and provides easy access to emission line 
 Part of the SNID SAGE GUI system.
 """
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import math
 
 # Import the centralized logging system
@@ -21,16 +21,17 @@ except ImportError:
 
 # Import the multi-step emission dialog
 try:
-    from snid_sage.interfaces.gui.components.dialogs.multi_step_emission_dialog import show_multi_step_emission_dialog
-    _LOGGER.debug("✅ Multi-step emission line dialog imported successfully")
+    # Refactored, matplotlib-free PySide6 dialog
+    from snid_sage.interfaces.gui.components.pyside6_dialogs import show_pyside6_multi_step_emission_dialog
+    _LOGGER.debug("✅ PySide6 multi-step emission line dialog imported successfully")
     DIALOG_AVAILABLE = True
 except ImportError as e:
     _LOGGER.warning(f"⚠️ Could not import multi-step emission line dialog: {e}")
-    show_multi_step_emission_dialog = None
+    show_pyside6_multi_step_emission_dialog = None
     DIALOG_AVAILABLE = False
 except Exception as e:
     _LOGGER.error(f"❌ Error importing multi-step emission line dialog: {e}")
-    show_multi_step_emission_dialog = None
+    show_pyside6_multi_step_emission_dialog = None
     DIALOG_AVAILABLE = False
 
 
@@ -82,11 +83,11 @@ class EmissionLineOverlayController:
                     pass
             
             # Open new multi-step dialog
-            if not DIALOG_AVAILABLE or not show_multi_step_emission_dialog:
+            if not DIALOG_AVAILABLE or not show_pyside6_multi_step_emission_dialog:
                 self._show_import_error()
                 return
                 
-            self.current_dialog = show_multi_step_emission_dialog(
+            self.current_dialog = show_pyside6_multi_step_emission_dialog(
                 parent=self.gui,  # Pass the GUI instance, not just master
                 spectrum_data=spectrum_data,
                 theme_manager=self.gui.theme_manager,
@@ -95,10 +96,76 @@ class EmissionLineOverlayController:
             )
             
             _LOGGER.info(f"🔬 Opened multi-step emission line analysis dialog with galaxy z={galaxy_redshift:.6f}, cluster z={cluster_median_redshift:.6f}")
+
+            # Persist user-selected line information back onto the GUI so other features
+            # (including the AI assistant) can consume it as *user-provided* context.
+            try:
+                self._persist_dialog_line_markers(self.current_dialog)
+            except Exception as persist_error:
+                _LOGGER.warning(f"Could not persist emission-line markers to GUI: {persist_error}")
             
         except Exception as e:
             _LOGGER.error(f"❌ Error opening emission line overlay: {e}")
             self._show_generic_error(str(e))
+
+    def _persist_dialog_line_markers(self, dialog) -> None:
+        """
+        Persist line selections/analysis produced in the emission dialog to the GUI instance.
+
+        This is intentionally a pass-through of *user-selected* GUI outputs (no new fitting/estimation).
+        """
+        if dialog is None:
+            return
+
+        line_markers: List[Dict[str, Any]] = []
+        host_z = float(getattr(dialog, 'host_redshift', 0.0) or 0.0)
+        velocity_kms = float(getattr(dialog, 'velocity_shift', 0.0) or 0.0)
+
+        # Optional Step-2 peak analysis results (user-triggered via "Analyze")
+        step2_results = {}
+        try:
+            step2 = getattr(dialog, 'step2_analysis', None)
+            if step2 is not None and isinstance(getattr(step2, 'line_analysis_results', None), dict):
+                step2_results = getattr(step2, 'line_analysis_results') or {}
+        except Exception:
+            step2_results = {}
+
+        def add_group(lines_dict: Dict[str, Any], mode: str):
+            for line_name, payload in (lines_dict or {}).items():
+                try:
+                    obs_wavelength, meta = payload
+                except Exception:
+                    # Unexpected format; skip safely
+                    continue
+                marker = {
+                    'wavelength': float(obs_wavelength) if obs_wavelength is not None else None,
+                    'identification': str(line_name),
+                    'mode': mode,  # 'sn' or 'galaxy'
+                    'host_redshift': host_z,
+                    'velocity_shift_kms': velocity_kms,
+                    'metadata': meta if isinstance(meta, dict) else {},
+                    'step2_analysis': step2_results.get(line_name, None),
+                    'source': 'emission_line_overlay_dialog',
+                }
+                line_markers.append(marker)
+
+        add_group(getattr(dialog, 'sn_lines', {}) if hasattr(dialog, 'sn_lines') else {}, mode='sn')
+        add_group(getattr(dialog, 'galaxy_lines', {}) if hasattr(dialog, 'galaxy_lines') else {}, mode='galaxy')
+
+        # Store on GUI
+        try:
+            self.gui.line_markers = line_markers
+        except Exception:
+            pass
+        try:
+            self.gui.line_detection_results = {
+                'host_redshift': host_z,
+                'velocity_shift_kms': velocity_kms,
+                'n_markers': len(line_markers),
+                'markers': line_markers,
+            }
+        except Exception:
+            pass
     
     def _is_spectrum_loaded(self) -> bool:
         """Check if a spectrum is currently loaded"""

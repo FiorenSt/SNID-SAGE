@@ -283,6 +283,52 @@ class DialogManager:
                     cluster_median_redshift=cluster_median_redshift
                 )
                 _LOGGER.info("✅ Emission line dialog created successfully")
+
+                # Persist user-selected lines/annotations to the main window so other features
+                # (including the AI assistant) can consume them as user-provided context.
+                try:
+                    host_z = float(getattr(dialog, 'host_redshift', 0.0) or 0.0)
+                    velocity_kms = float(getattr(dialog, 'velocity_shift', 0.0) or 0.0)
+                    step2_results = {}
+                    try:
+                        step2 = getattr(dialog, 'step2_analysis', None)
+                        if step2 is not None and isinstance(getattr(step2, 'line_analysis_results', None), dict):
+                            step2_results = getattr(step2, 'line_analysis_results') or {}
+                    except Exception:
+                        step2_results = {}
+
+                    markers = []
+
+                    def add_group(lines_dict, mode: str):
+                        for line_name, payload in (lines_dict or {}).items():
+                            try:
+                                obs_wavelength, meta = payload
+                            except Exception:
+                                continue
+                            markers.append({
+                                'wavelength': float(obs_wavelength) if obs_wavelength is not None else None,
+                                'identification': str(line_name),
+                                'mode': mode,
+                                'host_redshift': host_z,
+                                'velocity_shift_kms': velocity_kms,
+                                'metadata': meta if isinstance(meta, dict) else {},
+                                'step2_analysis': step2_results.get(line_name, None),
+                                'source': 'pyside6_emission_line_dialog',
+                            })
+
+                    add_group(getattr(dialog, 'sn_lines', {}) if hasattr(dialog, 'sn_lines') else {}, mode='sn')
+                    add_group(getattr(dialog, 'galaxy_lines', {}) if hasattr(dialog, 'galaxy_lines') else {}, mode='galaxy')
+
+                    self.main_window.line_markers = markers
+                    self.main_window.line_detection_results = {
+                        'host_redshift': host_z,
+                        'velocity_shift_kms': velocity_kms,
+                        'n_markers': len(markers),
+                        'markers': markers,
+                    }
+                    _LOGGER.info(f"✅ Persisted {len(markers)} line markers to GUI for downstream use")
+                except Exception as persist_error:
+                    _LOGGER.warning(f"Could not persist line markers from emission dialog: {persist_error}")
                 
                 self._update_status("emission", "Dialog opened", success_style=True)
                 _LOGGER.info(f"🔬 Emission line analysis dialog opened successfully using {spectrum_view} view")

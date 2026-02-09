@@ -7,7 +7,7 @@ redshift and age estimation using template quality metrics.
 Primary match-quality metric (preferred when available): HσLAP-CCC
     HσLAP-CCC = (height × lap × CCC) / sqrt(sigma_z)
 
-Weighting policy for clustering/aggregation: w = (HσLAP-CCC)^2
+Weighting policy for clustering/aggregation: w = exp(metric) (τ = 1)
 """
 
 from .weighted_statistics import (

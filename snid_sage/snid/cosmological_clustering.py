@@ -225,7 +225,6 @@ def perform_direct_gmm_clustering(
     max_clusters_per_type: int = 10,
     verbose: bool = False,
     hsigma_lap_ccc_threshold: float = 1.5,  # Best-metric threshold for clustering (HσLAP-CCC)
-    use_weighted_gmm: Optional[bool] = None,  # Hidden option: when True, use weighted GMM + weighted BIC
     # Optional: model selection method for choosing the number of GMM components.
     # Default is 'elbow'. Optional 'bic' chooses min(BIC).
     model_selection_method: Optional[str] = None,
@@ -260,14 +259,6 @@ def perform_direct_gmm_clustering(
     hsigma_lap_ccc_threshold : float, optional
         Minimum HσLAP-CCC value required for matches to be considered for clustering
         (HσLAP-CCC: (height × lap × CCC) / sqrt(sigma_z)).
-        
-    Hidden Options
-    --------------
-    use_weighted_gmm : bool, optional
-        When True, enables sample-weighted GMM fitting and weighted-BIC selection
-        using combined weights (HσLAP-CCC)^2. By default (None/False),
-        the method uses standard unweighted GMM and unweighted BIC. If None, the
-        value is read from environment variable 'SNID_SAGE_WEIGHTED_GMM' (1/true/on).
 
     Returns
     -------
@@ -275,15 +266,6 @@ def perform_direct_gmm_clustering(
     """
     
     start_time = time.time()
-    
-    # Resolve hidden option: default to unweighted unless explicitly enabled
-    if use_weighted_gmm is None:
-        try:
-            import os
-            env_val = str(os.getenv("SNID_SAGE_WEIGHTED_GMM", "0")).strip().lower()
-            use_weighted_gmm = env_val in ("1", "true", "yes", "on")
-        except Exception:
-            use_weighted_gmm = False
 
     # Resolve model selection method (default: elbow)
     if model_selection_method is None:
@@ -399,7 +381,6 @@ def perform_direct_gmm_clustering(
         type_result = _perform_direct_gmm_clustering(
             type_matches, sn_type, max_clusters_per_type, 
             verbose, "best_metric",
-            use_weighted_gmm=use_weighted_gmm,
             model_selection_method=model_selection_method
         )
         
@@ -618,7 +599,7 @@ def perform_direct_gmm_clustering(
         'quality_assessment': quality_assessment,  # NEW: Complete quality assessment
         'total_computation_time': total_time,
         'n_types_clustered': len(clustering_results),
-        'use_weighted_gmm': bool(use_weighted_gmm),
+        'use_weighted_gmm': False,
         'total_candidates': len(valid_candidates)
     }
 
@@ -630,7 +611,6 @@ def _perform_direct_gmm_clustering(
     verbose: bool,
     metric_key: str = 'best_metric',  # Uses get_best_metric_value() automatically
     *,
-    use_weighted_gmm: bool = False,
     model_selection_method: str = "elbow",
 ) -> Dict[str, Any]:
     """
@@ -640,7 +620,7 @@ def _perform_direct_gmm_clustering(
     
     try:
         redshifts = np.array([m['redshift'] for m in type_matches])
-        from snid_sage.shared.utils.math_utils import get_best_metric_value, calculate_combined_weights
+        from snid_sage.shared.utils.math_utils import get_best_metric_value
         from snid_sage.shared.utils.match_utils import extract_redshift_sigma
         metric_values = np.array([get_best_metric_value(m) for m in type_matches])  # Use best available metric
         sigmas = np.array([extract_redshift_sigma(m) for m in type_matches], dtype=float)
@@ -661,15 +641,6 @@ def _perform_direct_gmm_clustering(
                 type_matches, sn_type, redshifts, "best_metric"
             )
         
-        # Build weights only when requested; default to unweighted GMM.
-        # Official weighting policy (HσLAP-CCC): w_i = (metric_i)^2
-        if use_weighted_gmm:
-            raw_weights = calculate_combined_weights(metric_values, sigmas)
-            sum_w = float(np.sum(raw_weights)) if raw_weights.size else 0.0
-            weights = raw_weights if (sum_w > 0 and np.isfinite(sum_w)) else np.ones_like(metric_values, dtype=float)
-        else:
-            weights = None
-
         bic_scores = []
         models = []
         
@@ -684,34 +655,8 @@ def _perform_direct_gmm_clustering(
 
             # Cluster directly on redshift values (no transformation)
             features = redshifts.reshape(-1, 1)
-
-            if use_weighted_gmm and weights is not None:
-                # Weighted fit and weighted BIC; fallback to resampling if needed
-                d = features.shape[1]
-                try:
-                    gmm.fit(features, sample_weight=weights)
-                    logprob = gmm.score_samples(features)
-                    # Parameter count for full covariance
-                    p = (n_clusters - 1) + n_clusters * d + n_clusters * d * (d + 1) / 2.0
-                    bic = -2.0 * float(np.sum(weights * logprob)) + float(p) * np.log(float(np.sum(weights)))
-                except TypeError:
-                    # Resampling fallback
-                    rng = np.random.RandomState(42)
-                    # Target size similar to test script bounds
-                    target = int(min(max(len(features) * 5, 300), 5000)) if len(features) > 0 else 0
-                    if target > 0:
-                        p_norm = weights / float(np.sum(weights)) if np.sum(weights) > 0 else np.full_like(weights, 1.0 / len(weights))
-                        idx = rng.choice(np.arange(len(features)), size=target, replace=True, p=p_norm)
-                        features_rs = features[idx]
-                        gmm.fit(features_rs)
-                        bic = float(gmm.bic(features_rs))
-                    else:
-                        gmm.fit(features)
-                        bic = float(gmm.bic(features))
-            else:
-                # Unweighted default path
-                gmm.fit(features)
-                bic = float(gmm.bic(features))
+            gmm.fit(features)
+            bic = float(gmm.bic(features))
 
             bic_scores.append(bic)
             models.append(gmm)
@@ -951,8 +896,8 @@ def _perform_direct_gmm_clustering(
             'gamma': gamma,
             'type_matches': type_matches,  # Store the original matches used for gamma matrix
             'contiguity_split_applied': True if final_clusters else bool(split_applied),
-            # Debug extras
-            'weights': weights.tolist() if isinstance(weights, np.ndarray) else []
+            # Debug extras (kept for backward compatibility)
+            'weights': []
         }
                 
     except Exception as e:

@@ -17,28 +17,19 @@ def build_enhanced_context(snid_results: Union[Dict[str, Any], Any],
                           mask_regions: Optional[List[Tuple[float, float]]] = None,
                           line_markers: Optional[List] = None,
                           analysis_params: Optional[Dict] = None) -> Dict[str, Any]:
-    """
-    Build comprehensive context for LLM analysis from SNID results.
-    
-    Args:
-        snid_results: SNID analysis results (can be Dict or SNIDResult object)
-        mask_regions: Wavelength regions that were masked during preprocessing
-        line_markers: Identified spectral line markers
-        analysis_params: Analysis parameters used
-        
-    Returns:
-        Dict containing structured context for LLM analysis
-    """
+    """Build structured context for LLM analysis from SNID results."""
     # Initialize context structure
     context = {
+        # Pipeline outputs (sanitized for size)
+        'pipeline_outputs': {},
         'redshift_analysis': {},
         'spectrum_properties': {},
         'template_matches': {},
         'analysis_quality': {},
         'observational_context': {},
         'preprocessing_info': {},
-        'clustering_analysis': {},  # NEW: Enhanced clustering information
-        'classification_summary': {}  # NEW: Clear classification summary
+        'clustering_analysis': {},
+        'classification_summary': {}
     }
     
     # ENHANCED: Handle both dictionary and SNIDResult object inputs
@@ -48,7 +39,8 @@ def build_enhanced_context(snid_results: Union[Dict[str, Any], Any],
         # Create a mock dictionary structure for compatibility
         snid_results_dict = {
             'result': result,
-            'templates': getattr(result, 'top_matches', []),
+            # Prefer top_matches if present; otherwise fall back to best_matches.
+            'templates': (getattr(result, 'top_matches', None) or getattr(result, 'best_matches', []) or []),
             'input_flux': getattr(result, 'input_spectrum', {}).get('flux', None) if hasattr(result, 'input_spectrum') else None
         }
     else:
@@ -57,6 +49,60 @@ def build_enhanced_context(snid_results: Union[Dict[str, Any], Any],
         result = snid_results.get('result')  # SNIDResult object
     
     if result:
+        # Pipeline outputs (authoritative). Keep arrays out of the LLM context.
+        try:
+            context['pipeline_outputs'] = {
+                'success': bool(getattr(result, 'success', False)),
+                'runtime_sec': float(getattr(result, 'runtime_sec', 0.0) or 0.0),
+                'input_file': getattr(result, 'input_file', '') or getattr(result, 'spectrum_path', '') or '',
+                'output_files': getattr(result, 'output_files', {}) if isinstance(getattr(result, 'output_files', {}), dict) else {},
+
+                # Analysis bounds/thresholds used (for reproducibility)
+                'zmin_used': getattr(result, 'zmin_used', None),
+                'zmax_used': getattr(result, 'zmax_used', None),
+                'lapmin': getattr(result, 'lapmin', None),
+                'hsigma_lap_ccc_threshold': getattr(result, 'hsigma_lap_ccc_threshold', None),
+
+                # Primary best-match values
+                'template_name': getattr(result, 'template_name', 'Unknown'),
+                'template_type': getattr(result, 'template_type', 'Unknown'),
+                'template_subtype': getattr(result, 'template_subtype', ''),
+                'template_age': getattr(result, 'template_age', 0.0),
+                'redshift': getattr(result, 'redshift', 0.0),
+                'redshift_error': getattr(result, 'redshift_error', 0.0),
+                'r': getattr(result, 'r', 0.0),
+                'lap': getattr(result, 'lap', 0.0),
+                'hlap': getattr(result, 'hlap', 0.0),
+                'hsigma_lap_ccc': getattr(result, 'hsigma_lap_ccc', 0.0),
+
+                # Consensus values (as produced by the pipeline)
+                'initial_redshift': getattr(result, 'initial_redshift', 0.0),
+                'consensus_redshift': getattr(result, 'consensus_redshift', 0.0),
+                'consensus_redshift_error': getattr(result, 'consensus_redshift_error', 0.0),
+                'consensus_z_median': getattr(result, 'consensus_z_median', 0.0),
+                'consensus_age': getattr(result, 'consensus_age', 0.0),
+                'consensus_age_error': getattr(result, 'consensus_age_error', 0.0),
+                'consensus_type': getattr(result, 'consensus_type', 'Unknown'),
+                'best_subtype': getattr(result, 'best_subtype', 'Unknown'),
+
+                # Aggregated statistics (verbatim)
+                'match_statistics': getattr(result, 'match_statistics', {}) if isinstance(getattr(result, 'match_statistics', {}), dict) else {},
+                'type_fractions': getattr(result, 'type_fractions', {}) if isinstance(getattr(result, 'type_fractions', {}), dict) else {},
+                'type_fractions_weighted': getattr(result, 'type_fractions_weighted', {}) if isinstance(getattr(result, 'type_fractions_weighted', {}), dict) else {},
+                'type_statistics': getattr(result, 'type_statistics', {}) if isinstance(getattr(result, 'type_statistics', {}), dict) else {},
+                'subtype_fractions': getattr(result, 'subtype_fractions', {}) if isinstance(getattr(result, 'subtype_fractions', {}), dict) else {},
+                'correlation_statistics': getattr(result, 'correlation_statistics', {}) if isinstance(getattr(result, 'correlation_statistics', {}), dict) else {},
+
+                # Match list sizes (not the full lists)
+                'n_best_matches': int(len(getattr(result, 'best_matches', []) or [])),
+                'n_filtered_matches': int(len(getattr(result, 'filtered_matches', []) or [])),
+                'n_top_matches': int(len(getattr(result, 'top_matches', []) or [])),
+                'n_all_matches': int(len(getattr(result, 'all_matches', []) or [])),
+            }
+        except Exception:
+            # Best-effort: do not break LLM context if result is non-standard.
+            context['pipeline_outputs'] = {'error': 'Failed to serialize pipeline outputs.'}
+
         # Primary classification summary
         context['classification_summary'] = {
             'consensus_type': getattr(result, 'consensus_type', 'Unknown'),
@@ -89,7 +135,8 @@ def build_enhanced_context(snid_results: Union[Dict[str, Any], Any],
                     cluster_size = best_cluster.get('size', 0)
                     quality_score = best_cluster.get('composite_score', 0)
                     top_5_mean = best_cluster.get('top_5_mean', 0)
-                    enhanced_redshift = best_cluster.get('weighted_mean_redshift', 0)
+                    # Clusters may provide either 'enhanced_redshift' or 'weighted_mean_redshift'
+                    enhanced_redshift = best_cluster.get('enhanced_redshift', best_cluster.get('weighted_mean_redshift', 0))
                     redshift_span = best_cluster.get('redshift_span', 0)
                     cluster_matches = best_cluster.get('matches', [])
                     # Extract pipeline-computed quality and confidence assessments
@@ -101,7 +148,7 @@ def build_enhanced_context(snid_results: Union[Dict[str, Any], Any],
                     cluster_size = getattr(best_cluster, 'size', 0)
                     quality_score = getattr(best_cluster, 'composite_score', 0)
                     top_5_mean = getattr(best_cluster, 'top_5_mean', 0)
-                    enhanced_redshift = getattr(best_cluster, 'weighted_mean_redshift', 0)
+                    enhanced_redshift = getattr(best_cluster, 'enhanced_redshift', getattr(best_cluster, 'weighted_mean_redshift', 0))
                     redshift_span = getattr(best_cluster, 'redshift_span', 0)
                     cluster_matches = getattr(best_cluster, 'matches', [])
                     # Extract pipeline-computed quality and confidence assessments
@@ -142,38 +189,10 @@ def build_enhanced_context(snid_results: Union[Dict[str, Any], Any],
                     'total_candidates': total_candidates,
                     'clustering_method': 'Type-specific GMM with Q selection'
                 }
-                
-                # Add subtype composition within cluster
-                if cluster_matches:
-                    from collections import Counter
-                    subtypes = []
-                    for match in cluster_matches:
-                        # Handle match as either dict or object
-                        if isinstance(match, dict):
-                            template = match.get('template', {})
-                            if isinstance(template, dict):
-                                subtype = template.get('subtype', 'Unknown')
-                            else:
-                                subtype = getattr(template, 'subtype', 'Unknown')
-                        else:
-                            template = getattr(match, 'template', {})
-                            if isinstance(template, dict):
-                                subtype = template.get('subtype', 'Unknown')
-                            else:
-                                subtype = getattr(template, 'subtype', 'Unknown')
-                        
-                        if not subtype or subtype.strip() == '':
-                            subtype = 'Unknown'
-                        subtypes.append(subtype)
-                    
-                    subtype_counts = Counter(subtypes)
-                    total = len(cluster_matches)
-                    subtype_fractions = {
-                        subtype: count / total 
-                        for subtype, count in subtype_counts.items()
-                    }
-                    
-                    context['clustering_analysis']['subtype_composition'] = subtype_fractions
+                # Prefer pipeline-provided subtype fractions if present.
+                subtype_fractions = getattr(result, 'subtype_fractions', None)
+                if isinstance(subtype_fractions, dict) and subtype_fractions:
+                    context['clustering_analysis']['subtype_fractions'] = subtype_fractions
         
         # Redshift analysis (prefer cluster-weighted if available)
         if hasattr(result, 'consensus_redshift') and result.consensus_redshift > 0:
@@ -232,10 +251,18 @@ def build_enhanced_context(snid_results: Union[Dict[str, Any], Any],
     # Enhanced template match information
     if 'templates' in snid_results_dict:
         templates = snid_results_dict['templates']
+        # Strict policy: do not compute new statistics in the LLM layer.
+        # Prefer pipeline-provided match statistics when available.
+        pipeline_match_statistics = {}
+        try:
+            if result is not None and isinstance(getattr(result, 'match_statistics', None), dict):
+                pipeline_match_statistics = getattr(result, 'match_statistics') or {}
+        except Exception:
+            pipeline_match_statistics = {}
         context['template_matches'] = {
             'primary_match': _extract_template_info(templates[0]) if templates else None,
             'alternative_matches': [_extract_template_info(t) for t in templates[1:5]] if len(templates) > 1 else [],
-            'match_statistics': _calculate_match_statistics(templates) if templates else {}
+            'match_statistics': pipeline_match_statistics
         }
     
     # Analysis quality assessment
@@ -248,7 +275,8 @@ def build_enhanced_context(snid_results: Union[Dict[str, Any], Any],
                 'start': start, 
                 'end': end, 
                 'width': end - start,
-                'likely_reason': _identify_mask_reason(start, end)
+                # Avoid speculative "reason" inference; keep raw mask data only.
+                'reason': None
             }
             for start, end in mask_regions
         ]
@@ -258,20 +286,22 @@ def build_enhanced_context(snid_results: Union[Dict[str, Any], Any],
         context['observational_context']['identified_lines'] = []
         for line in line_markers:
             if isinstance(line, dict):
-                # Line marker is already a dictionary with information
-                context['observational_context']['identified_lines'].append({
-                    'wavelength': line.get('wavelength', 0),
-                    'identification': line.get('identification', 'Unknown'),
-                    'type': line.get('type', 'unknown'),
-                    'strength': line.get('strength', 'unknown'),
-                    'redshift': line.get('redshift', 0.0)
-                })
+                # Keep full GUI/pipeline-provided payload (no inference/truncation).
+                # Ensure at least wavelength exists for downstream consumers.
+                if 'wavelength' not in line and 'lambda' in line:
+                    try:
+                        line = dict(line)
+                        line['wavelength'] = line.get('lambda')
+                    except Exception:
+                        pass
+                context['observational_context']['identified_lines'].append(line)
             elif hasattr(line, 'get_xdata'):
                 # Line marker is a matplotlib object
                 wavelength = line.get_xdata()[0] if line.get_xdata() else 0
                 context['observational_context']['identified_lines'].append({
                     'wavelength': wavelength,
-                    'identification': _identify_spectral_line(wavelength),
+                    # Do not guess line IDs here; provide wavelength only.
+                    'identification': 'Unknown',
                     'type': 'matplotlib_marker',
                     'strength': 'unknown',
                     'redshift': 0.0
@@ -312,22 +342,25 @@ def _assess_spectral_quality(flux: np.ndarray) -> Dict[str, Any]:
     return quality
 
 def _extract_template_info(template: Dict) -> Dict[str, Any]:
-    """Extract enhanced information from template match."""
+    """Extract enhanced information from a template match or template dict."""
     if not template:
         return {}
     
     # Handle template as either dict or object
     if isinstance(template, dict):
+        # If this is a match dict, prefer the nested template payload when present
+        tpl = template.get('template') if isinstance(template.get('template'), dict) else template
         return {
-            'name': template.get('name', 'Unknown'),
-            'type': template.get('type', 'Unknown'),
-            'subtype': template.get('subtype', ''),
-            'redshift': template.get('z', 0.0),
-            'redshift_error': template.get('zerr', 0.0),
-            'age': template.get('age', 0.0),
-            'lap_score': template.get('lap', 0.0),
-            'metric_score': template.get('hsigma_lap_ccc', template.get('hlap', 0.0)),
-            'grade': template.get('grade', '')
+            'name': tpl.get('name', template.get('name', 'Unknown')),
+            'type': tpl.get('type', template.get('type', 'Unknown')),
+            'subtype': tpl.get('subtype', template.get('subtype', '')),
+            # Match dictionaries often use 'redshift'/'sigma_z'; templates may use 'z'/'zerr'
+            'redshift': template.get('z', template.get('redshift', tpl.get('z', tpl.get('redshift', 0.0)))),
+            'redshift_error': template.get('zerr', template.get('sigma_z', template.get('redshift_error', tpl.get('zerr', 0.0)))),
+            'age': tpl.get('age', template.get('age', 0.0)),
+            'lap_score': template.get('lap', tpl.get('lap', 0.0)),
+            'metric_score': template.get('hsigma_lap_ccc', template.get('primary_metric', template.get('hlap', 0.0))),
+            'grade': template.get('grade', tpl.get('grade', ''))
         }
     else:
         # Handle as object with attributes
@@ -335,109 +368,30 @@ def _extract_template_info(template: Dict) -> Dict[str, Any]:
             'name': getattr(template, 'name', 'Unknown'),
             'type': getattr(template, 'type', 'Unknown'),
             'subtype': getattr(template, 'subtype', ''),
-            'redshift': getattr(template, 'z', 0.0),
-            'redshift_error': getattr(template, 'zerr', 0.0),
+            'redshift': getattr(template, 'z', getattr(template, 'redshift', 0.0)),
+            'redshift_error': getattr(template, 'zerr', getattr(template, 'sigma_z', getattr(template, 'redshift_error', 0.0))),
             'age': getattr(template, 'age', 0.0),
             'lap_score': getattr(template, 'lap', 0.0),
             'metric_score': getattr(template, 'hsigma_lap_ccc', getattr(template, 'hlap', 0.0)),
             'grade': getattr(template, 'grade', '')
         }
 
-def _calculate_match_statistics(templates: List[Dict]) -> Dict[str, Any]:
-    """Calculate statistics across template matches."""
-    if not templates:
-        return {}
-    
-    # Handle templates as either dicts or objects
-    metric_values = []
-    lap_values = []
-    for t in templates:
-        if isinstance(t, dict):
-            metric_values.append(t.get('hsigma_lap_ccc', t.get('hlap', 0.0)))
-            lap_values.append(t.get('lap', 0))
-        else:
-            metric_values.append(getattr(t, 'hsigma_lap_ccc', getattr(t, 'hlap', 0.0)))
-            lap_values.append(getattr(t, 'lap', 0))
-    
-    return {
-        'best_metric': max(metric_values) if metric_values else 0,
-        'metric_spread': max(metric_values) - min(metric_values) if len(metric_values) > 1 else 0,
-        'consistent_type': _check_type_consistency(templates),
-        'redshift_consistency': _check_redshift_consistency(templates)
-    }
-
-def _check_type_consistency(templates: List[Dict]) -> bool:
-    """Check if top matches agree on supernova type."""
-    if len(templates) < 2:
-        return True
-    
-    # Handle first template as either dict or object
-    if isinstance(templates[0], dict):
-        primary_type = templates[0].get('type', '').split('-')[0]  # Get main type
-    else:
-        primary_type = getattr(templates[0], 'type', '').split('-')[0]  # Get main type
-    
-    # Check consistency across top 3 templates
-    for t in templates[:3]:
-        if isinstance(t, dict):
-            template_type = t.get('type', '').split('-')[0]
-        else:
-            template_type = getattr(t, 'type', '').split('-')[0]
-        
-        if template_type != primary_type:
-            return False
-    
-    return True
-
-def _check_redshift_consistency(templates: List[Dict]) -> Dict[str, Any]:
-    """Check redshift consistency across top matches."""
-    if len(templates) < 2:
-        return {'consistent': True, 'spread': 0.0}
-    
-    # Handle templates as either dicts or objects
-    redshifts = []
-    for t in templates[:5]:
-        if isinstance(t, dict):
-            redshifts.append(t.get('z', 0))
-        else:
-            redshifts.append(getattr(t, 'z', 0))
-    
-    # Use weighted redshift estimate if weights available, otherwise simple mean
-    try:
-        # Try to get metric values as weights if available in the template data
-        weights = []
-        for t in templates[:5]:
-            if isinstance(t, dict):
-                weights.append(t.get('primary_metric', t.get('hlap', 1.0)))  # Default weight of 1.0 if missing
-            else:
-                weights.append(getattr(t, 'hsigma_lap_ccc', getattr(t, 'hlap', 1.0)))
-        
-        # If we have meaningful weights (not all 1.0), use weighted calculation
-        if any(w != 1.0 for w in weights):
-            from snid_sage.shared.utils.math_utils import estimate_weighted_redshift
-            # Use dummy unit errors when only weights are given: sigma=1 → weights proportional to metric^2
-            z_mean = estimate_weighted_redshift(redshifts, [1.0]*len(weights), weights)
-        else:
-            # No meaningful weights available, use simple mean
-            z_mean = np.mean(redshifts)
-    except ImportError:
-        # Fallback to simple mean if function not available
-        z_mean = np.mean(redshifts)
-    
-    z_std = np.std(redshifts)
-    
-    return {
-        'consistent': z_std < 0.01,  # Within 1% variation
-        'spread': float(z_std),
-        'mean': float(z_mean)
-    }
+#
+# NOTE (strict-mode):
+# Historically this module computed template-level "consistency" diagnostics
+# (e.g., redshift spread across top matches). This conflicted with the policy
+# that the LLM layer must not estimate/derive new values; the authoritative
+# source is the pipeline output (e.g., `SNIDResult.match_statistics`).
+#
+# Those helper functions were removed; any statistics needed by the LLM should
+# be produced upstream by the pipeline and passed through verbatim.
 
 def _assess_analysis_quality(snid_results: Dict) -> Dict[str, Any]:
     """
     Assess overall quality of the SNID-SAGE analysis.
     
     Prefers pipeline-computed quality categories from cluster analysis.
-    Falls back to basic checks if no cluster data available.
+    Does not attempt to infer a quality category if the pipeline did not compute one.
     """
     quality = {
         'template_database_coverage': 'good',  # Assume good coverage
@@ -477,62 +431,11 @@ def _assess_analysis_quality(snid_results: Dict) -> Dict[str, Any]:
                         quality['potential_issues'].append(f'Low match quality: {quality_description}')
                     return quality
     
-    # Fallback: basic checks if no cluster data
-    if 'templates' in snid_results and snid_results['templates']:
-        best_match = snid_results['templates'][0]
-        
-        # Handle best_match as either dict or object
-        if isinstance(best_match, dict):
-            metric = best_match.get('hsigma_lap_ccc', best_match.get('hlap', 0.0))
-            zerr = best_match.get('zerr', 1)
-        else:
-            metric = getattr(best_match, 'hsigma_lap_ccc', getattr(best_match, 'hlap', 0.0))
-            zerr = getattr(best_match, 'zerr', 1)
-        
-        if float(metric) < 0.7:
-            quality['potential_issues'].append('Low correlation score - weak match')
-        if zerr > 0.1:
-            quality['potential_issues'].append('Large redshift uncertainty')
-    
+    # If the pipeline did not provide a quality assessment, keep as unknown.
+    quality['potential_issues'].append('Pipeline quality assessment unavailable (no clustering quality provided).')
     return quality
 
-def _identify_mask_reason(start: float, end: float) -> str:
-    """Identify likely reason for wavelength masking."""
-    # Common problematic regions
-    if 5570 <= start <= 5590 and 5570 <= end <= 5590:
-        return 'Sky line region (5577Å)'
-    elif 6860 <= start <= 6880 and 6860 <= end <= 6880:
-        return 'Telluric absorption (6867Å)'
-    elif 7590 <= start <= 7610 and 7590 <= end <= 7610:
-        return 'Telluric absorption (7600Å)'
-    elif end - start > 500:
-        return 'Large gap or detector issue'
-    else:
-        return 'Custom mask'
-
-def _identify_spectral_line(wavelength: float) -> str:
-    """Identify likely spectral line based on wavelength."""
-    # Common supernova lines (approximate rest wavelengths)
-    line_identifications = {
-        (3925, 3935): 'Ca II H',
-        (3965, 3975): 'Ca II K', 
-        (4100, 4110): 'Hδ',
-        (4330, 4350): 'Hγ',
-        (4860, 4870): 'Hβ',
-        (5015, 5025): 'He I',
-        (5170, 5180): 'Mg II',
-        (5890, 5900): 'Na I D',
-        (6150, 6170): 'Si II',
-        (6560, 6570): 'Hα',
-        (8540, 8550): 'Ca II IR',
-        (8660, 8670): 'Ca II IR'
-    }
     
-    for (min_wave, max_wave), identification in line_identifications.items():
-        if min_wave <= wavelength <= max_wave:
-            return identification
-    
-    return 'Unidentified'
 
 
 
@@ -675,36 +578,14 @@ def _assess_classification_confidence(templates: List[Dict], cluster_confidence_
     Assess overall classification confidence based on template matches.
     
     Prefers the pipeline-computed cluster confidence level if available.
-    Falls back to heuristic assessment based on template metrics if no cluster data.
+    Does not attempt heuristic confidence estimation if the pipeline did not compute one.
     """
     # Use pipeline-computed confidence if available
     if cluster_confidence_level:
         return cluster_confidence_level
-    
-    if not templates:
-        return 'no_data'
-    
-    best_match = templates[0]
-    
-    # Handle best_match as either dict or object
-    if isinstance(best_match, dict):
-        metric = best_match.get('hsigma_lap_ccc', best_match.get('hlap', 0.0))
-    else:
-        metric = getattr(best_match, 'hsigma_lap_ccc', getattr(best_match, 'hlap', 0.0))
-    
-    # Check consistency among top matches
-    type_consistency = _check_type_consistency(templates)
-    redshift_consistency = _check_redshift_consistency(templates)
-    
-    # Fallback heuristic (not the official quality category - that comes from cluster)
-    if float(metric) > 2.5 and type_consistency and redshift_consistency.get('consistent', False):
-        return 'High'
-    elif float(metric) >= 1.2 and type_consistency:
-        return 'Moderate'
-    elif float(metric) >= 0.7:
-        return 'Low'
-    else:
-        return 'Very Low'
+
+    # Strict mode: only pipeline confidence. Keep output stable as a string.
+    return 'unknown'
 
 def _analyze_continuum_shape(flat_spectrum: np.ndarray) -> Dict[str, Any]:
     """Analyze the shape of the continuum from flattened spectrum."""

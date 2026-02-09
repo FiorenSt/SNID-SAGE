@@ -585,7 +585,6 @@ def process_single_spectrum_optimized(
             verbose=False,
             show_plots=False,
             save_plots=False,
-            use_weighted_gmm=getattr(args, 'weighted_gmm', False),
             profile_id=active_profile_id
         )
         
@@ -1478,12 +1477,6 @@ Examples:
         choices=["optical", "onir"],
         default=None,
         help="Analysis profile to use (optical or onir). Defaults to config or optical."
-    )
-    analysis_group.add_argument(
-        "--weighted-gmm",
-        dest="weighted_gmm",
-        action="store_true",
-        help=argparse.SUPPRESS  # Internal toggle for using weighted GMM + weighted BIC
     )
     analysis_group.add_argument(
         "--type-filter", 
@@ -2503,7 +2496,6 @@ def main(args: argparse.Namespace) -> int:
                 'phase1_peak_min_distance': int(getattr(args, 'phase1_peak_min_distance', 3)),
                 'peak_window_size': int(getattr(args, 'peak_window_size', 10)),
                 'max_output_templates': int(getattr(args, 'max_output_templates', 10)),
-                'weighted_gmm': bool(getattr(args, 'weighted_gmm', False)),
             }
 
             # Submit all tasks at once; each task is ~30s so overhead is negligible

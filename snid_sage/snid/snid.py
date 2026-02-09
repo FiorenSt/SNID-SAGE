@@ -1405,8 +1405,6 @@ def run_snid_analysis(
     plot_dir: Optional[str | Path] = None,
     # Progress callback
     progress_callback: Optional[Callable[[str, float], None]] = None,
-    # Hidden/advanced: toggle weighted GMM (default False; surfaced via CLI flags)
-    use_weighted_gmm: bool = False,
     # Hidden/advanced: GMM component selection method ('bic' default, optional 'elbow')
     gmm_model_selection: Optional[str] = None,
     # Profile selection (None -> resolve from config)
@@ -2204,7 +2202,6 @@ def run_snid_analysis(
                 max_clusters_per_type=10,
                 verbose=verbose,
                 hsigma_lap_ccc_threshold=hsigma_lap_ccc_threshold,
-                use_weighted_gmm=bool(use_weighted_gmm),
                 model_selection_method=gmm_model_selection,
                 # Defensive: ensure clustering cannot see out-of-bounds redshifts
                 zmin=float(zmin),

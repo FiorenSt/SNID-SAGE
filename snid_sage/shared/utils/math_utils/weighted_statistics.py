@@ -18,7 +18,7 @@ def compute_cluster_weights(
     redshift_errors: Union[np.ndarray, List[float]]
 ) -> np.ndarray:
     """
-    Compute canonical cluster weights: w_i = (HσLAP-CCC_i)^2.
+    Compute canonical cluster weights from match-quality metric values.
 
     This is a thin wrapper around calculate_combined_weights for clarity.
     """
@@ -75,7 +75,8 @@ def estimate_weighted_redshift(
     metric_values: Union[np.ndarray, List[float]]
 ) -> float:
     """
-    Weighted mean redshift using weights w = (HσLAP-CCC)^2.
+    Weighted mean redshift using canonical exponential weights:
+    w = exp(metric) with τ fixed to 1 (absolute metric; no max-subtraction).
     """
     z = np.asarray(redshifts, dtype=float)
     sigma = np.asarray(redshift_errors, dtype=float)
@@ -97,7 +98,7 @@ def estimate_weighted_epoch(
 ) -> float:
     """
     Weighted mean epoch (age) using the same cluster weights as redshift:
-    w = (HσLAP-CCC)^2.
+    w = exp(metric) with τ fixed to 1 (absolute metric; no max-subtraction).
     """
     t = np.asarray(ages, dtype=float)
     sigma = np.asarray(redshift_errors, dtype=float)
@@ -119,7 +120,7 @@ def weighted_redshift_error(
 ) -> float:
     """
     Uncertainty for redshift reported as unbiased weighted SD within the set.
-    Uses weights w = (HσLAP-CCC)^2.
+    Uses canonical exponential weights: w = exp(metric) with τ fixed to 1.
     Single-member rule: return that member's sigma_z.
     """
     z = np.asarray(redshifts, dtype=float)
@@ -145,7 +146,7 @@ def weighted_epoch_error(
 ) -> float:
     """
     Uncertainty for age reported as unbiased weighted SD within the set.
-    Uses redshift-based weights w = (HσLAP-CCC)^2.
+    Uses canonical exponential weights: w = exp(metric) with τ fixed to 1.
     Single-member rule: return NaN (cannot estimate SD from one point).
     """
     t = np.asarray(ages, dtype=float)
@@ -175,8 +176,8 @@ def calculate_combined_weights(
     
     For HσLAP-CCC, sigma_z normalization is already included in the metric:
         HσLAP-CCC = (height × lap × CCC) / sqrt(sigma_z)
-    so the canonical cluster weight is simply:
-        w_i = (HσLAP-CCC_i)^2
+    so the canonical cluster weight is:
+        w_i = exp(metric_i)   (Boltzmann-style with τ fixed to 1)
     
     Parameters
     ----------
@@ -188,7 +189,7 @@ def calculate_combined_weights(
     Returns
     -------
     np.ndarray
-        Weights = (HσLAP-CCC)²
+        Weights = exp(metric) with τ=1, computed on the absolute metric.
     """
     metric_values = np.asarray(metric_values, dtype=float)
     uncertainties = np.asarray(uncertainties, dtype=float)
@@ -200,8 +201,23 @@ def calculate_combined_weights(
     if len(metric_values) == 0:
         return np.array([])
     
-    # Canonical weights for HσLAP-CCC: w = metric^2
-    combined_weights = metric_values ** 2
+    # Canonical weights: w = exp(metric) (τ fixed to 1, absolute metric).
+    # If an extreme metric is present, force 100% weight to the top match.
+    combined_weights = np.zeros_like(metric_values, dtype=float)
+    finite = np.isfinite(metric_values)
+    if not np.any(finite):
+        return combined_weights
+
+    max_m = float(np.max(metric_values[finite]))
+    if max_m > 100.0:
+        max_mask = finite & (metric_values == max_m)
+        n_top = int(np.sum(max_mask))
+        if n_top > 0:
+            combined_weights[max_mask] = 1.0 / float(n_top)
+        return combined_weights
+
+    # Safe for max_m <= 100: exp(100) is far from float overflow.
+    combined_weights[finite] = np.exp(metric_values[finite])
     
     logger.debug(f"Combined weighting: Best-metric [{metric_values.min():.2f}, {metric_values.max():.2f}], "
                 f"weights [{combined_weights.min():.2e}, {combined_weights.max():.2e}]")
@@ -211,10 +227,10 @@ def calculate_combined_weights(
 
 def apply_exponential_weighting(metric_values: Union[np.ndarray, List[float]]) -> np.ndarray:
     """
-    Apply squared-metric weighting to HσLAP-CCC/HLAP values for template prioritization.
+    Apply canonical exponential (Boltzmann-style) weighting to metric values.
     
-    This helper now implements w = (metric)² to match the main pipeline's
-    weighting policy when per-template σ is unavailable (quality-only case).
+    This helper implements the official pipeline weighting:
+      w = exp(metric) with τ fixed to 1.
     
     Parameters
     ----------
@@ -224,11 +240,11 @@ def apply_exponential_weighting(metric_values: Union[np.ndarray, List[float]]) -
     Returns
     -------
     np.ndarray
-        Squared metric weights
+        Exponential metric weights
         
     Notes
     -----
-    Transformation: w = (HσLAP-CCC)²
+    Transformation: w = exp(metric)
     """
     metric_values = np.asarray(metric_values, dtype=float)
     
@@ -236,12 +252,24 @@ def apply_exponential_weighting(metric_values: Union[np.ndarray, List[float]]) -
     if len(metric_values) == 0:
         return np.array([])
     
-    # Apply squared weighting: w = x^2
-    exponential_weights = metric_values ** 2
+    exponential_weights = np.zeros_like(metric_values, dtype=float)
+    finite = np.isfinite(metric_values)
+    if not np.any(finite):
+        return exponential_weights
+
+    max_m = float(np.max(metric_values[finite]))
+    if max_m > 100.0:
+        max_mask = finite & (metric_values == max_m)
+        n_top = int(np.sum(max_mask))
+        if n_top > 0:
+            exponential_weights[max_mask] = 1.0 / float(n_top)
+        return exponential_weights
+
+    exponential_weights[finite] = np.exp(metric_values[finite])
     
     # Log the transformation for debugging
     if len(metric_values) > 0:
-        logger.debug(f"Squared weighting: Best-metric range [{metric_values.min():.2f}, {metric_values.max():.2f}] "
+        logger.debug(f"Exponential weighting: Best-metric range [{metric_values.min():.2f}, {metric_values.max():.2f}] "
                     f"→ weight range [{exponential_weights.min():.2e}, {exponential_weights.max():.2e}]")
     
     return exponential_weights
