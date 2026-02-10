@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1751831068.0201683,
-  "template_count": 649,
+  "template_count": 650,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -4552,6 +4552,13 @@
       "redshift": 0.2657,
       "epochs": 3,
       "storage_file": "templates_SLSN.hdf5"
+    },
+    "iPTF14bdn": {
+      "type": "Ia",
+      "subtype": "Ia-99aa",
+      "redshift": 0.01558,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
     }
   },
   "by_type": {
@@ -4686,7 +4693,7 @@
       ]
     },
     "Ia": {
-      "count": 270,
+      "count": 271,
       "storage_file": "templates_Ia.hdf5",
       "template_names": [
         "1999aa",
@@ -4958,7 +4965,8 @@
         "SNLS03D3bb",
         "SN2007N",
         "SN2005P",
-        "SN2013dn"
+        "SN2013dn",
+        "iPTF14bdn"
       ]
     },
     "TDE": {

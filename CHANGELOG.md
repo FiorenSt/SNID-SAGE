@@ -2,6 +2,12 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
+## [1.2.1] - 2026-02-09
+
+### Templates
+
+- Templates: added template `iPTF14bdn` (Ia/Ia-99aa) into the built-in optical default banks.
+
 ## [1.2.0] - 2026-02-09
 
 ### Compatibility (Breaking)

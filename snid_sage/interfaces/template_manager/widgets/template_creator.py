@@ -925,14 +925,30 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
                 self.subtype_combo.addItem(self._SUBTYPE_NEW_LABEL)
                 if self.subtype_combo.lineEdit():
                     self.subtype_combo.lineEdit().setPlaceholderText("Enter new subtype")
+                # Do not auto-suggest/auto-select anything; wait for user input.
+                try:
+                    self.subtype_combo.setCurrentIndex(-1)
+                except Exception:
+                    pass
                 self.subtype_combo.setEditText("")
                 return
             options = list(self._subtypes_by_type.get(normalized, []))
             if options:
                 self.subtype_combo.addItems(options)
-            # Preserve user-entered text if any
-            if current_text and current_text not in options:
+            # Do not auto-suggest a subtype: leave blank until user types at least 1 character
+            # or explicitly picks from the dropdown. Preserve user-entered text if any.
+            if current_text:
+                # Keep whatever the user already typed (even if not in known options).
                 self.subtype_combo.setEditText(current_text)
+            else:
+                # Ensure Qt doesn't auto-select the first item as the "current" subtype.
+                try:
+                    self.subtype_combo.setCurrentIndex(-1)
+                except Exception:
+                    pass
+                self.subtype_combo.setEditText("")
+                if self.subtype_combo.lineEdit():
+                    self.subtype_combo.lineEdit().setPlaceholderText("Start typing a subtype (or pick from list)")
         finally:
             try:
                 self.subtype_combo.blockSignals(False)
