@@ -32,8 +32,8 @@ TYPENAME = {
     # Type 2 - SN Ib (7 subtypes)
     2: {1: 'Ib', 2: 'Ib-norm', 3: 'Ib-pec', 4: 'IIb', 5: 'Ibn', 6: 'Ib-Ca-rich', 7: 'Ib-csm'},
     
-    # Type 3 - SN Ic (7 subtypes)
-    3: {1: 'Ic', 2: 'Ic-norm', 3: 'Ic-pec', 4: 'Ic-broad', 5: 'Icn', 6: 'Ic-Ca-rich', 7: 'Ic-csm'},
+    # Type 3 - SN Ic (8 subtypes)
+    3: {1: 'Ic', 2: 'Ic-norm', 3: 'Ic-pec', 4: 'Ic-broad', 5: 'Icn', 6: 'Ic-Ca-rich', 7: 'Ic-csm', 8: 'Ic-05ek'},
     
     # Type 4 - SN II (7 subtypes)
     4: {1: 'II', 2: 'IIP', 3: 'II-pec', 4: 'IIn', 5: 'IIL', 6: 'IIn-pec', 7: 'II-87A'},

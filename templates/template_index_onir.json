@@ -1756,7 +1756,7 @@
     },
     "sn2005ek": {
       "type": "Ic",
-      "subtype": "Ic-pec",
+      "subtype": "Ic-05ek",
       "redshift": 0.0,
       "epochs": 6,
       "storage_file": "templates_Ic_onir.hdf5"

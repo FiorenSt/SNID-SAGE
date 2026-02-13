@@ -6,7 +6,13 @@ All notable changes to SNID SAGE will be documented in this file.
 
 ### Templates
 
-- Templates: added template `iPTF14bdn` (Ia/Ia-99aa) into the built-in optical default banks.
+- Templates: added template `iPTF14bdn` (Ia/Ia-99aa).
+- Template metadata correction: reclassified `sn2005ek` subtype from Ic-pec to **Ic-05ek**.
+- Templates: promoted the user template `2010X` (Ic/Ic-05ek) into the built-in optical default banks.
+- Templates: promoted two **Icn** templates into the built-in optical default banks: `2019hgp`, `2019jc`.
+- Templates: promoted seven **Star** templates into the built-in optical default banks:
+  - Mdwarf: `AT2024abwb`, `AT2021abpq`, `AT2022ure`
+  - Varstar: `SSS130402`, `AT2021ziw`, `AT2018apl`, `OGLE16cza`
 
 ## [1.2.0] - 2026-02-09
 

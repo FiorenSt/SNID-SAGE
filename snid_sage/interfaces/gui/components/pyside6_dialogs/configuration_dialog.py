@@ -434,7 +434,7 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
         self.sn_types = {
             'Ia': ['Ia', 'Ia-norm', 'Ia-91T', 'Ia-91bg', 'Ia-csm', 'Ia-pec', 'Ia-02cx', 'Ia-03fg', 'Ia-02es', 'Ia-Ca-rich'],
             'Ib': ['Ib', 'Ib-norm', 'Ib-pec', 'IIb', 'Ibn', 'Ib-Ca-rich', 'Ib-csm'],
-            'Ic': ['Ic', 'Ic-norm', 'Ic-pec', 'Ic-broad', 'Icn', 'Ic-Ca-rich', 'Ic-csm'],
+            'Ic': ['Ic', 'Ic-norm', 'Ic-pec', 'Ic-broad', 'Icn', 'Ic-Ca-rich', 'Ic-csm', 'Ic-05ek'],
             'II': ['II', 'IIP', 'II-pec', 'II-87A', 'IIn', 'IIL', 'IIn-pec'],
             'SLSN': ['SLSN', 'SLSN-I', 'SLSN-Ib', 'SLSN-Ic', 'SLSN-II', 'SLSN-IIn'],
             'LFBOT': ['LFBOT', '18cow', '20xnd'],
