@@ -491,7 +491,7 @@ def perform_direct_gmm_clustering(
                         })
                         
                         if verbose:
-                            _LOGGER.info(f"  Cluster {cluster_id} subtypes: {best_subtype} "
+                            _LOGGER.info(f"  Cluster {cluster_info['id']} subtypes: {best_subtype} "
                                         f"(margin: {subtype_margin_over_second:.3f}, second: {second_best_subtype})")
                             
                             if not np.isnan(subtype_redshift) and not np.isnan(subtype_age):
@@ -538,7 +538,7 @@ def perform_direct_gmm_clustering(
                         'cluster_age_err': cluster_age_err
                     })
                     if verbose:
-                        _LOGGER.warning(f"  Failed to calculate subtypes for cluster {cluster_id}: {e}")
+                        _LOGGER.warning(f"  Failed to calculate subtypes for cluster {cluster_info['id']}: {e}")
                 
                 all_cluster_candidates.append(cluster_candidate)
 
