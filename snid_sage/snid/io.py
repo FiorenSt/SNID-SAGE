@@ -380,8 +380,9 @@ def read_template(filename: str) -> Dict[str, Any]:
         template['flux_matrix'] = flux_matrix  # All epochs' fluxes
         template['is_log_rebinned'] = True
         
-        # Calculate the linear wavelength array from the log values
-        template['wave_linear'] = 10.0**np.clip(wave_log, -20, 20)
+        # wave_log values are already wavelengths in Angstroms (bin centers
+        # on a log-spaced grid), not log10 values.
+        template['wave_linear'] = wave_log.copy()
 
     except Exception as e:
         logging.error(f"Error reading template {filename}: {e}")

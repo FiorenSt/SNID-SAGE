@@ -514,7 +514,7 @@ def perform_direct_gmm_clustering(
                         cluster_redshift, cluster_age, cluster_redshift_err, cluster_age_err, _ = _compute_weighted_cluster_stats(
                             cluster_candidate['matches']
                         )
-                    except:
+                    except Exception:
                         cluster_redshift = cluster_age = cluster_redshift_err = cluster_age_err = _ = np.nan
                     
                     cluster_candidate.update({
