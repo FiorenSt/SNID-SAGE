@@ -20,6 +20,7 @@ from snid_sage.snid.snid import run_snid
 import snid_sage.interfaces.cli.identify as identify_module
 import snid_sage.interfaces.cli.batch as batch_module
 import snid_sage.interfaces.cli.config as config_module
+import snid_sage.interfaces.cli.templates as templates_module
 from snid_sage.shared.utils.logging import add_logging_arguments, configure_from_args
 from snid_sage.shared.utils.logging import VerbosityLevel
 
@@ -110,7 +111,15 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     config_module.add_arguments(config_parser)
-    
+
+    # Templates management commands
+    templates_parser = subparsers.add_parser(
+        "templates",
+        help="Manage template libraries (import, convert)",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    templates_module.add_arguments(templates_parser)
+
     return parser
 
 
@@ -132,7 +141,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     #   - sage --profile onir <file>
     # We insert 'identify' just before the first non-option token,
     # so global options (e.g. verbosity) remain in the global scope.
-    known_commands = {'identify', 'batch', 'config'}
+    known_commands = {'identify', 'batch', 'config', 'templates'}
     has_command = any(tok in known_commands for tok in argv)
     if not has_command:
         # Partition argv into known global options vs the rest, then insert 'identify'
@@ -184,6 +193,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             return batch_module.main(args)
         elif args.command == "config":
             return config_module.main(args)
+        elif args.command == "templates":
+            return templates_module.main(args)
         else:
             parser.print_help()
             return 0
