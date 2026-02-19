@@ -365,23 +365,64 @@ def read_template(filename: str) -> Dict[str, Any]:
                 logging.warning(f"File {filename} has fewer spectrum lines than expected: {i} of {nw}")
                 break
         
-        wave_log = np.array(wave_log)
+        wave_vals = np.array(wave_log, dtype=float)
         
-        if len(wave_log) == 0:
+        if len(wave_vals) == 0:
             raise ValueError(f"No valid wavelength data found in {filename}")
 
-        # ——— Convert from log to linear wavelength ———
-        # In logwave.f, these are mean wavelengths: wmean = 0.5*(wlog(i)+wlog(i+1))
-        # We don't need to recalculate them here since they're directly stored in the file
-        template['wave'] = wave_log
+        # The first column in .lnw templates is *sometimes* stored as:
+        # - log10(wavelength_A)   (common in simplified exports), or
+        # - wavelength_A          (SNID logwave.f stores mean wavelengths in Å on a log-λ grid)
+        #
+        # We expose BOTH representations:
+        # - template['wave']        : log10(wavelength_A)  (used by log-grid code paths/plots)
+        # - template['wave_linear'] : wavelength_A         (used by log_rebin() and visualization)
+        values_look_linear = False
+        try:
+            values_look_linear = bool(np.nanmedian(wave_vals) > 50.0)
+        except Exception:
+            values_look_linear = False
+
+        values_look_log10 = False
+        try:
+            # log10(λ/Å) should be ~3–4.5 for SNID grids; keep a wide safety envelope.
+            values_look_log10 = bool(np.nanmax(wave_vals) < 20.0 and np.nanmin(wave_vals) > -20.0)
+        except Exception:
+            values_look_log10 = False
+
+        header_looks_linear = False
+        try:
+            header_looks_linear = (float(w0) > 50.0) or (float(w1) > 50.0)
+        except Exception:
+            header_looks_linear = False
+
+        if values_look_linear:
+            wave_linear = wave_vals
+            # Guard against any pathological non-positive wavelengths
+            safe_wave_linear = np.clip(wave_linear, 1e-10, np.inf)
+            wave_log10 = np.log10(safe_wave_linear)
+        elif values_look_log10:
+            wave_log10 = wave_vals
+            wave_linear = 10.0 ** np.clip(wave_log10, -20, 20)
+        else:
+            # Ambiguous input: use the header as a tie-breaker.
+            if header_looks_linear:
+                wave_linear = wave_vals
+                safe_wave_linear = np.clip(wave_linear, 1e-10, np.inf)
+                wave_log10 = np.log10(safe_wave_linear)
+            else:
+                wave_log10 = wave_vals
+                wave_linear = 10.0 ** np.clip(wave_log10, -20, 20)
+
+        template['wave'] = wave_log10
                     
         # Store both the first flux (for backward compatibility) and the full matrix
         template['flux'] = flux_matrix[0]  # First epoch's flux for backward compatibility
         template['flux_matrix'] = flux_matrix  # All epochs' fluxes
         template['is_log_rebinned'] = True
         
-        # Calculate the linear wavelength array from the log values
-        template['wave_linear'] = 10.0**np.clip(wave_log, -20, 20)
+        # Linear wavelength array in Å (used by rebin/visualization code paths)
+        template['wave_linear'] = wave_linear
 
     except Exception as e:
         logging.error(f"Error reading template {filename}: {e}")

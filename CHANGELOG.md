@@ -14,6 +14,12 @@ All notable changes to SNID SAGE will be documented in this file.
   - Mdwarf: `AT2024abwb`, `AT2021abpq`, `AT2022ure`
   - Varstar: `SSS130402`, `AT2021ziw`, `AT2018apl`, `OGLE16cza`
 
+### Bug Fixes
+
+- Fixed a verbose-mode `NameError` in `perform_direct_gmm_clustering()` (undefined `cluster_id`) that could abort GMM clustering.
+- Fixed `.lnw` template wavelength handling so `wave_linear` is treated as Å.
+- Avoided swallowing `KeyboardInterrupt`/`SystemExit` by replacing a bare `except:` with `except Exception:` in cosmological clustering.
+
 ## [1.2.0] - 2026-02-09
 
 ### Compatibility (Breaking)

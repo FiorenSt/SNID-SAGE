@@ -8,7 +8,7 @@ This module provides the core components for SNID analysis:
 - Centralized configuration management
 """
 
-from ..template_fft_storage import TemplateFFTStorage, TemplateEntry, create_unified_storage
+from ..template_fft_storage import TemplateFFTStorage, TemplateEntry
 from .config import SNIDConfig
 
 from .integration import (
@@ -25,7 +25,6 @@ from .integration import (
 __all__ = [
     'TemplateFFTStorage',
     'TemplateEntry', 
-    'create_unified_storage',
     'SNIDConfig',
     'integrate_fft_optimization',
     'enable_optimization',

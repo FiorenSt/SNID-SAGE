@@ -224,11 +224,6 @@ class TemplateFFTStorage:
     def get_standard_wavelength_grid(self) -> np.ndarray:
         """Get the standard wavelength grid used for all templates."""
         return self.standard_log_wave.copy()
-    
-    def build_storage(self, force: bool = False) -> None:
-        """Rebuild disabled; no action taken."""
-        _LOG.info("Unified template storage rebuild is disabled. Ensure HDF5 and index files are provided.")
-        return
         
     def get_templates(self, 
                      type_filter: Optional[List[str]] = None,
@@ -540,123 +535,6 @@ class TemplateFFTStorage:
             pass
 
         self._index = merged
-    
-    def _load_all_templates_with_rebinning(self) -> List[TemplateEntry]:
-        """Load all templates from the template directory and rebin them to standard grid."""
-        # We no longer build storage from .lnw files
-        from snid_sage.snid.preprocessing import log_rebin, init_wavelength_grid
-        
-        templates = []
-        # LNW files are no longer supported as a source. Keep empty list.
-        template_files = []
-        
-        _LOG.info(f"Loading and rebinning {len(template_files)} template files...")
-        
-        # Initialize wavelength grid for rebinning
-        init_wavelength_grid(num_points=self.NW, min_wave=self.W0, max_wave=self.W1)
-        
-        for i, template_file in enumerate(template_files):
-            if i % 100 == 0:
-                _LOG.info(f"Processing template {i+1}/{len(template_files)}")
-            
-            try:
-                # Load template data
-                # No LNW source: skip
-                continue
-                
-                # Extract metadata
-                name = template_file.stem
-                template_type = template_data.get('type', 'Unknown')
-                subtype = template_data.get('subtype', 'Unknown')
-                
-                # For age, prefer the first value from the ages array when present
-                age = float(template_data.get('age', 0))
-                if 'ages' in template_data and len(template_data['ages']) > 0:
-                    age = float(template_data['ages'][0])
-                
-                redshift = float(template_data.get('redshift', 0))
-                
-                # Get spectral data
-                wave = template_data.get('wave', np.array([]))
-                flux = template_data.get('flux', np.array([]))
-                
-                if len(wave) == 0 or len(flux) == 0:
-                    _LOG.warning(f"Empty template data: {name}")
-                    continue
-                
-                # Handle multi-epoch templates
-                epochs = template_data.get('nepoch', 1)
-                epoch_data = []
-                valid_epochs = 0
-                
-                if epochs > 1 and 'flux_matrix' in template_data and 'ages' in template_data:
-                    # Extract epoch data from flux_matrix and ages arrays
-                    flux_matrix = template_data['flux_matrix']
-                    ages_array = template_data['ages']
-                    
-                    for epoch in range(epochs):
-                        # Extract age for this epoch  
-                        if epoch < len(ages_array):
-                            epoch_age = ages_array[epoch]
-                        else:
-                            epoch_age = age
-                        
-                        # Extract flux for this epoch
-                        if epoch < flux_matrix.shape[0]:
-                            epoch_flux = flux_matrix[epoch]
-                        else:
-                            epoch_flux = flux
-                        
-                        # Rebin epoch flux to standard grid
-                        if not template_data.get('is_log_rebinned', False):
-                            _, epoch_rebinned_flux = log_rebin(wave, epoch_flux)
-                        else:
-                            if len(epoch_flux) == self.NW:
-                                epoch_rebinned_flux = epoch_flux
-                            else:
-                                # Re-rebin from linear
-                                if hasattr(template_data, 'wave_linear'):
-                                    wave_linear = template_data['wave_linear']
-                                else:
-                                    wave_linear = 10.0**np.clip(wave, -20, 20)
-                                _, epoch_rebinned_flux = log_rebin(wave_linear, epoch_flux)
-                        
-                        epoch_info = {
-                            'flux': epoch_rebinned_flux,  # Already rebinned
-                            'age': epoch_age,
-                            'fft': np.fft.fft(epoch_rebinned_flux)
-                        }
-                        epoch_data.append(epoch_info)
-                        valid_epochs += 1
-                    
-                    # Update epochs count to reflect valid epochs only
-                    epochs = valid_epochs
-                
-                # Pre-compute FFT on rebinned data
-                fft = np.fft.fft(flux)
-                
-                # Create template entry with rebinned data
-                template_entry = TemplateEntry(
-                    name=name,
-                    type=template_type,
-                    subtype=subtype,
-                    age=age,
-                    redshift=redshift,
-                    flux=flux,  # Already rebinned to standard grid
-                    fft=fft,
-                    epochs=epochs,
-                    epoch_data=epoch_data,
-                    file_path=str(template_file)
-                )
-                
-                templates.append(template_entry)
-                
-            except Exception as e:
-                _LOG.error(f"Failed to load template {template_file}: {e}")
-                continue
-        
-        _LOG.info(f"Successfully loaded and rebinned {len(templates)} templates")
-        return templates
     
     def _build_hdf5_storage_for_type(self, sn_type: str, templates: List[TemplateEntry]):
         """Build HDF5 storage file for a specific supernova type with rebinned data."""
@@ -1176,24 +1054,3 @@ class TemplateFFTStorage:
         
         return template_name in self._index.get('templates', {})
 
-
-def create_unified_storage(template_dir: str, force_rebuild: bool = False, output_dir: str = None) -> TemplateFFTStorage:
-    """
-    Create or load unified template storage with rebinning.
-    
-    Parameters
-    ----------
-    template_dir : str
-        Directory containing templates
-    force_rebuild : bool, optional
-        Force rebuild even if storage exists
-    output_dir : str, optional
-        Directory to write HDF5 and index files (default: template_dir)
-    Returns
-    -------
-    TemplateFFTStorage
-        Unified storage instance
-    """
-    storage = TemplateFFTStorage(template_dir, output_dir=output_dir)
-    # Rebuild disabled; just return the storage instance
-    return storage
