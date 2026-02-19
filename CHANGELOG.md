@@ -2,7 +2,7 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
-## [1.2.1] - 2026-02-09
+## [1.2.1] - 2026-02-19
 
 ### Templates
 
