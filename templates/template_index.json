@@ -1,7 +1,7 @@
 {
   "version": "2.0",
-  "created_date": 1751831068.0201683,
-  "template_count": 660,
+  "created_date": 1773393796.0089746,
+  "template_count": 678,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -10,6 +10,62 @@
     "DWLOG": 0.0013538030870311431
   },
   "templates": {
+    "ASASSN-14ko": {
+      "type": "AGN",
+      "subtype": "Seyfert 1.5",
+      "redshift": 0.042489,
+      "epochs": 5,
+      "storage_file": "templates_AGN.hdf5"
+    },
+    "IRAS19254-7245_South": {
+      "type": "AGN",
+      "subtype": "AGN-Sey2",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_AGN.hdf5"
+    },
+    "Mrk231": {
+      "type": "AGN",
+      "subtype": "QSO-BAL",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_AGN.hdf5"
+    },
+    "QSO1": {
+      "type": "AGN",
+      "subtype": "QSO",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_AGN.hdf5"
+    },
+    "QSO2": {
+      "type": "AGN",
+      "subtype": "QSO2",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_AGN.hdf5"
+    },
+    "Sey2": {
+      "type": "AGN",
+      "subtype": "AGN-Sey2",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_AGN.hdf5"
+    },
+    "TQSO1": {
+      "type": "AGN",
+      "subtype": "QSO",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_AGN.hdf5"
+    },
+    "Torus": {
+      "type": "AGN",
+      "subtype": "QSO2",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_AGN.hdf5"
+    },
     "agn": {
       "type": "AGN",
       "subtype": "AGN-type1",
@@ -30,6 +86,3254 @@
       "redshift": 0.0,
       "epochs": 1,
       "storage_file": "templates_AGN.hdf5"
+    },
+    "AM_CVn": {
+      "type": "CV",
+      "subtype": "AM_CVn",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "GKPer": {
+      "type": "CV",
+      "subtype": "DN",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "IP1": {
+      "type": "CV",
+      "subtype": "IP",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "NL1": {
+      "type": "CV",
+      "subtype": "NL",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "NL2": {
+      "type": "CV",
+      "subtype": "NL",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "NovaLup2025": {
+      "type": "CV",
+      "subtype": "Nova",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "Polar": {
+      "type": "CV",
+      "subtype": "Polar",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "RSOphiuchi": {
+      "type": "CV",
+      "subtype": "Nova",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "U_Gem": {
+      "type": "CV",
+      "subtype": "DN",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "WZ_Sge": {
+      "type": "CV",
+      "subtype": "DN",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "Z_Cam": {
+      "type": "CV",
+      "subtype": "DN",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "cas2021": {
+      "type": "CV",
+      "subtype": "Nova",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "her2021": {
+      "type": "CV",
+      "subtype": "Nova",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "Arp220": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Ell13": {
+      "type": "Galaxy",
+      "subtype": "Gal-E",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Ell2": {
+      "type": "Galaxy",
+      "subtype": "Gal-E",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Ell5": {
+      "type": "Galaxy",
+      "subtype": "Gal-E",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "IRAS20551-4250": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "IRAS22491-1808": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "M82": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "NGC6090": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "NGC6240": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "S0": {
+      "type": "Galaxy",
+      "subtype": "Gal-S0",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Sa": {
+      "type": "Galaxy",
+      "subtype": "Gal-Sa",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Sb": {
+      "type": "Galaxy",
+      "subtype": "Gal-Sb",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Sc": {
+      "type": "Galaxy",
+      "subtype": "Gal-Sc",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Sd": {
+      "type": "Galaxy",
+      "subtype": "Gal-Sc",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Sdm": {
+      "type": "Galaxy",
+      "subtype": "Gal-Sc",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "Spi4": {
+      "type": "Galaxy",
+      "subtype": "Gal-Sc",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "kcE": {
+      "type": "Galaxy",
+      "subtype": "Gal-E",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "kcS0": {
+      "type": "Galaxy",
+      "subtype": "Gal-S0",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "kcSB1": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "kcSB2": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "kcSB3": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "kcSB4": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "kcSB5": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "kcSB6": {
+      "type": "Galaxy",
+      "subtype": "Gal-SB",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "kcSa": {
+      "type": "Galaxy",
+      "subtype": "Gal-Sa",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "kcSb": {
+      "type": "Galaxy",
+      "subtype": "Gal-Sb",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "kcSc": {
+      "type": "Galaxy",
+      "subtype": "Gal-Sc",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Galaxy.hdf5"
+    },
+    "2008S": {
+      "type": "GAP",
+      "subtype": "ILRT",
+      "redshift": 0.00015,
+      "epochs": 6,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "2008jd": {
+      "type": "GAP",
+      "subtype": "ILRT",
+      "redshift": 0.00048,
+      "epochs": 8,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "2018aes": {
+      "type": "GAP",
+      "subtype": "ILRT",
+      "redshift": 0.00391,
+      "epochs": 2,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "2018hso": {
+      "type": "GAP",
+      "subtype": "LRN",
+      "redshift": 0.003536,
+      "epochs": 3,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "2021biy": {
+      "type": "GAP",
+      "subtype": "LRN",
+      "redshift": 0.002035,
+      "epochs": 9,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "AT2012jc": {
+      "type": "GAP",
+      "subtype": "ILRT",
+      "redshift": 0.005607,
+      "epochs": 5,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "AT2013la": {
+      "type": "GAP",
+      "subtype": "ILRT",
+      "redshift": 0.00271,
+      "epochs": 8,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "AT2015dl": {
+      "type": "GAP",
+      "subtype": "LRN",
+      "redshift": 0.000804,
+      "epochs": 10,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "PS15dbp": {
+      "type": "GAP",
+      "subtype": "LBV",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "PSNJ15213475": {
+      "type": "GAP",
+      "subtype": "LBV",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "at2014ej": {
+      "type": "GAP",
+      "subtype": "LRN",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "lbv1999bw": {
+      "type": "GAP",
+      "subtype": "LBV",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "lbv2001ac": {
+      "type": "GAP",
+      "subtype": "LBV",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "lbv2003hy": {
+      "type": "GAP",
+      "subtype": "LBV",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_GAP.hdf5"
+    },
+    "1999aa": {
+      "type": "Ia",
+      "subtype": "Ia-99aa",
+      "redshift": 0.01444,
+      "epochs": 48,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "2003fg": {
+      "type": "Ia",
+      "subtype": "Ia-03fg",
+      "redshift": 0.244,
+      "epochs": 1,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "2010ae": {
+      "type": "Ia",
+      "subtype": "Ia-02cx",
+      "redshift": 0.003662,
+      "epochs": 15,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "2012Z": {
+      "type": "Ia",
+      "subtype": "Ia-02cx",
+      "redshift": 0.007125,
+      "epochs": 16,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "2020qxz": {
+      "type": "Ia",
+      "subtype": "Ia-csm",
+      "redshift": 0.0975,
+      "epochs": 3,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "ASASSN-15ga": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "ASASSN-15hy": {
+      "type": "Ia",
+      "subtype": "Ia-03fg",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "LSQ12fhs": {
+      "type": "Ia",
+      "subtype": "Ia-02cx",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "LSQ12gdj": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "LSQ15adm": {
+      "type": "Ia",
+      "subtype": "Ia-csm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "OGLE2012sn04": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "PSNJ15053007": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "PTF09dav": {
+      "type": "Ia",
+      "subtype": "Ia-Ca-rich",
+      "redshift": 0.0371,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "PTF10ops": {
+      "type": "Ia",
+      "subtype": "Ia-02es",
+      "redshift": 0.061,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "PTF11kx": {
+      "type": "Ia",
+      "subtype": "Ia-csm",
+      "redshift": 0.0466,
+      "epochs": 11,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "SN2005P": {
+      "type": "Ia",
+      "subtype": "Ia-02es",
+      "redshift": 0.00948,
+      "epochs": 2,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "SN2007N": {
+      "type": "Ia",
+      "subtype": "Ia-02es",
+      "redshift": 0.012879,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "SN2009dc": {
+      "type": "Ia",
+      "subtype": "Ia-03fg",
+      "redshift": 0.021468,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "SN2012dn": {
+      "type": "Ia",
+      "subtype": "Ia-03fg",
+      "redshift": 0.010187,
+      "epochs": 9,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "SN2013dn": {
+      "type": "Ia",
+      "subtype": "Ia-csm",
+      "redshift": 0.056,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "SNLS03D3bb": {
+      "type": "Ia",
+      "subtype": "Ia-03fg",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "iPTF14atg": {
+      "type": "Ia",
+      "subtype": "Ia-02es",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "iPTF14bdn": {
+      "type": "Ia",
+      "subtype": "Ia-99aa",
+      "redshift": 0.01558,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1981B": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1984A": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1986G": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 28,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1989B": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 25,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1990N": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 15,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1990O": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1991M": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1991T": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 16,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1991bg": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 26,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1992A": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 13,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1994D": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 39,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1994M": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1994Q": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1994S": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1994T": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1994ae": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 18,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1995D": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 14,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1995E": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1995ac": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1995ak": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1995al": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 13,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1995bd": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1996X": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 27,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1996Z": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1996ai": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1996bl": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1996bo": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1997E": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1997Y": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1997bp": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 13,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1997bq": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 13,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1997br": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 21,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1997cn": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 13,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1997do": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 14,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1997dt": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1998V": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1998ab": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 12,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1998aq": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 27,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1998bp": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1998bu": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 34,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1998co": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1998de": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1998dh": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1998dk": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1998dm": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1998dx": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1998ec": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1998ef": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1998eg": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1998es": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 26,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999X": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999ac": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 34,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999aw": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999bh": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999by": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 14,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999cc": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999cl": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999cw": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999da": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999dk": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999dq": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 19,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999ee": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 12,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999ej": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999ek": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999gd": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999gh": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 15,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn1999gp": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2000B": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2000E": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2000ce": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2000cf": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2000cn": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2000cx": {
+      "type": "Ia",
+      "subtype": "Ia-pec",
+      "redshift": 0.0,
+      "epochs": 44,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2000dg": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2000dk": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2000dn": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2000fa": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 15,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001G": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 15,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001N": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001V": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 38,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001ah": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001ay": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 20,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001az": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001bf": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001bg": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001ck": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001cp": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001da": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001eh": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 18,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001el": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001en": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001ep": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 26,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001fe": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 12,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001fh": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2001gc": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002bf": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 13,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002bo": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 51,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002cd": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 15,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002cf": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002ck": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002cr": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002cs": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002cx": {
+      "type": "Ia",
+      "subtype": "Ia-02cx",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002de": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002dj": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 23,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002dl": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002do": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002dp": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002er": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 26,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002es": {
+      "type": "Ia",
+      "subtype": "Ia-02es",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002eu": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002fb": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002fk": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 24,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002ha": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002he": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002hu": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002hw": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002ic": {
+      "type": "Ia",
+      "subtype": "Ia-csm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002jg": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002jy": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2002kf": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2003W": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 16,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2003Y": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2003cg": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 42,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2003ch": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 12,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2003cq": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2003du": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 60,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2003fa": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 19,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2003gq": {
+      "type": "Ia",
+      "subtype": "Ia-02cx",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2003hu": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2003hv": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2003ic": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2003it": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 15,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2003iv": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2003kc": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2003kf": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 26,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2004L": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2004S": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2004as": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 18,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2004at": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2004bd": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2004bg": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2004dt": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 39,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2004ef": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 15,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2004eo": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 19,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2004fu": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2004gs": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005M": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005am": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 18,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005bl": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005cc": {
+      "type": "Ia",
+      "subtype": "Ia-02cx",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005cf": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 67,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005cg": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005de": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005el": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005eq": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005eu": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005gj": {
+      "type": "Ia",
+      "subtype": "Ia-csm",
+      "redshift": 0.0,
+      "epochs": 22,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005hf": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005hj": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005hk": {
+      "type": "Ia",
+      "subtype": "Ia-02cx",
+      "redshift": 0.0,
+      "epochs": 32,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005kc": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005ke": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005mz": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2005na": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006D": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006H": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 14,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006N": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 12,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006S": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006X": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 26,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006ac": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006al": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006ax": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006bt": {
+      "type": "Ia",
+      "subtype": "Ia-02es",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006bz": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006cf": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006cp": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006cs": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006cz": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006dm": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006dw": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006ej": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006em": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006gr": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 17,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006gt": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006gz": {
+      "type": "Ia",
+      "subtype": "Ia-03fg",
+      "redshift": 0.0,
+      "epochs": 17,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006hb": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006ke": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006le": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 22,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006lf": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 20,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006oa": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2006sr": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007F": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 13,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007S": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007af": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 32,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007al": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007au": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007ax": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007ba": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007bc": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007bd": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007bj": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007bm": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007ca": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007ci": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007co": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 17,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007cq": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007fb": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007fs": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007hj": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 14,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007if": {
+      "type": "Ia",
+      "subtype": "Ia-03fg",
+      "redshift": 0.0,
+      "epochs": 38,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007kk": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 15,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007le": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 27,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007qe": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2007sr": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 12,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2008A": {
+      "type": "Ia",
+      "subtype": "Ia-02cx",
+      "redshift": 0.0,
+      "epochs": 14,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2008C": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2008Q": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2008R": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2008Z": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 15,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2008ae": {
+      "type": "Ia",
+      "subtype": "Ia-02cx",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2008ar": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 18,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2008bf": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 14,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2008bt": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2008ds": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2008ec": {
+      "type": "Ia",
+      "subtype": "Ia-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2012ca": {
+      "type": "Ia",
+      "subtype": "Ia-csm",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2013bh": {
+      "type": "Ia",
+      "subtype": "Ia-pec",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2013gr": {
+      "type": "Ia",
+      "subtype": "Ia-02cx",
+      "redshift": 0.0,
+      "epochs": 12,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2013u": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2014eg": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2015H": {
+      "type": "Ia",
+      "subtype": "Ia-02cx",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2015bo": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2016ado": {
+      "type": "Ia",
+      "subtype": "Ia-02cx",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2016hnk": {
+      "type": "Ia",
+      "subtype": "Ia-Ca-rich",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2016ije": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2016iks": {
+      "type": "Ia",
+      "subtype": "Ia-csm",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2017awz": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2017dfb": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2017eby": {
+      "type": "Ia",
+      "subtype": "Ia-csm",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2017ifu": {
+      "type": "Ia",
+      "subtype": "Ia-csm",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2018apo": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2018bie": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2018hjw": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2019akg": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2019bka": {
+      "type": "Ia",
+      "subtype": "Ia-91T",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2019so": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2022vqz": {
+      "type": "Ia",
+      "subtype": "Ia-02es",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "2005E": {
+      "type": "Ib",
+      "subtype": "Ib-Ca-rich",
+      "redshift": 0.008986,
+      "epochs": 6,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "2016hgs": {
+      "type": "Ib",
+      "subtype": "Ib-Ca-rich",
+      "redshift": 0.017,
+      "epochs": 5,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "LSQ15rw": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "PTF11kmb": {
+      "type": "Ib",
+      "subtype": "Ib-Ca-rich",
+      "redshift": 0.017,
+      "epochs": 4,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "PTF12bho": {
+      "type": "Ib",
+      "subtype": "Ib-Ca-rich",
+      "redshift": 0.023,
+      "epochs": 5,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "iPTF13bvn": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 13,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn1983N": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn1984L": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 12,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn1988L": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn1990I": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn1990U": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn1991ar": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn1995F": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn1997X": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn1997dc": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn1998T": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn1998dt": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn1999di": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn1999dn": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn1999ex": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2001ai": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2001ej": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2002ji": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 12,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2004ao": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 29,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2004dk": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2004gq": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 24,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2004gv": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2005ar": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2005bf": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 30,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2005hg": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 18,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2006ep": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2006fo": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2006lc": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2006ld": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2006lv": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2007C": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 16,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2007Y": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 12,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2007ag": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2007kj": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2007uy": {
+      "type": "Ib",
+      "subtype": "Ib-pec",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2008D": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 21,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2009er": {
+      "type": "Ib",
+      "subtype": "Ib-pec",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2009iz": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2009jf": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 48,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2016bau": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.003856,
+      "epochs": 19,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2016frp": {
+      "type": "Ib",
+      "subtype": "Ib-pec",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2018beh": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2019odp": {
+      "type": "Ib",
+      "subtype": "Ib-pec",
+      "redshift": 0.014353,
+      "epochs": 32,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2020hvp": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.005247,
+      "epochs": 16,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2021hen": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.021125,
+      "epochs": 6,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2021njk": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.012952,
+      "epochs": 8,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2021ukt": {
+      "type": "Ib",
+      "subtype": "Ib-pec",
+      "redshift": 0.012886,
+      "epochs": 12,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2022nyo": {
+      "type": "Ib",
+      "subtype": "Ib-pec",
+      "redshift": 0.010637,
+      "epochs": 5,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2023ljf": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.015,
+      "epochs": 9,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "2010al": {
+      "type": "Ibn",
+      "subtype": "Ibn",
+      "redshift": 0.017155,
+      "epochs": 10,
+      "storage_file": "templates_Ibn.hdf5"
+    },
+    "2011hw": {
+      "type": "Ibn",
+      "subtype": "Ibn",
+      "redshift": 0.023,
+      "epochs": 6,
+      "storage_file": "templates_Ibn.hdf5"
+    },
+    "2018bcc": {
+      "type": "Ibn",
+      "subtype": "Ibn",
+      "redshift": 0.0636,
+      "epochs": 4,
+      "storage_file": "templates_Ibn.hdf5"
+    },
+    "CSS140421": {
+      "type": "Ibn",
+      "subtype": "Ibn",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ibn.hdf5"
+    },
+    "OGLE2012sn00": {
+      "type": "Ibn",
+      "subtype": "Ibn",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ibn.hdf5"
+    },
+    "iPTF13beo": {
+      "type": "Ibn",
+      "subtype": "Ibn",
+      "redshift": 0.0907,
+      "epochs": 1,
+      "storage_file": "templates_Ibn.hdf5"
+    },
+    "sn2000er": {
+      "type": "Ibn",
+      "subtype": "Ibn",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ibn.hdf5"
+    },
+    "sn2002ao": {
+      "type": "Ibn",
+      "subtype": "Ibn",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ibn.hdf5"
+    },
+    "sn2005la": {
+      "type": "Ibn",
+      "subtype": "Ibn",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ibn.hdf5"
+    },
+    "sn2006jc": {
+      "type": "Ibn",
+      "subtype": "Ibn",
+      "redshift": 0.0,
+      "epochs": 22,
+      "storage_file": "templates_Ibn.hdf5"
+    },
+    "sn2018gjx": {
+      "type": "Ibn",
+      "subtype": "Ibn",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ibn.hdf5"
+    },
+    "sn2018jmt": {
+      "type": "Ibn",
+      "subtype": "Ibn",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ibn.hdf5"
+    },
+    "2010X": {
+      "type": "Ic",
+      "subtype": "Ic-05ek",
+      "redshift": 0.015014,
+      "epochs": 5,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "LSQ12dwl": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "PTF10bzf": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "PTF10qts": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "PTF10vgv": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "PTF12gzk": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn1983V": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 12,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn1990B": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 21,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn1990aa": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn1991A": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn1991N": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn1992ar": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn1994I": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 38,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn1997dq": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 12,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn1997ef": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 28,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn1997ei": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn1998bw": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 26,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2002ap": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 34,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2003dh": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2003jd": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 25,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2003lw": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2004aw": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 27,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2004dn": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2004eu": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2004fe": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2004ge": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2004gk": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 30,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2004gt": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 13,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2005az": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 22,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2005da": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2005ek": {
+      "type": "Ic",
+      "subtype": "Ic-05ek",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2005kf": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2005kl": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2005mf": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2005nb": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2006aj": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 26,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2006ck": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2007D": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2007I": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2007bg": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2007ce": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2007cl": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2007gr": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 17,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2007ru": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2007rz": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2008an": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2009bb": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2009nz": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2010ay": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2010bh": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 24,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2010ma": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2011bm": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 14,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2012ap": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 15,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2012bz": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2012hn": {
+      "type": "Ic",
+      "subtype": "Ic-Ca-rich",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2013cq": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2013dk": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2013dx": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 16,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2014ad": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2014l": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2016dsg": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2016iae": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2017dcc": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2017gax": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2017iuk": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0,
+      "epochs": 7,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2018fwm": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2018gsk": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2019ape": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2019bkc": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "2019hgp": {
+      "type": "Icn",
+      "subtype": "Icn",
+      "redshift": 0.0641,
+      "epochs": 14,
+      "storage_file": "templates_Icn.hdf5"
+    },
+    "2019jc": {
+      "type": "Icn",
+      "subtype": "Icn",
+      "redshift": 0.01948,
+      "epochs": 3,
+      "storage_file": "templates_Icn.hdf5"
+    },
+    "sn2021csp": {
+      "type": "Icn",
+      "subtype": "Icn",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Icn.hdf5"
+    },
+    "2004ex": {
+      "type": "II",
+      "subtype": "IIb",
+      "redshift": 0.017549,
+      "epochs": 7,
+      "storage_file": "templates_II.hdf5"
     },
     "ASASSN-14ha": {
       "type": "II",
@@ -87,6 +3391,13 @@
       "epochs": 3,
       "storage_file": "templates_II.hdf5"
     },
+    "SSS130221-13": {
+      "type": "II",
+      "subtype": "IIn",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_II.hdf5"
+    },
     "sn1979C": {
       "type": "II",
       "subtype": "IIL",
@@ -129,18 +3440,18 @@
       "epochs": 74,
       "storage_file": "templates_II.hdf5"
     },
-    "sn1996cb": {
-      "type": "II",
-      "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 25,
-      "storage_file": "templates_II.hdf5"
-    },
     "sn1996L": {
       "type": "II",
       "subtype": "IIn",
       "redshift": 0.0,
       "epochs": 7,
+      "storage_file": "templates_II.hdf5"
+    },
+    "sn1996cb": {
+      "type": "II",
+      "subtype": "IIb",
+      "redshift": 0.0,
+      "epochs": 25,
       "storage_file": "templates_II.hdf5"
     },
     "sn1997cy": {
@@ -157,18 +3468,25 @@
       "epochs": 3,
       "storage_file": "templates_II.hdf5"
     },
-    "sn1998fa": {
-      "type": "II",
-      "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_II.hdf5"
-    },
     "sn1998S": {
       "type": "II",
       "subtype": "IIn",
       "redshift": 0.0,
       "epochs": 55,
+      "storage_file": "templates_II.hdf5"
+    },
+    "sn1998SEarly": {
+      "type": "II",
+      "subtype": "II-flash",
+      "redshift": 0.00299,
+      "epochs": 2,
+      "storage_file": "templates_II.hdf5"
+    },
+    "sn1998fa": {
+      "type": "II",
+      "subtype": "IIb",
+      "redshift": 0.0,
+      "epochs": 3,
       "storage_file": "templates_II.hdf5"
     },
     "sn1999em": {
@@ -234,6 +3552,13 @@
       "epochs": 1,
       "storage_file": "templates_II.hdf5"
     },
+    "sn2005U": {
+      "type": "II",
+      "subtype": "IIb",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_II.hdf5"
+    },
     "sn2005cs": {
       "type": "II",
       "subtype": "IIP",
@@ -241,11 +3566,11 @@
       "epochs": 41,
       "storage_file": "templates_II.hdf5"
     },
-    "sn2005U": {
+    "sn2006T": {
       "type": "II",
       "subtype": "IIb",
       "redshift": 0.0,
-      "epochs": 4,
+      "epochs": 7,
       "storage_file": "templates_II.hdf5"
     },
     "sn2006bp": {
@@ -256,13 +3581,6 @@
       "storage_file": "templates_II.hdf5"
     },
     "sn2006el": {
-      "type": "II",
-      "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_II.hdf5"
-    },
-    "sn2006T": {
       "type": "II",
       "subtype": "IIb",
       "redshift": 0.0,
@@ -332,13 +3650,6 @@
       "epochs": 8,
       "storage_file": "templates_II.hdf5"
     },
-    "sn2012ca": {
-      "type": "Ia",
-      "subtype": "Ia-csm",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_Ia.hdf5"
-    },
     "sn2012dy": {
       "type": "II",
       "subtype": "IIb",
@@ -407,6 +3718,13 @@
       "subtype": "IIP",
       "redshift": 0.0,
       "epochs": 6,
+      "storage_file": "templates_II.hdf5"
+    },
+    "sn2013fsEarly": {
+      "type": "II",
+      "subtype": "II-flash",
+      "redshift": 0.011855,
+      "epochs": 4,
       "storage_file": "templates_II.hdf5"
     },
     "sn2013k": {
@@ -647,13 +3965,6 @@
       "epochs": 5,
       "storage_file": "templates_II.hdf5"
     },
-    "sn2018bsz": {
-      "type": "SLSN",
-      "subtype": "SLSN-I",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_SLSN.hdf5"
-    },
     "sn2018coq": {
       "type": "II",
       "subtype": "IIP",
@@ -752,1923 +4063,26 @@
       "epochs": 2,
       "storage_file": "templates_II.hdf5"
     },
-    "SSS130221-13": {
+    "sn2020pniEarly": {
       "type": "II",
-      "subtype": "IIn",
+      "subtype": "II-flash",
       "redshift": 0.0,
       "epochs": 4,
       "storage_file": "templates_II.hdf5"
     },
-    "ASASSN-15ga": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "ASASSN-15hy": {
-      "type": "Ia",
-      "subtype": "Ia-03fg",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "iPTF14atg": {
-      "type": "Ia",
-      "subtype": "Ia-02es",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "LSQ12fhs": {
-      "type": "Ia",
-      "subtype": "Ia-02cx",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "LSQ12gdj": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "LSQ15adm": {
-      "type": "Ia",
-      "subtype": "Ia-csm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "OGLE2012sn04": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "PSNJ15053007": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1981B": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1984A": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1986G": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 28,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1989B": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 25,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1990N": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 15,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1990O": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1991bg": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 26,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1991M": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1991T": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 16,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1992A": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 13,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1994ae": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 18,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1994D": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 39,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1994M": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1994Q": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1994S": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1994T": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1995ac": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1995ak": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1995al": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 13,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1995bd": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1995D": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 14,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1995E": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1996ai": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1996bl": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1996bo": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1996X": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 27,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1996Z": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1997bp": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 13,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1997bq": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 13,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1997br": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 21,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1997cn": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 13,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1997do": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 14,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1997dt": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1997E": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1997Y": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998ab": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998aq": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 27,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998bp": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998bu": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 34,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998co": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998de": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998dh": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998dk": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998dm": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998dx": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998ec": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998ef": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998eg": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998es": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 26,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998V": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999ac": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 34,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999aw": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999bh": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999by": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 14,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999cc": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999cl": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999cw": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999da": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999dk": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999dq": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 19,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999ee": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999ej": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999ek": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999gd": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999gh": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 15,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999gp": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1999X": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2000B": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2000ce": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2000cf": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2000cn": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2000cx": {
-      "type": "Ia",
-      "subtype": "Ia-pec",
-      "redshift": 0.0,
-      "epochs": 44,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2000dg": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2000dk": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2000dn": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2000E": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2000fa": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 15,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001ah": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001ay": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 20,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001az": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001bf": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001bg": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001ck": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001cp": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001da": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001eh": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 18,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001el": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001en": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001ep": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 26,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001fe": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001fh": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001G": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 15,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001gc": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001N": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2001V": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 38,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002bf": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 13,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002bo": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 51,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002cd": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 15,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002cf": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002ck": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002cr": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002cs": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002cx": {
-      "type": "Ia",
-      "subtype": "Ia-02cx",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002de": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002dj": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 23,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002dl": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002do": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002dp": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002er": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 26,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002es": {
-      "type": "Ia",
-      "subtype": "Ia-02es",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002eu": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002fb": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002fk": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 24,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002ha": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002he": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002hu": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002hw": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002ic": {
-      "type": "Ia",
-      "subtype": "Ia-csm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002jg": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002jy": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2002kf": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003cg": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 42,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003ch": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003cq": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003du": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 60,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003fa": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 19,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003gq": {
-      "type": "Ia",
-      "subtype": "Ia-02cx",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003hu": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003hv": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003ic": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003it": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 15,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003iv": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003kc": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003kf": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 26,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003W": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 16,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2003Y": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2004as": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 18,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2004at": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2004bd": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2004bg": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2004dt": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 39,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2004ef": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 15,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2004eo": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 19,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2004fu": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2004gs": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2004L": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2004S": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005am": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 18,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005bl": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005cc": {
-      "type": "Ia",
-      "subtype": "Ia-02cx",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005cf": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 67,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005cg": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005de": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005el": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005eq": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005eu": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005gj": {
-      "type": "Ia",
-      "subtype": "Ia-csm",
-      "redshift": 0.0,
-      "epochs": 22,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005hf": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005hj": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005hk": {
-      "type": "Ia",
-      "subtype": "Ia-02cx",
-      "redshift": 0.0,
-      "epochs": 32,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005kc": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005ke": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005M": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005mz": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2005na": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006ac": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006al": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006ax": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006bt": {
-      "type": "Ia",
-      "subtype": "Ia-02es",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006bz": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006cf": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006cp": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006cs": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006cz": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006D": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006dm": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006dw": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006ej": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006em": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006gr": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 17,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006gt": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006gz": {
-      "type": "Ia",
-      "subtype": "Ia-03fg",
-      "redshift": 0.0,
-      "epochs": 17,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006H": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 14,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006hb": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006ke": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006le": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 22,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006lf": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 20,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006N": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006oa": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006S": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006sr": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2006X": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 26,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007af": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 32,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007al": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007au": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007ax": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007ba": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007bc": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007bd": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007bj": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007bm": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007ca": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007ci": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007co": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 17,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007cq": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007F": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 13,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007fb": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007fs": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007hj": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 14,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007if": {
-      "type": "Ia",
-      "subtype": "Ia-03fg",
-      "redshift": 0.0,
-      "epochs": 38,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007kk": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 15,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007le": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 27,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007qe": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007S": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2007sr": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2008A": {
-      "type": "Ia",
-      "subtype": "Ia-02cx",
-      "redshift": 0.0,
-      "epochs": 14,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2008ae": {
-      "type": "Ia",
-      "subtype": "Ia-02cx",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2008ar": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 18,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2008bf": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 14,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2008bt": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2008C": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2008ds": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2008ec": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2008Q": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2008R": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2008Z": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 15,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2013bh": {
-      "type": "Ia",
-      "subtype": "Ia-pec",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2013gr": {
-      "type": "Ia",
-      "subtype": "Ia-02cx",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2013u": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2014eg": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2015bo": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2015H": {
-      "type": "Ia",
-      "subtype": "Ia-02cx",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2016ado": {
-      "type": "Ia",
-      "subtype": "Ia-02cx",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2016hnk": {
-      "type": "Ia",
-      "subtype": "Ia-Ca-rich",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2016ije": {
-      "type": "Ia",
-      "subtype": "Ia-02es",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2016iks": {
-      "type": "Ia",
-      "subtype": "Ia-csm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2017awz": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2017dfb": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2017eby": {
-      "type": "Ia",
-      "subtype": "Ia-csm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2017ifu": {
-      "type": "Ia",
-      "subtype": "Ia-csm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2018apo": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2018bie": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2018hjw": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2019akg": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2019bka": {
-      "type": "Ia",
-      "subtype": "Ia-91T",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2019so": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn2022vqz": {
-      "type": "Ia",
-      "subtype": "Ia-02es",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "SNLS03D3bb": {
-      "type": "Ia",
-      "subtype": "Ia-03fg",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "ASASSN-15oi": {
-      "type": "TDE",
-      "subtype": "TDE-He",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "at2018dyb": {
-      "type": "TDE",
-      "subtype": "TDE-H-He",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "at2018fyk": {
-      "type": "TDE",
-      "subtype": "TDE-H-He",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "at2018hyz": {
-      "type": "TDE",
-      "subtype": "TDE-H-He",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "at2018lna": {
-      "type": "TDE",
-      "subtype": "TDE-H-He",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "at2019ahk": {
-      "type": "TDE",
-      "subtype": "TDE-H",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "at2019azh": {
-      "type": "TDE",
-      "subtype": "TDE-H",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "LSQ12dyw": {
-      "type": "TDE",
-      "subtype": "TDE-H",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "OGLE16aaa": {
-      "type": "TDE",
-      "subtype": "TDE-H-He",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "sn2015L": {
-      "type": "TDE",
-      "subtype": "TDE-Ftless",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "at2014ej": {
-      "type": "GAP",
-      "subtype": "LRN",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_GAP.hdf5"
-    },
-    "AT2015dl": {
-      "type": "GAP",
-      "subtype": "LRN",
+    "sn2023ixfEarly": {
+      "type": "II",
+      "subtype": "II-flash",
       "redshift": 0.000804,
-      "epochs": 10,
-      "storage_file": "templates_GAP.hdf5"
+      "epochs": 4,
+      "storage_file": "templates_II.hdf5"
     },
-    "lbv1999bw": {
-      "type": "GAP",
-      "subtype": "LBV",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_GAP.hdf5"
-    },
-    "lbv2001ac": {
-      "type": "GAP",
-      "subtype": "LBV",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_GAP.hdf5"
-    },
-    "lbv2003hy": {
-      "type": "GAP",
-      "subtype": "LBV",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_GAP.hdf5"
-    },
-    "PS15dbp": {
-      "type": "GAP",
-      "subtype": "LBV",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_GAP.hdf5"
-    },
-    "PSNJ15213475": {
-      "type": "GAP",
-      "subtype": "LBV",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_GAP.hdf5"
+    "sn2024ggiEarly": {
+      "type": "II",
+      "subtype": "II-flash",
+      "redshift": 0.0024355,
+      "epochs": 9,
+      "storage_file": "templates_II.hdf5"
     },
     "at2017gfo": {
       "type": "KN",
@@ -2677,18 +4091,18 @@
       "epochs": 10,
       "storage_file": "templates_KN.hdf5"
     },
-    "at2020xnd": {
-      "type": "LFBOT",
-      "subtype": "20xnd",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_LFBOT.hdf5"
-    },
     "CSS1601010": {
       "type": "LFBOT",
       "subtype": "20xnd",
       "redshift": 0.0,
       "epochs": 8,
+      "storage_file": "templates_LFBOT.hdf5"
+    },
+    "at2020xnd": {
+      "type": "LFBOT",
+      "subtype": "20xnd",
+      "redshift": 0.0,
+      "epochs": 2,
       "storage_file": "templates_LFBOT.hdf5"
     },
     "sn2018cow": {
@@ -2698,61 +4112,61 @@
       "epochs": 11,
       "storage_file": "templates_LFBOT.hdf5"
     },
-    "CSS140421": {
-      "type": "Ibn",
-      "subtype": "Ibn",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ibn.hdf5"
+    "2009cb": {
+      "type": "SLSN",
+      "subtype": "SLSN-I",
+      "redshift": 0.1864,
+      "epochs": 1,
+      "storage_file": "templates_SLSN.hdf5"
     },
-    "OGLE2012sn00": {
-      "type": "Ibn",
-      "subtype": "Ibn",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ibn.hdf5"
+    "2010md": {
+      "type": "SLSN",
+      "subtype": "SLSN-I",
+      "redshift": 0.0982,
+      "epochs": 8,
+      "storage_file": "templates_SLSN.hdf5"
     },
-    "sn2000er": {
-      "type": "Ibn",
-      "subtype": "Ibn",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ibn.hdf5"
-    },
-    "sn2002ao": {
-      "type": "Ibn",
-      "subtype": "Ibn",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ibn.hdf5"
-    },
-    "sn2005la": {
-      "type": "Ibn",
-      "subtype": "Ibn",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ibn.hdf5"
-    },
-    "sn2006jc": {
-      "type": "Ibn",
-      "subtype": "Ibn",
-      "redshift": 0.0,
-      "epochs": 22,
-      "storage_file": "templates_Ibn.hdf5"
-    },
-    "sn2018gjx": {
-      "type": "Ibn",
-      "subtype": "Ibn",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ibn.hdf5"
-    },
-    "sn2018jmt": {
-      "type": "Ibn",
-      "subtype": "Ibn",
-      "redshift": 0.0,
+    "2016aps": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.2657,
       "epochs": 3,
-      "storage_file": "templates_Ibn.hdf5"
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "2016eay": {
+      "type": "SLSN",
+      "subtype": "SLSN-I",
+      "redshift": 0.1013,
+      "epochs": 6,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "2017egm": {
+      "type": "SLSN",
+      "subtype": "SLSN-I",
+      "redshift": 0.03072,
+      "epochs": 14,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "2018jkq": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.1193,
+      "epochs": 3,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "2023gpw": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.08,
+      "epochs": 5,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "CSS121015": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.2868,
+      "epochs": 5,
+      "storage_file": "templates_SLSN.hdf5"
     },
     "DES13S2cmm": {
       "type": "SLSN",
@@ -2762,20 +4176,6 @@
       "storage_file": "templates_SLSN.hdf5"
     },
     "DES14X3taz": {
-      "type": "SLSN",
-      "subtype": "SLSN-I",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_SLSN.hdf5"
-    },
-    "iPTF13ajg": {
-      "type": "SLSN",
-      "subtype": "SLSN-I",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_SLSN.hdf5"
-    },
-    "iPTF13ehe": {
       "type": "SLSN",
       "subtype": "SLSN-I",
       "redshift": 0.0,
@@ -2880,6 +4280,13 @@
       "epochs": 1,
       "storage_file": "templates_SLSN.hdf5"
     },
+    "PTF10bfz": {
+      "type": "SLSN",
+      "subtype": "SLSN-I",
+      "redshift": 0.173,
+      "epochs": 5,
+      "storage_file": "templates_SLSN.hdf5"
+    },
     "PTF10cwr": {
       "type": "SLSN",
       "subtype": "SLSN-I",
@@ -2913,6 +4320,55 @@
       "subtype": "SLSN-I",
       "redshift": 0.0,
       "epochs": 3,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "SN2006gy": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.01919,
+      "epochs": 16,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "SN2019hge": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.0866,
+      "epochs": 2,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "SNLS06D4eu": {
+      "type": "SLSN",
+      "subtype": "SLSN-I",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "SNLS07D2bv": {
+      "type": "SLSN",
+      "subtype": "SLSN-I",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "SSS120810-23": {
+      "type": "SLSN",
+      "subtype": "SLSN-I",
+      "redshift": 0.0,
+      "epochs": 12,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "iPTF13ajg": {
+      "type": "SLSN",
+      "subtype": "SLSN-I",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "iPTF13ehe": {
+      "type": "SLSN",
+      "subtype": "SLSN-I",
+      "redshift": 0.0,
+      "epochs": 2,
       "storage_file": "templates_SLSN.hdf5"
     },
     "sn2005ap": {
@@ -3013,6 +4469,13 @@
       "epochs": 8,
       "storage_file": "templates_SLSN.hdf5"
     },
+    "sn2018bsz": {
+      "type": "SLSN",
+      "subtype": "SLSN-I",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_SLSN.hdf5"
+    },
     "sn2018ffj": {
       "type": "SLSN",
       "subtype": "SLSN-I",
@@ -3048,1542 +4511,9 @@
       "epochs": 1,
       "storage_file": "templates_SLSN.hdf5"
     },
-    "SNLS06D4eu": {
-      "type": "SLSN",
-      "subtype": "SLSN-I",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_SLSN.hdf5"
-    },
-    "SNLS07D2bv": {
-      "type": "SLSN",
-      "subtype": "SLSN-I",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_SLSN.hdf5"
-    },
-    "SSS120810-23": {
-      "type": "SLSN",
-      "subtype": "SLSN-I",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_SLSN.hdf5"
-    },
-    "iPTF13bvn": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 13,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "LSQ15rw": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1983N": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1984L": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1988L": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1990I": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1990U": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1991ar": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1995F": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1997dc": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1997X": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1998dt": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1998T": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1999di": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1999dn": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1999ex": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2001ai": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2001ej": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2002ji": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2004ao": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 29,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2004dk": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2004gq": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 24,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2004gv": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2005ar": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2005bf": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 30,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2005hg": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 18,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2006ep": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2006fo": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2006lc": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2006ld": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2006lv": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2007ag": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2007C": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 16,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2007kj": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2007uy": {
-      "type": "Ib",
-      "subtype": "Ib-pec",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2007Y": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2008D": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 21,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2009er": {
-      "type": "Ib",
-      "subtype": "Ib-pec",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2009iz": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2009jf": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 48,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2016frp": {
-      "type": "Ib",
-      "subtype": "Ib-pec",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2018beh": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "kcE": {
-      "type": "Galaxy",
-      "subtype": "Gal-E",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "kcS0": {
-      "type": "Galaxy",
-      "subtype": "Gal-S0",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "kcSa": {
-      "type": "Galaxy",
-      "subtype": "Gal-Sa",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "kcSb": {
-      "type": "Galaxy",
-      "subtype": "Gal-Sb",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "kcSB1": {
-      "type": "Galaxy",
-      "subtype": "Gal-SB",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "kcSB2": {
-      "type": "Galaxy",
-      "subtype": "Gal-SB",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "kcSB3": {
-      "type": "Galaxy",
-      "subtype": "Gal-SB",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "kcSB4": {
-      "type": "Galaxy",
-      "subtype": "Gal-SB",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "kcSB5": {
-      "type": "Galaxy",
-      "subtype": "Gal-SB",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "kcSB6": {
-      "type": "Galaxy",
-      "subtype": "Gal-SB",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "kcSc": {
-      "type": "Galaxy",
-      "subtype": "Gal-Sc",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "LSQ12dwl": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "PTF10bzf": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "PTF10qts": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "PTF10vgv": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "PTF12gzk": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn1983V": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn1990aa": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn1990B": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 21,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn1991A": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn1991N": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn1992ar": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn1994I": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 38,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn1997dq": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn1997ef": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 28,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn1997ei": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn1998bw": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 26,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2002ap": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 34,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2003dh": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2003jd": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 25,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2003lw": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2004aw": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 27,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2004dn": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2004eu": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2004fe": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2004ge": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2004gk": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 30,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2004gt": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 13,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2005az": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 22,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2005da": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2005ek": {
-      "type": "Ic",
-      "subtype": "Ic-05ek",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2005kf": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2005kl": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2005mf": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2005nb": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2006aj": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 26,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2006ck": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2007bg": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2007ce": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2007cl": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2007D": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2007gr": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 17,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2007I": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2007ru": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2007rz": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2008an": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2009bb": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2009nz": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2010ay": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2010bh": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 24,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2010ma": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2011bm": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 14,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2012ap": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 15,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2012bz": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2012hn": {
-      "type": "Ic",
-      "subtype": "Ic-Ca-rich",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2013cq": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2013dk": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2013dx": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 16,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2014ad": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2014l": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2016dsg": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2016iae": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2017dcc": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2017gax": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2017iuk": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 7,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2018fwm": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2018gsk": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2019ape": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2019bkc": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2021csp": {
-      "type": "Icn",
-      "subtype": "Icn",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Icn.hdf5"
-    },
-    "sn2013fsEarly": {
-      "type": "II",
-      "subtype": "II-flash",
-      "redshift": 0.011855,
-      "epochs": 4,
-      "storage_file": "templates_II.hdf5"
-    },
-    "sn2023ljf": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.015,
-      "epochs": 9,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2022nyo": {
-      "type": "Ib",
-      "subtype": "Ib-pec",
-      "redshift": 0.010637,
-      "epochs": 5,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2021ukt": {
-      "type": "Ib",
-      "subtype": "Ib-pec",
-      "redshift": 0.012886,
-      "epochs": 12,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2021njk": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.012952,
-      "epochs": 8,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2021hen": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.021125,
-      "epochs": 6,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2020hvp": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.005247,
-      "epochs": 16,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2019odp": {
-      "type": "Ib",
-      "subtype": "Ib-pec",
-      "redshift": 0.014353,
-      "epochs": 32,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2016bau": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.003856,
-      "epochs": 19,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "2008S": {
-      "type": "GAP",
-      "subtype": "ILRT",
-      "redshift": 0.00015,
-      "epochs": 6,
-      "storage_file": "templates_GAP.hdf5"
-    },
-    "2008jd": {
-      "type": "GAP",
-      "subtype": "ILRT",
-      "redshift": 0.00048,
-      "epochs": 8,
-      "storage_file": "templates_GAP.hdf5"
-    },
-    "2021biy": {
-      "type": "GAP",
-      "subtype": "LRN",
-      "redshift": 0.002035,
-      "epochs": 9,
-      "storage_file": "templates_GAP.hdf5"
-    },
-    "sn1998SEarly": {
-      "type": "II",
-      "subtype": "II-flash",
-      "redshift": 0.00299,
-      "epochs": 2,
-      "storage_file": "templates_II.hdf5"
-    },
-    "sn2023ixfEarly": {
-      "type": "II",
-      "subtype": "II-flash",
-      "redshift": 0.000804,
-      "epochs": 4,
-      "storage_file": "templates_II.hdf5"
-    },
-    "sn2020pniEarly": {
-      "type": "II",
-      "subtype": "II-flash",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_II.hdf5"
-    },
-    "sn2024ggiEarly": {
-      "type": "II",
-      "subtype": "II-flash",
-      "redshift": 0.0024355,
-      "epochs": 9,
-      "storage_file": "templates_II.hdf5"
-    },
-    "AM_CVn": {
-      "type": "CV",
-      "subtype": "AM_CVn",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_CV.hdf5"
-    },
-    "U_Gem": {
-      "type": "CV",
-      "subtype": "DN",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_CV.hdf5"
-    },
-    "WZ_Sge": {
-      "type": "CV",
-      "subtype": "DN",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_CV.hdf5"
-    },
-    "Z_Cam": {
-      "type": "CV",
-      "subtype": "DN",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_CV.hdf5"
-    },
-    "Polar": {
-      "type": "CV",
-      "subtype": "Polar",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_CV.hdf5"
-    },
-    "HD193928": {
+    "AT2018apl": {
       "type": "Star",
-      "subtype": "WR-WN",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Star.hdf5"
-    },
-    "HD186943": {
-      "type": "Star",
-      "subtype": "WR-WN",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Star.hdf5"
-    },
-    "ASASSN-14ko": {
-      "type": "AGN",
-      "subtype": "Seyfert 1.5",
-      "redshift": 0.042489,
-      "epochs": 5,
-      "storage_file": "templates_AGN.hdf5"
-    },
-    "cas2021": {
-      "type": "CV",
-      "subtype": "Nova",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_CV.hdf5"
-    },
-    "her2021": {
-      "type": "CV",
-      "subtype": "Nova",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_CV.hdf5"
-    },
-    "NL1": {
-      "type": "CV",
-      "subtype": "NL",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_CV.hdf5"
-    },
-    "IP1": {
-      "type": "CV",
-      "subtype": "IP",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_CV.hdf5"
-    },
-    "TCorBorealis": {
-      "type": "Star",
-      "subtype": "Symbiotic",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Star.hdf5"
-    },
-    "PS1-10jh": {
-      "type": "TDE",
-      "subtype": "TDE-He",
-      "redshift": 0.1696,
-      "epochs": 2,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "ASASSN-14ae": {
-      "type": "TDE",
-      "subtype": "TDE-H",
-      "redshift": 0.043603,
-      "epochs": 13,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "2019qiz": {
-      "type": "TDE",
-      "subtype": "TDE-H-He",
-      "redshift": 0.01513,
-      "epochs": 8,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "2018dyb": {
-      "type": "TDE",
-      "subtype": "TDE-H-He",
-      "redshift": 0.017932,
-      "epochs": 6,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "iPTF16fnl": {
-      "type": "TDE",
-      "subtype": "TDE-H-He",
-      "redshift": 0.016328,
-      "epochs": 3,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "ASASSN-14li": {
-      "type": "TDE",
-      "subtype": "TDE-H-He",
-      "redshift": 0.020578,
-      "epochs": 5,
-      "storage_file": "templates_TDE.hdf5"
-    },
-    "SN2012dn": {
-      "type": "Ia",
-      "subtype": "Ia-03fg",
-      "redshift": 0.010187,
-      "epochs": 9,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "SN2009dc": {
-      "type": "Ia",
-      "subtype": "Ia-03fg",
-      "redshift": 0.021468,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "PTF10ops": {
-      "type": "Ia",
-      "subtype": "Ia-02es",
-      "redshift": 0.061,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "2010md": {
-      "type": "SLSN",
-      "subtype": "SLSN-I",
-      "redshift": 0.0982,
-      "epochs": 8,
-      "storage_file": "templates_SLSN.hdf5"
-    },
-    "SN2019hge": {
-      "type": "SLSN",
-      "subtype": "SLSN-II",
-      "redshift": 0.0866,
-      "epochs": 2,
-      "storage_file": "templates_SLSN.hdf5"
-    },
-    "2003fg": {
-      "type": "Ia",
-      "subtype": "Ia-03fg",
-      "redshift": 0.244,
-      "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "CSS121015": {
-      "type": "SLSN",
-      "subtype": "SLSN-II",
-      "redshift": 0.2868,
-      "epochs": 5,
-      "storage_file": "templates_SLSN.hdf5"
-    },
-    "Ell2": {
-      "type": "Galaxy",
-      "subtype": "Gal-E",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "Ell5": {
-      "type": "Galaxy",
-      "subtype": "Gal-E",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "Ell13": {
-      "type": "Galaxy",
-      "subtype": "Gal-E",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "S0": {
-      "type": "Galaxy",
-      "subtype": "Gal-S0",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "Sa": {
-      "type": "Galaxy",
-      "subtype": "Gal-Sa",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "Sb": {
-      "type": "Galaxy",
-      "subtype": "Gal-Sb",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "Sc": {
-      "type": "Galaxy",
-      "subtype": "Gal-Sc",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "Sd": {
-      "type": "Galaxy",
-      "subtype": "Gal-Sc",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "Sdm": {
-      "type": "Galaxy",
-      "subtype": "Gal-Sc",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "Spi4": {
-      "type": "Galaxy",
-      "subtype": "Gal-Sc",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "NGC6090": {
-      "type": "Galaxy",
-      "subtype": "Gal-SB",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "M82": {
-      "type": "Galaxy",
-      "subtype": "Gal-SB",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "Arp220": {
-      "type": "Galaxy",
-      "subtype": "Gal-SB",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "IRAS20551-4250": {
-      "type": "Galaxy",
-      "subtype": "Gal-SB",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "IRAS22491-1808": {
-      "type": "Galaxy",
-      "subtype": "Gal-SB",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "NGC6240": {
-      "type": "Galaxy",
-      "subtype": "Gal-SB",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Galaxy.hdf5"
-    },
-    "Sey2": {
-      "type": "AGN",
-      "subtype": "AGN-Sey2",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_AGN.hdf5"
-    },
-    "IRAS19254-7245_South": {
-      "type": "AGN",
-      "subtype": "AGN-Sey2",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_AGN.hdf5"
-    },
-    "QSO2": {
-      "type": "AGN",
-      "subtype": "QSO2",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_AGN.hdf5"
-    },
-    "Torus": {
-      "type": "AGN",
-      "subtype": "QSO2",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_AGN.hdf5"
-    },
-    "Mrk231": {
-      "type": "AGN",
-      "subtype": "QSO-BAL",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_AGN.hdf5"
-    },
-    "QSO1": {
-      "type": "AGN",
-      "subtype": "QSO",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_AGN.hdf5"
-    },
-    "TQSO1": {
-      "type": "AGN",
-      "subtype": "QSO",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_AGN.hdf5"
-    },
-    "PTF11kx": {
-      "type": "Ia",
-      "subtype": "Ia-csm",
-      "redshift": 0.0466,
-      "epochs": 11,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "2020qxz": {
-      "type": "Ia",
-      "subtype": "Ia-csm",
-      "redshift": 0.0975,
-      "epochs": 3,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "2010ae": {
-      "type": "Ia",
-      "subtype": "Ia-02cx",
-      "redshift": 0.003662,
-      "epochs": 15,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "2012Z": {
-      "type": "Ia",
-      "subtype": "Ia-02cx",
-      "redshift": 0.007125,
-      "epochs": 16,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "PTF09dav": {
-      "type": "Ia",
-      "subtype": "Ia-Ca-rich",
-      "redshift": 0.0371,
-      "epochs": 4,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "1999aa": {
-      "type": "Ia",
-      "subtype": "Ia-99aa",
-      "redshift": 0.01444,
-      "epochs": 48,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "2017egm": {
-      "type": "SLSN",
-      "subtype": "SLSN-I",
-      "redshift": 0.03072,
-      "epochs": 14,
-      "storage_file": "templates_SLSN.hdf5"
-    },
-    "2016eay": {
-      "type": "SLSN",
-      "subtype": "SLSN-I",
-      "redshift": 0.1013,
-      "epochs": 6,
-      "storage_file": "templates_SLSN.hdf5"
-    },
-    "2018jkq": {
-      "type": "SLSN",
-      "subtype": "SLSN-II",
-      "redshift": 0.1193,
-      "epochs": 3,
-      "storage_file": "templates_SLSN.hdf5"
-    },
-    "2023gpw": {
-      "type": "SLSN",
-      "subtype": "SLSN-II",
-      "redshift": 0.08,
-      "epochs": 5,
-      "storage_file": "templates_SLSN.hdf5"
-    },
-    "2010al": {
-      "type": "Ibn",
-      "subtype": "Ibn",
-      "redshift": 0.017155,
-      "epochs": 10,
-      "storage_file": "templates_Ibn.hdf5"
-    },
-    "2011hw": {
-      "type": "Ibn",
-      "subtype": "Ibn",
-      "redshift": 0.023,
-      "epochs": 6,
-      "storage_file": "templates_Ibn.hdf5"
-    },
-    "PTF11kmb": {
-      "type": "Ib",
-      "subtype": "Ib-Ca-rich",
-      "redshift": 0.017,
-      "epochs": 4,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "PTF12bho": {
-      "type": "Ib",
-      "subtype": "Ib-Ca-rich",
-      "redshift": 0.023,
-      "epochs": 5,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "2016hgs": {
-      "type": "Ib",
-      "subtype": "Ib-Ca-rich",
-      "redshift": 0.017,
-      "epochs": 5,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "2005E": {
-      "type": "Ib",
-      "subtype": "Ib-Ca-rich",
-      "redshift": 0.008986,
-      "epochs": 6,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "AT2012jc": {
-      "type": "GAP",
-      "subtype": "ILRT",
-      "redshift": 0.005607,
-      "epochs": 5,
-      "storage_file": "templates_GAP.hdf5"
-    },
-    "AT2013la": {
-      "type": "GAP",
-      "subtype": "ILRT",
-      "redshift": 0.00271,
-      "epochs": 8,
-      "storage_file": "templates_GAP.hdf5"
-    },
-    "2018aes": {
-      "type": "GAP",
-      "subtype": "ILRT",
-      "redshift": 0.00391,
-      "epochs": 2,
-      "storage_file": "templates_GAP.hdf5"
-    },
-    "2018hso": {
-      "type": "GAP",
-      "subtype": "LRN",
-      "redshift": 0.003536,
-      "epochs": 3,
-      "storage_file": "templates_GAP.hdf5"
-    },
-    "SN2007N": {
-      "type": "Ia",
-      "subtype": "Ia-02es",
-      "redshift": 0.012879,
-      "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "SN2005P": {
-      "type": "Ia",
-      "subtype": "Ia-02es",
-      "redshift": 0.00948,
-      "epochs": 2,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "SN2013dn": {
-      "type": "Ia",
-      "subtype": "Ia-csm",
-      "redshift": 0.056,
-      "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "SN2006gy": {
-      "type": "SLSN",
-      "subtype": "SLSN-II",
-      "redshift": 0.01919,
-      "epochs": 16,
-      "storage_file": "templates_SLSN.hdf5"
-    },
-    "2016aps": {
-      "type": "SLSN",
-      "subtype": "SLSN-II",
-      "redshift": 0.2657,
-      "epochs": 3,
-      "storage_file": "templates_SLSN.hdf5"
-    },
-    "iPTF14bdn": {
-      "type": "Ia",
-      "subtype": "Ia-99aa",
-      "redshift": 0.01558,
-      "epochs": 6,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "2010X": {
-      "type": "Ic",
-      "subtype": "Ic-05ek",
-      "redshift": 0.015014,
-      "epochs": 5,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "2019hgp": {
-      "type": "Icn",
-      "subtype": "Icn",
-      "redshift": 0.0641,
-      "epochs": 14,
-      "storage_file": "templates_Icn.hdf5"
-    },
-    "2019jc": {
-      "type": "Icn",
-      "subtype": "Icn",
-      "redshift": 0.01948,
-      "epochs": 3,
-      "storage_file": "templates_Icn.hdf5"
-    },
-    "AT2024abwb": {
-      "type": "Star",
-      "subtype": "Mdwarf",
+      "subtype": "Varstar",
       "redshift": 0.0,
       "epochs": 1,
       "storage_file": "templates_Star.hdf5"
@@ -4595,9 +4525,86 @@
       "epochs": 1,
       "storage_file": "templates_Star.hdf5"
     },
+    "AT2021ziw": {
+      "type": "Star",
+      "subtype": "Varstar",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Star.hdf5"
+    },
     "AT2022ure": {
       "type": "Star",
       "subtype": "Mdwarf",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "AT2024abwb": {
+      "type": "Star",
+      "subtype": "Mdwarf",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "BDCamelopardalis": {
+      "type": "Star",
+      "subtype": "Symbiotic",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "EGAndromedae": {
+      "type": "Star",
+      "subtype": "Symbiotic",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "HD165763": {
+      "type": "Star",
+      "subtype": "WR-WC",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "HD184738": {
+      "type": "Star",
+      "subtype": "WR-WC",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "HD186943": {
+      "type": "Star",
+      "subtype": "WR-WN",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "HD192103": {
+      "type": "Star",
+      "subtype": "WR-WC",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "HD193928": {
+      "type": "Star",
+      "subtype": "WR-WN",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "HD56925": {
+      "type": "Star",
+      "subtype": "WR-WN",
+      "redshift": 0.0,
+      "epochs": 5,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "OGLE16cza": {
+      "type": "Star",
+      "subtype": "Varstar",
       "redshift": 0.0,
       "epochs": 1,
       "storage_file": "templates_Star.hdf5"
@@ -4609,50 +4616,430 @@
       "epochs": 1,
       "storage_file": "templates_Star.hdf5"
     },
-    "AT2021ziw": {
+    "TCorBorealis": {
       "type": "Star",
-      "subtype": "Varstar",
+      "subtype": "Symbiotic",
       "redshift": 0.0,
-      "epochs": 1,
+      "epochs": 4,
       "storage_file": "templates_Star.hdf5"
     },
-    "AT2018apl": {
-      "type": "Star",
-      "subtype": "Varstar",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Star.hdf5"
+    "2018dyb": {
+      "type": "TDE",
+      "subtype": "TDE-H-He",
+      "redshift": 0.017932,
+      "epochs": 6,
+      "storage_file": "templates_TDE.hdf5"
     },
-    "OGLE16cza": {
-      "type": "Star",
-      "subtype": "Varstar",
-      "redshift": 0.0,
+    "2019qiz": {
+      "type": "TDE",
+      "subtype": "TDE-H-He",
+      "redshift": 0.01513,
+      "epochs": 8,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "2025hee": {
+      "type": "TDE",
+      "subtype": "TDE-He",
+      "redshift": 0.0873,
       "epochs": 1,
-      "storage_file": "templates_Star.hdf5"
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "2025lxx": {
+      "type": "TDE",
+      "subtype": "TDE-He",
+      "redshift": 0.145,
+      "epochs": 1,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "ASASSN-14ae": {
+      "type": "TDE",
+      "subtype": "TDE-H",
+      "redshift": 0.043603,
+      "epochs": 13,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "ASASSN-14li": {
+      "type": "TDE",
+      "subtype": "TDE-H-He",
+      "redshift": 0.020578,
+      "epochs": 5,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "ASASSN-15oi": {
+      "type": "TDE",
+      "subtype": "TDE-He",
+      "redshift": 0.0,
+      "epochs": 6,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "LSQ12dyw": {
+      "type": "TDE",
+      "subtype": "TDE-H",
+      "redshift": 0.0,
+      "epochs": 9,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "OGLE16aaa": {
+      "type": "TDE",
+      "subtype": "TDE-H-He",
+      "redshift": 0.0,
+      "epochs": 4,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "PS1-10jh": {
+      "type": "TDE",
+      "subtype": "TDE-He",
+      "redshift": 0.1696,
+      "epochs": 2,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "PTF09axc": {
+      "type": "TDE",
+      "subtype": "TDE-H-He",
+      "redshift": 0.1146,
+      "epochs": 2,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "at2018dyb": {
+      "type": "TDE",
+      "subtype": "TDE-H-He",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "at2018fyk": {
+      "type": "TDE",
+      "subtype": "TDE-H-He",
+      "redshift": 0.0,
+      "epochs": 11,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "at2018hyz": {
+      "type": "TDE",
+      "subtype": "TDE-H-He",
+      "redshift": 0.0,
+      "epochs": 8,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "at2018lna": {
+      "type": "TDE",
+      "subtype": "TDE-H-He",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "at2019ahk": {
+      "type": "TDE",
+      "subtype": "TDE-H",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "at2019azh": {
+      "type": "TDE",
+      "subtype": "TDE-H",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "iPTF16fnl": {
+      "type": "TDE",
+      "subtype": "TDE-H-He",
+      "redshift": 0.016328,
+      "epochs": 3,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "sn2015L": {
+      "type": "TDE",
+      "subtype": "TDE-Ftless",
+      "redshift": 0.0,
+      "epochs": 10,
+      "storage_file": "templates_TDE.hdf5"
     }
   },
   "by_type": {
-    "AGN": {
-      "count": 11,
-      "storage_file": "templates_AGN.hdf5",
+    "Ia": {
+      "count": 271,
+      "storage_file": "templates_Ia.hdf5",
       "template_names": [
-        "agn",
-        "ASASSN-14ko",
-        "IRAS19254-7245_South",
-        "Mrk231",
-        "qso",
-        "QSO1",
-        "qso2",
-        "QSO2",
-        "Sey2",
-        "Torus",
-        "TQSO1"
+        "1999aa",
+        "2003fg",
+        "2010ae",
+        "2012Z",
+        "2020qxz",
+        "ASASSN-15ga",
+        "ASASSN-15hy",
+        "LSQ12fhs",
+        "LSQ12gdj",
+        "LSQ15adm",
+        "OGLE2012sn04",
+        "PSNJ15053007",
+        "PTF09dav",
+        "PTF10ops",
+        "PTF11kx",
+        "SN2005P",
+        "SN2007N",
+        "SN2009dc",
+        "SN2012dn",
+        "SN2013dn",
+        "SNLS03D3bb",
+        "iPTF14atg",
+        "iPTF14bdn",
+        "sn1981B",
+        "sn1984A",
+        "sn1986G",
+        "sn1989B",
+        "sn1990N",
+        "sn1990O",
+        "sn1991M",
+        "sn1991T",
+        "sn1991bg",
+        "sn1992A",
+        "sn1994D",
+        "sn1994M",
+        "sn1994Q",
+        "sn1994S",
+        "sn1994T",
+        "sn1994ae",
+        "sn1995D",
+        "sn1995E",
+        "sn1995ac",
+        "sn1995ak",
+        "sn1995al",
+        "sn1995bd",
+        "sn1996X",
+        "sn1996Z",
+        "sn1996ai",
+        "sn1996bl",
+        "sn1996bo",
+        "sn1997E",
+        "sn1997Y",
+        "sn1997bp",
+        "sn1997bq",
+        "sn1997br",
+        "sn1997cn",
+        "sn1997do",
+        "sn1997dt",
+        "sn1998V",
+        "sn1998ab",
+        "sn1998aq",
+        "sn1998bp",
+        "sn1998bu",
+        "sn1998co",
+        "sn1998de",
+        "sn1998dh",
+        "sn1998dk",
+        "sn1998dm",
+        "sn1998dx",
+        "sn1998ec",
+        "sn1998ef",
+        "sn1998eg",
+        "sn1998es",
+        "sn1999X",
+        "sn1999ac",
+        "sn1999aw",
+        "sn1999bh",
+        "sn1999by",
+        "sn1999cc",
+        "sn1999cl",
+        "sn1999cw",
+        "sn1999da",
+        "sn1999dk",
+        "sn1999dq",
+        "sn1999ee",
+        "sn1999ej",
+        "sn1999ek",
+        "sn1999gd",
+        "sn1999gh",
+        "sn1999gp",
+        "sn2000B",
+        "sn2000E",
+        "sn2000ce",
+        "sn2000cf",
+        "sn2000cn",
+        "sn2000cx",
+        "sn2000dg",
+        "sn2000dk",
+        "sn2000dn",
+        "sn2000fa",
+        "sn2001G",
+        "sn2001N",
+        "sn2001V",
+        "sn2001ah",
+        "sn2001ay",
+        "sn2001az",
+        "sn2001bf",
+        "sn2001bg",
+        "sn2001ck",
+        "sn2001cp",
+        "sn2001da",
+        "sn2001eh",
+        "sn2001el",
+        "sn2001en",
+        "sn2001ep",
+        "sn2001fe",
+        "sn2001fh",
+        "sn2001gc",
+        "sn2002bf",
+        "sn2002bo",
+        "sn2002cd",
+        "sn2002cf",
+        "sn2002ck",
+        "sn2002cr",
+        "sn2002cs",
+        "sn2002cx",
+        "sn2002de",
+        "sn2002dj",
+        "sn2002dl",
+        "sn2002do",
+        "sn2002dp",
+        "sn2002er",
+        "sn2002es",
+        "sn2002eu",
+        "sn2002fb",
+        "sn2002fk",
+        "sn2002ha",
+        "sn2002he",
+        "sn2002hu",
+        "sn2002hw",
+        "sn2002ic",
+        "sn2002jg",
+        "sn2002jy",
+        "sn2002kf",
+        "sn2003W",
+        "sn2003Y",
+        "sn2003cg",
+        "sn2003ch",
+        "sn2003cq",
+        "sn2003du",
+        "sn2003fa",
+        "sn2003gq",
+        "sn2003hu",
+        "sn2003hv",
+        "sn2003ic",
+        "sn2003it",
+        "sn2003iv",
+        "sn2003kc",
+        "sn2003kf",
+        "sn2004L",
+        "sn2004S",
+        "sn2004as",
+        "sn2004at",
+        "sn2004bd",
+        "sn2004bg",
+        "sn2004dt",
+        "sn2004ef",
+        "sn2004eo",
+        "sn2004fu",
+        "sn2004gs",
+        "sn2005M",
+        "sn2005am",
+        "sn2005bl",
+        "sn2005cc",
+        "sn2005cf",
+        "sn2005cg",
+        "sn2005de",
+        "sn2005el",
+        "sn2005eq",
+        "sn2005eu",
+        "sn2005gj",
+        "sn2005hf",
+        "sn2005hj",
+        "sn2005hk",
+        "sn2005kc",
+        "sn2005ke",
+        "sn2005mz",
+        "sn2005na",
+        "sn2006D",
+        "sn2006H",
+        "sn2006N",
+        "sn2006S",
+        "sn2006X",
+        "sn2006ac",
+        "sn2006al",
+        "sn2006ax",
+        "sn2006bt",
+        "sn2006bz",
+        "sn2006cf",
+        "sn2006cp",
+        "sn2006cs",
+        "sn2006cz",
+        "sn2006dm",
+        "sn2006dw",
+        "sn2006ej",
+        "sn2006em",
+        "sn2006gr",
+        "sn2006gt",
+        "sn2006gz",
+        "sn2006hb",
+        "sn2006ke",
+        "sn2006le",
+        "sn2006lf",
+        "sn2006oa",
+        "sn2006sr",
+        "sn2007F",
+        "sn2007S",
+        "sn2007af",
+        "sn2007al",
+        "sn2007au",
+        "sn2007ax",
+        "sn2007ba",
+        "sn2007bc",
+        "sn2007bd",
+        "sn2007bj",
+        "sn2007bm",
+        "sn2007ca",
+        "sn2007ci",
+        "sn2007co",
+        "sn2007cq",
+        "sn2007fb",
+        "sn2007fs",
+        "sn2007hj",
+        "sn2007if",
+        "sn2007kk",
+        "sn2007le",
+        "sn2007qe",
+        "sn2007sr",
+        "sn2008A",
+        "sn2008C",
+        "sn2008Q",
+        "sn2008R",
+        "sn2008Z",
+        "sn2008ae",
+        "sn2008ar",
+        "sn2008bf",
+        "sn2008bt",
+        "sn2008ds",
+        "sn2008ec",
+        "sn2012ca",
+        "sn2013bh",
+        "sn2013gr",
+        "sn2013u",
+        "sn2014eg",
+        "sn2015H",
+        "sn2015bo",
+        "sn2016ado",
+        "sn2016hnk",
+        "sn2016ije",
+        "sn2016iks",
+        "sn2017awz",
+        "sn2017dfb",
+        "sn2017eby",
+        "sn2017ifu",
+        "sn2018apo",
+        "sn2018bie",
+        "sn2018hjw",
+        "sn2019akg",
+        "sn2019bka",
+        "sn2019so",
+        "sn2022vqz"
       ]
     },
     "II": {
-      "count": 107,
+      "count": 108,
       "storage_file": "templates_II.hdf5",
       "template_names": [
+        "2004ex",
         "ASASSN-14ha",
         "ASASSN-14il",
         "LSQ12heq",
@@ -4673,6 +5060,7 @@
         "sn1997cy",
         "sn1997dd",
         "sn1998S",
+        "sn1998SEarly",
         "sn1998fa",
         "sn1999em",
         "sn1999gi",
@@ -4707,6 +5095,7 @@
         "sn2013fc",
         "sn2013fq",
         "sn2013fs",
+        "sn2013fsEarly",
         "sn2013k",
         "sn2014cx",
         "sn2014dq",
@@ -4755,385 +5144,98 @@
         "sn2018ldu",
         "sn2019asz",
         "sn2019bao",
-        "sn2013fsEarly",
-        "sn2023ixfEarly",
-        "sn1998SEarly",
         "sn2020pniEarly",
+        "sn2023ixfEarly",
         "sn2024ggiEarly"
       ]
     },
-    "Ia": {
-      "count": 271,
-      "storage_file": "templates_Ia.hdf5",
+    "Ib": {
+      "count": 54,
+      "storage_file": "templates_Ib.hdf5",
       "template_names": [
-        "1999aa",
-        "2003fg",
-        "2010ae",
-        "2012Z",
-        "2020qxz",
-        "ASASSN-15ga",
-        "ASASSN-15hy",
-        "iPTF14atg",
-        "LSQ12fhs",
-        "LSQ12gdj",
-        "LSQ15adm",
-        "OGLE2012sn04",
-        "PSNJ15053007",
-        "PTF09dav",
-        "PTF10ops",
-        "PTF11kx",
-        "sn1981B",
-        "sn1984A",
-        "sn1986G",
-        "sn1989B",
-        "sn1990N",
-        "sn1990O",
-        "sn1991bg",
-        "sn1991M",
-        "sn1991T",
-        "sn1992A",
-        "sn1994ae",
-        "sn1994D",
-        "sn1994M",
-        "sn1994Q",
-        "sn1994S",
-        "sn1994T",
-        "sn1995ac",
-        "sn1995ak",
-        "sn1995al",
-        "sn1995bd",
-        "sn1995D",
-        "sn1995E",
-        "sn1996ai",
-        "sn1996bl",
-        "sn1996bo",
-        "sn1996X",
-        "sn1996Z",
-        "sn1997bp",
-        "sn1997bq",
-        "sn1997br",
-        "sn1997cn",
-        "sn1997do",
-        "sn1997dt",
-        "sn1997E",
-        "sn1997Y",
-        "sn1998ab",
-        "sn1998aq",
-        "sn1998bp",
-        "sn1998bu",
-        "sn1998co",
-        "sn1998de",
-        "sn1998dh",
-        "sn1998dk",
-        "sn1998dm",
-        "sn1998dx",
-        "sn1998ec",
-        "sn1998ef",
-        "sn1998eg",
-        "sn1998es",
-        "sn1998V",
-        "sn1999ac",
-        "sn1999aw",
-        "sn1999bh",
-        "sn1999by",
-        "sn1999cc",
-        "sn1999cl",
-        "sn1999cw",
-        "sn1999da",
-        "sn1999dk",
-        "sn1999dq",
-        "sn1999ee",
-        "sn1999ej",
-        "sn1999ek",
-        "sn1999gd",
-        "sn1999gh",
-        "sn1999gp",
-        "sn1999X",
-        "sn2000B",
-        "sn2000ce",
-        "sn2000cf",
-        "sn2000cn",
-        "sn2000cx",
-        "sn2000dg",
-        "sn2000dk",
-        "sn2000dn",
-        "sn2000E",
-        "sn2000fa",
-        "sn2001ah",
-        "sn2001ay",
-        "sn2001az",
-        "sn2001bf",
-        "sn2001bg",
-        "sn2001ck",
-        "sn2001cp",
-        "sn2001da",
-        "sn2001eh",
-        "sn2001el",
-        "sn2001en",
-        "sn2001ep",
-        "sn2001fe",
-        "sn2001fh",
-        "sn2001G",
-        "sn2001gc",
-        "sn2001N",
-        "sn2001V",
-        "sn2002bf",
-        "sn2002bo",
-        "sn2002cd",
-        "sn2002cf",
-        "sn2002ck",
-        "sn2002cr",
-        "sn2002cs",
-        "sn2002cx",
-        "sn2002de",
-        "sn2002dj",
-        "sn2002dl",
-        "sn2002do",
-        "sn2002dp",
-        "sn2002er",
-        "sn2002es",
-        "sn2002eu",
-        "sn2002fb",
-        "sn2002fk",
-        "sn2002ha",
-        "sn2002he",
-        "sn2002hu",
-        "sn2002hw",
-        "sn2002ic",
-        "sn2002jg",
-        "sn2002jy",
-        "sn2002kf",
-        "sn2003cg",
-        "sn2003ch",
-        "sn2003cq",
-        "sn2003du",
-        "sn2003fa",
-        "sn2003gq",
-        "sn2003hu",
-        "sn2003hv",
-        "sn2003ic",
-        "sn2003it",
-        "sn2003iv",
-        "sn2003kc",
-        "sn2003kf",
-        "sn2003W",
-        "sn2003Y",
-        "sn2004as",
-        "sn2004at",
-        "sn2004bd",
-        "sn2004bg",
-        "sn2004dt",
-        "sn2004ef",
-        "sn2004eo",
-        "sn2004fu",
-        "sn2004gs",
-        "sn2004L",
-        "sn2004S",
-        "sn2005am",
-        "sn2005bl",
-        "sn2005cc",
-        "sn2005cf",
-        "sn2005cg",
-        "sn2005de",
-        "sn2005el",
-        "sn2005eq",
-        "sn2005eu",
-        "sn2005gj",
-        "sn2005hf",
-        "sn2005hj",
-        "sn2005hk",
-        "sn2005kc",
-        "sn2005ke",
-        "sn2005M",
-        "sn2005mz",
-        "sn2005na",
-        "sn2006ac",
-        "sn2006al",
-        "sn2006ax",
-        "sn2006bt",
-        "sn2006bz",
-        "sn2006cf",
-        "sn2006cp",
-        "sn2006cs",
-        "sn2006cz",
-        "sn2006D",
-        "sn2006dm",
-        "sn2006dw",
-        "sn2006ej",
-        "sn2006em",
-        "sn2006gr",
-        "sn2006gt",
-        "sn2006gz",
-        "sn2006H",
-        "sn2006hb",
-        "sn2006ke",
-        "sn2006le",
-        "sn2006lf",
-        "sn2006N",
-        "sn2006oa",
-        "sn2006S",
-        "sn2006sr",
-        "sn2006X",
-        "sn2007af",
-        "sn2007al",
-        "sn2007au",
-        "sn2007ax",
-        "sn2007ba",
-        "sn2007bc",
-        "sn2007bd",
-        "sn2007bj",
-        "sn2007bm",
-        "sn2007ca",
-        "sn2007ci",
-        "sn2007co",
-        "sn2007cq",
-        "sn2007F",
-        "sn2007fb",
-        "sn2007fs",
-        "sn2007hj",
-        "sn2007if",
-        "sn2007kk",
-        "sn2007le",
-        "sn2007qe",
-        "sn2007S",
-        "sn2007sr",
-        "sn2008A",
-        "sn2008ae",
-        "sn2008ar",
-        "sn2008bf",
-        "sn2008bt",
-        "sn2008C",
-        "sn2008ds",
-        "sn2008ec",
-        "sn2008Q",
-        "sn2008R",
-        "sn2008Z",
-        "SN2009dc",
-        "sn2012ca",
-        "SN2012dn",
-        "sn2013bh",
-        "sn2013gr",
-        "sn2013u",
-        "sn2014eg",
-        "sn2015bo",
-        "sn2015H",
-        "sn2016ado",
-        "sn2016hnk",
-        "sn2016ije",
-        "sn2016iks",
-        "sn2017awz",
-        "sn2017dfb",
-        "sn2017eby",
-        "sn2017ifu",
-        "sn2018apo",
-        "sn2018bie",
-        "sn2018hjw",
-        "sn2019akg",
-        "sn2019bka",
-        "sn2019so",
-        "sn2022vqz",
-        "SNLS03D3bb",
-        "SN2007N",
-        "SN2005P",
-        "SN2013dn",
-        "iPTF14bdn"
-      ]
-    },
-    "TDE": {
-      "count": 16,
-      "storage_file": "templates_TDE.hdf5",
-      "template_names": [
-        "2018dyb",
-        "2019qiz",
-        "ASASSN-14ae",
-        "ASASSN-14li",
-        "ASASSN-15oi",
-        "LSQ12dyw",
-        "OGLE16aaa",
-        "PS1-10jh",
-        "at2018dyb",
-        "at2018fyk",
-        "at2018hyz",
-        "at2018lna",
-        "at2019ahk",
-        "at2019azh",
-        "iPTF16fnl",
-        "sn2015L"
+        "2005E",
+        "2016hgs",
+        "LSQ15rw",
+        "PTF11kmb",
+        "PTF12bho",
+        "iPTF13bvn",
+        "sn1983N",
+        "sn1984L",
+        "sn1988L",
+        "sn1990I",
+        "sn1990U",
+        "sn1991ar",
+        "sn1995F",
+        "sn1997X",
+        "sn1997dc",
+        "sn1998T",
+        "sn1998dt",
+        "sn1999di",
+        "sn1999dn",
+        "sn1999ex",
+        "sn2001ai",
+        "sn2001ej",
+        "sn2002ji",
+        "sn2004ao",
+        "sn2004dk",
+        "sn2004gq",
+        "sn2004gv",
+        "sn2005ar",
+        "sn2005bf",
+        "sn2005hg",
+        "sn2006ep",
+        "sn2006fo",
+        "sn2006lc",
+        "sn2006ld",
+        "sn2006lv",
+        "sn2007C",
+        "sn2007Y",
+        "sn2007ag",
+        "sn2007kj",
+        "sn2007uy",
+        "sn2008D",
+        "sn2009er",
+        "sn2009iz",
+        "sn2009jf",
+        "sn2016bau",
+        "sn2016frp",
+        "sn2018beh",
+        "sn2019odp",
+        "sn2020hvp",
+        "sn2021hen",
+        "sn2021njk",
+        "sn2021ukt",
+        "sn2022nyo",
+        "sn2023ljf"
       ]
     },
     "GAP": {
       "count": 14,
       "storage_file": "templates_GAP.hdf5",
       "template_names": [
-        "PS15dbp",
-        "PSNJ15213475",
-        "at2014ej",
-        "AT2015dl",
-        "lbv1999bw",
-        "lbv2001ac",
-        "lbv2003hy",
         "2008S",
         "2008jd",
+        "2018aes",
+        "2018hso",
         "2021biy",
         "AT2012jc",
         "AT2013la",
-        "2018aes",
-        "2018hso"
-      ]
-    },
-    "KN": {
-      "count": 1,
-      "storage_file": "templates_KN.hdf5",
-      "template_names": [
-        "at2017gfo"
-      ]
-    },
-    "LFBOT": {
-      "count": 3,
-      "storage_file": "templates_LFBOT.hdf5",
-      "template_names": [
-        "CSS1601010",
-        "at2020xnd",
-        "sn2018cow"
-      ]
-    },
-    "Star": {
-      "count": 10,
-      "storage_file": "templates_Star.hdf5",
-      "template_names": [
-        "HD186943",
-        "HD193928",
-        "TCorBorealis",
-        "AT2024abwb",
-        "AT2021abpq",
-        "AT2022ure",
-        "SSS130402",
-        "AT2021ziw",
-        "AT2018apl",
-        "OGLE16cza"
-      ]
-    },
-    "Ibn": {
-      "count": 10,
-      "storage_file": "templates_Ibn.hdf5",
-      "template_names": [
-        "2010al",
-        "2011hw",
-        "CSS140421",
-        "OGLE2012sn00",
-        "sn2000er",
-        "sn2002ao",
-        "sn2005la",
-        "sn2006jc",
-        "sn2018gjx",
-        "sn2018jmt"
+        "AT2015dl",
+        "PS15dbp",
+        "PSNJ15213475",
+        "at2014ej",
+        "lbv1999bw",
+        "lbv2001ac",
+        "lbv2003hy"
       ]
     },
     "SLSN": {
-      "count": 55,
+      "count": 57,
       "storage_file": "templates_SLSN.hdf5",
       "template_names": [
+        "2009cb",
         "2010md",
+        "2016aps",
         "2016eay",
         "2017egm",
         "2018jkq",
@@ -5141,8 +5243,6 @@
         "CSS121015",
         "DES13S2cmm",
         "DES14X3taz",
-        "iPTF13ajg",
-        "iPTF13ehe",
         "LSQ12dlf",
         "LSQ14an",
         "LSQ14bdq",
@@ -5157,11 +5257,19 @@
         "PTF09atu",
         "PTF09cnd",
         "PTF09cwl",
+        "PTF10bfz",
         "PTF10cwr",
         "PTF10hgi",
         "PTF11rks",
         "PTF12dam",
         "SCP06F6",
+        "SN2006gy",
+        "SN2019hge",
+        "SNLS06D4eu",
+        "SNLS07D2bv",
+        "SSS120810-23",
+        "iPTF13ajg",
+        "iPTF13ehe",
         "sn2005ap",
         "sn2006oz",
         "sn2007bi",
@@ -5181,112 +5289,14 @@
         "sn2018gft",
         "sn2018hti",
         "sn2018ibb",
-        "sn2019cca",
-        "SN2019hge",
-        "SNLS06D4eu",
-        "SNLS07D2bv",
-        "SSS120810-23",
-        "SN2006gy",
-        "2016aps"
-      ]
-    },
-    "Ib": {
-      "count": 54,
-      "storage_file": "templates_Ib.hdf5",
-      "template_names": [
-        "2005E",
-        "2016hgs",
-        "iPTF13bvn",
-        "LSQ15rw",
-        "PTF11kmb",
-        "PTF12bho",
-        "sn1983N",
-        "sn1984L",
-        "sn1988L",
-        "sn1990I",
-        "sn1990U",
-        "sn1991ar",
-        "sn1995F",
-        "sn1997dc",
-        "sn1997X",
-        "sn1998dt",
-        "sn1998T",
-        "sn1999di",
-        "sn1999dn",
-        "sn1999ex",
-        "sn2001ai",
-        "sn2001ej",
-        "sn2002ji",
-        "sn2004ao",
-        "sn2004dk",
-        "sn2004gq",
-        "sn2004gv",
-        "sn2005ar",
-        "sn2005bf",
-        "sn2005hg",
-        "sn2006ep",
-        "sn2006fo",
-        "sn2006lc",
-        "sn2006ld",
-        "sn2006lv",
-        "sn2007ag",
-        "sn2007C",
-        "sn2007kj",
-        "sn2007uy",
-        "sn2007Y",
-        "sn2008D",
-        "sn2009er",
-        "sn2009iz",
-        "sn2009jf",
-        "sn2016bau",
-        "sn2016frp",
-        "sn2018beh",
-        "sn2019odp",
-        "sn2020hvp",
-        "sn2021hen",
-        "sn2021njk",
-        "sn2021ukt",
-        "sn2022nyo",
-        "sn2023ljf"
-      ]
-    },
-    "Galaxy": {
-      "count": 27,
-      "storage_file": "templates_Galaxy.hdf5",
-      "template_names": [
-        "Arp220",
-        "Ell13",
-        "Ell2",
-        "Ell5",
-        "IRAS20551-4250",
-        "IRAS22491-1808",
-        "kcE",
-        "kcS0",
-        "kcSa",
-        "kcSb",
-        "kcSB1",
-        "kcSB2",
-        "kcSB3",
-        "kcSB4",
-        "kcSB5",
-        "kcSB6",
-        "kcSc",
-        "M82",
-        "NGC6090",
-        "NGC6240",
-        "S0",
-        "Sa",
-        "Sb",
-        "Sc",
-        "Sd",
-        "Sdm",
-        "Spi4"
+        "sn2019cca"
       ]
     },
     "Ic": {
       "count": 69,
       "storage_file": "templates_Ic.hdf5",
       "template_names": [
+        "2010X",
         "LSQ12dwl",
         "PTF10bzf",
         "PTF10qts",
@@ -5354,32 +5364,166 @@
         "sn2018fwm",
         "sn2018gsk",
         "sn2019ape",
-        "sn2019bkc",
-        "2010X"
+        "sn2019bkc"
+      ]
+    },
+    "Ibn": {
+      "count": 12,
+      "storage_file": "templates_Ibn.hdf5",
+      "template_names": [
+        "2010al",
+        "2011hw",
+        "2018bcc",
+        "CSS140421",
+        "OGLE2012sn00",
+        "iPTF13beo",
+        "sn2000er",
+        "sn2002ao",
+        "sn2005la",
+        "sn2006jc",
+        "sn2018gjx",
+        "sn2018jmt"
+      ]
+    },
+    "TDE": {
+      "count": 19,
+      "storage_file": "templates_TDE.hdf5",
+      "template_names": [
+        "2018dyb",
+        "2019qiz",
+        "2025hee",
+        "2025lxx",
+        "ASASSN-14ae",
+        "ASASSN-14li",
+        "ASASSN-15oi",
+        "LSQ12dyw",
+        "OGLE16aaa",
+        "PS1-10jh",
+        "PTF09axc",
+        "at2018dyb",
+        "at2018fyk",
+        "at2018hyz",
+        "at2018lna",
+        "at2019ahk",
+        "at2019azh",
+        "iPTF16fnl",
+        "sn2015L"
       ]
     },
     "Icn": {
       "count": 3,
       "storage_file": "templates_Icn.hdf5",
       "template_names": [
-        "sn2021csp",
         "2019hgp",
-        "2019jc"
+        "2019jc",
+        "sn2021csp"
       ]
     },
     "CV": {
-      "count": 9,
+      "count": 13,
       "storage_file": "templates_CV.hdf5",
       "template_names": [
         "AM_CVn",
+        "GKPer",
         "IP1",
         "NL1",
+        "NL2",
+        "NovaLup2025",
         "Polar",
+        "RSOphiuchi",
         "U_Gem",
         "WZ_Sge",
         "Z_Cam",
         "cas2021",
         "her2021"
+      ]
+    },
+    "AGN": {
+      "count": 11,
+      "storage_file": "templates_AGN.hdf5",
+      "template_names": [
+        "ASASSN-14ko",
+        "IRAS19254-7245_South",
+        "Mrk231",
+        "QSO1",
+        "QSO2",
+        "Sey2",
+        "TQSO1",
+        "Torus",
+        "agn",
+        "qso",
+        "qso2"
+      ]
+    },
+    "Star": {
+      "count": 16,
+      "storage_file": "templates_Star.hdf5",
+      "template_names": [
+        "AT2018apl",
+        "AT2021abpq",
+        "AT2021ziw",
+        "AT2022ure",
+        "AT2024abwb",
+        "BDCamelopardalis",
+        "EGAndromedae",
+        "HD165763",
+        "HD184738",
+        "HD186943",
+        "HD192103",
+        "HD193928",
+        "HD56925",
+        "OGLE16cza",
+        "SSS130402",
+        "TCorBorealis"
+      ]
+    },
+    "Galaxy": {
+      "count": 27,
+      "storage_file": "templates_Galaxy.hdf5",
+      "template_names": [
+        "Arp220",
+        "Ell13",
+        "Ell2",
+        "Ell5",
+        "IRAS20551-4250",
+        "IRAS22491-1808",
+        "M82",
+        "NGC6090",
+        "NGC6240",
+        "S0",
+        "Sa",
+        "Sb",
+        "Sc",
+        "Sd",
+        "Sdm",
+        "Spi4",
+        "kcE",
+        "kcS0",
+        "kcSB1",
+        "kcSB2",
+        "kcSB3",
+        "kcSB4",
+        "kcSB5",
+        "kcSB6",
+        "kcSa",
+        "kcSb",
+        "kcSc"
+      ]
+    },
+    "LFBOT": {
+      "count": 3,
+      "storage_file": "templates_LFBOT.hdf5",
+      "template_names": [
+        "CSS1601010",
+        "at2020xnd",
+        "sn2018cow"
+      ]
+    },
+    "KN": {
+      "count": 1,
+      "storage_file": "templates_KN.hdf5",
+      "template_names": [
+        "at2017gfo"
       ]
     }
   }

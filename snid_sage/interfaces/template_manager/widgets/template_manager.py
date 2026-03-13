@@ -66,7 +66,7 @@ class TemplateManagerWidget(QtWidgets.QWidget):
         except Exception:
             self.edit_type.addItems(["Ia", "Ib", "Ic", "II", "AGN", "Galaxy", "Star"])  # fallback
         self.edit_subtype = QtWidgets.QLineEdit()
-        self.edit_age = create_flexible_double_input(min_val=-999.9, max_val=999.9, suffix=" days", default=0.0)
+        self.edit_age = create_flexible_double_input(min_val=-9999.0, max_val=9999.0, suffix=" days", default=0.0)
         
         metadata_layout.addRow("Name:", self.edit_name)
         metadata_layout.addRow("Type:", self.edit_type)

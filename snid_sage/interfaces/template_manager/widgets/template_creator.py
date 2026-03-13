@@ -243,7 +243,7 @@ class TemplateCreatorWidget(QtWidgets.QWidget):
                 self.subtype_combo.lineEdit().setPlaceholderText("Select type first")
         except Exception:
             pass
-        self.age_spinbox = create_flexible_double_input(min_val=-999.9, max_val=999.9, suffix="", default=0.0)
+        self.age_spinbox = create_flexible_double_input(min_val=-9999.0, max_val=9999.0, suffix="", default=0.0)
         try:
             # Allow empty by default and show a helpful placeholder
             if hasattr(self.age_spinbox, 'setAllowEmpty'):
