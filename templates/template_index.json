@@ -1,7 +1,7 @@
 {
   "version": "2.0",
-  "created_date": 1773393796.0089746,
-  "template_count": 678,
+  "created_date": 1773764979.7516963,
+  "template_count": 693,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -3321,6 +3321,20 @@
       "epochs": 3,
       "storage_file": "templates_Icn.hdf5"
     },
+    "SN2022ann": {
+      "type": "Icn",
+      "subtype": "Icn",
+      "redshift": 0.04938,
+      "epochs": 1,
+      "storage_file": "templates_Icn.hdf5"
+    },
+    "SN2024abvb": {
+      "type": "Icn",
+      "subtype": "Icn",
+      "redshift": 0.039,
+      "epochs": 9,
+      "storage_file": "templates_Icn.hdf5"
+    },
     "sn2021csp": {
       "type": "Icn",
       "subtype": "Icn",
@@ -4518,6 +4532,20 @@
       "epochs": 1,
       "storage_file": "templates_Star.hdf5"
     },
+    "AT2018fwv": {
+      "type": "Star",
+      "subtype": "Varstar",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "AT2019fda": {
+      "type": "Star",
+      "subtype": "Varstar",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Star.hdf5"
+    },
     "AT2021abpq": {
       "type": "Star",
       "subtype": "Mdwarf",
@@ -4525,7 +4553,28 @@
       "epochs": 1,
       "storage_file": "templates_Star.hdf5"
     },
+    "AT2021agjj": {
+      "type": "Star",
+      "subtype": "Varstar",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "AT2021xtd": {
+      "type": "Star",
+      "subtype": "Varstar",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Star.hdf5"
+    },
     "AT2021ziw": {
+      "type": "Star",
+      "subtype": "Varstar",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "AT2022upx": {
       "type": "Star",
       "subtype": "Varstar",
       "redshift": 0.0,
@@ -4539,9 +4588,23 @@
       "epochs": 1,
       "storage_file": "templates_Star.hdf5"
     },
+    "AT2022vyo": {
+      "type": "Star",
+      "subtype": "Varstar",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Star.hdf5"
+    },
     "AT2024abwb": {
       "type": "Star",
       "subtype": "Mdwarf",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "AT2026bwh": {
+      "type": "Star",
+      "subtype": "Varstar",
       "redshift": 0.0,
       "epochs": 1,
       "storage_file": "templates_Star.hdf5"
@@ -4558,6 +4621,27 @@
       "subtype": "Symbiotic",
       "redshift": 0.0,
       "epochs": 5,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "GJ1154": {
+      "type": "Star",
+      "subtype": "Mdwarf",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "GL791": {
+      "type": "Star",
+      "subtype": "Mdwarf",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "GL836": {
+      "type": "Star",
+      "subtype": "Mdwarf",
+      "redshift": 0.0,
+      "epochs": 1,
       "storage_file": "templates_Star.hdf5"
     },
     "HD165763": {
@@ -4602,6 +4686,20 @@
       "epochs": 5,
       "storage_file": "templates_Star.hdf5"
     },
+    "NN3304": {
+      "type": "Star",
+      "subtype": "Mdwarf",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "NN3682": {
+      "type": "Star",
+      "subtype": "Mdwarf",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Star.hdf5"
+    },
     "OGLE16cza": {
       "type": "Star",
       "subtype": "Varstar",
@@ -4621,6 +4719,13 @@
       "subtype": "Symbiotic",
       "redshift": 0.0,
       "epochs": 4,
+      "storage_file": "templates_Star.hdf5"
+    },
+    "ZTF21aasbxmt": {
+      "type": "Star",
+      "subtype": "Mdwarf",
+      "redshift": 0.0,
+      "epochs": 1,
       "storage_file": "templates_Star.hdf5"
     },
     "2018dyb": {
@@ -5411,11 +5516,13 @@
       ]
     },
     "Icn": {
-      "count": 3,
+      "count": 5,
       "storage_file": "templates_Icn.hdf5",
       "template_names": [
         "2019hgp",
         "2019jc",
+        "SN2022ann",
+        "SN2024abvb",
         "sn2021csp"
       ]
     },
@@ -5456,25 +5563,38 @@
       ]
     },
     "Star": {
-      "count": 16,
+      "count": 29,
       "storage_file": "templates_Star.hdf5",
       "template_names": [
         "AT2018apl",
+        "AT2018fwv",
+        "AT2019fda",
         "AT2021abpq",
+        "AT2021agjj",
+        "AT2021xtd",
         "AT2021ziw",
+        "AT2022upx",
         "AT2022ure",
+        "AT2022vyo",
         "AT2024abwb",
+        "AT2026bwh",
         "BDCamelopardalis",
         "EGAndromedae",
+        "GJ1154",
+        "GL791",
+        "GL836",
         "HD165763",
         "HD184738",
         "HD186943",
         "HD192103",
         "HD193928",
         "HD56925",
+        "NN3304",
+        "NN3682",
         "OGLE16cza",
         "SSS130402",
-        "TCorBorealis"
+        "TCorBorealis",
+        "ZTF21aasbxmt"
       ]
     },
     "Galaxy": {

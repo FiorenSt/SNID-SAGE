@@ -7,7 +7,7 @@ All notable changes to SNID SAGE will be documented in this file.
 ### Templates
 
 - Template bank version: bumped the managed built-in templates bank from `2.4` to `2.5`.
-- Templates: created 18 new templates:
+- Templates: created 33 new templates:
   - II/IIb: `2004ex`
   - SLSN/SLSN-I: `2009cb`, `PTF10bfz`
   - Ibn/Ibn: `2018bcc`, `iPTF13beo`
@@ -19,6 +19,9 @@ All notable changes to SNID SAGE will be documented in this file.
   - CV/DN: `GKPer`
   - CV/NL: `NL2`
   - CV/Nova: `NovaLup2025`, `RSOphiuchi`
+  - Icn/Icn: `SN2022ann`, `SN2024abvb`
+  - Star/Varstar: `AT2018fwv`, `AT2019fda`, `AT2021agjj`, `AT2021xtd`, `AT2022upx`, `AT2022vyo`, `AT2026bwh`
+  - Star/Mdwarf: `GJ1154`, `GL791`, `GL836`, `NN3304`, `NN3682`, `ZTF21aasbxmt`
 
 
 ## [1.2.1] - 2026-02-19
