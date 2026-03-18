@@ -3142,7 +3142,7 @@
     },
     "LSQ12dyw": {
       "type": "TDE",
-      "subtype": "TDE-H",
+      "subtype": "TDE-H-He",
       "redshift": 0.0,
       "epochs": 9,
       "storage_file": "templates_TDE_onir.hdf5"

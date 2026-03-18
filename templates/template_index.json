@@ -1,7 +1,7 @@
 {
   "version": "2.0",
-  "created_date": 1773764979.7516963,
-  "template_count": 693,
+  "created_date": 1773876409.0472062,
+  "template_count": 698,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -4168,6 +4168,34 @@
       "epochs": 3,
       "storage_file": "templates_SLSN.hdf5"
     },
+    "2019cqc": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.1173,
+      "epochs": 3,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "2019uba": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.3035,
+      "epochs": 6,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "2020bfe": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.099,
+      "epochs": 6,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "2020hgr": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.1258,
+      "epochs": 3,
+      "storage_file": "templates_SLSN.hdf5"
+    },
     "2023gpw": {
       "type": "SLSN",
       "subtype": "SLSN-II",
@@ -4728,13 +4756,6 @@
       "epochs": 1,
       "storage_file": "templates_Star.hdf5"
     },
-    "2018dyb": {
-      "type": "TDE",
-      "subtype": "TDE-H-He",
-      "redshift": 0.017932,
-      "epochs": 6,
-      "storage_file": "templates_TDE.hdf5"
-    },
     "2019qiz": {
       "type": "TDE",
       "subtype": "TDE-H-He",
@@ -4758,7 +4779,7 @@
     },
     "ASASSN-14ae": {
       "type": "TDE",
-      "subtype": "TDE-H",
+      "subtype": "TDE-H-He",
       "redshift": 0.043603,
       "epochs": 13,
       "storage_file": "templates_TDE.hdf5"
@@ -4779,7 +4800,7 @@
     },
     "LSQ12dyw": {
       "type": "TDE",
-      "subtype": "TDE-H",
+      "subtype": "TDE-H-He",
       "redshift": 0.0,
       "epochs": 9,
       "storage_file": "templates_TDE.hdf5"
@@ -4800,8 +4821,22 @@
     },
     "PTF09axc": {
       "type": "TDE",
-      "subtype": "TDE-H-He",
+      "subtype": "TDE-H",
       "redshift": 0.1146,
+      "epochs": 2,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "PTF09djl": {
+      "type": "TDE",
+      "subtype": "TDE-H",
+      "redshift": 0.184,
+      "epochs": 2,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "PTF09ge": {
+      "type": "TDE",
+      "subtype": "TDE-He",
+      "redshift": 0.064,
       "epochs": 2,
       "storage_file": "templates_TDE.hdf5"
     },
@@ -4842,7 +4877,7 @@
     },
     "at2019azh": {
       "type": "TDE",
-      "subtype": "TDE-H",
+      "subtype": "TDE-H-He",
       "redshift": 0.0,
       "epochs": 2,
       "storage_file": "templates_TDE.hdf5"
@@ -5335,7 +5370,7 @@
       ]
     },
     "SLSN": {
-      "count": 57,
+      "count": 61,
       "storage_file": "templates_SLSN.hdf5",
       "template_names": [
         "2009cb",
@@ -5344,6 +5379,10 @@
         "2016eay",
         "2017egm",
         "2018jkq",
+        "2019cqc",
+        "2019uba",
+        "2020bfe",
+        "2020hgr",
         "2023gpw",
         "CSS121015",
         "DES13S2cmm",
@@ -5490,11 +5529,21 @@
         "sn2018jmt"
       ]
     },
+    "Icn": {
+      "count": 5,
+      "storage_file": "templates_Icn.hdf5",
+      "template_names": [
+        "2019hgp",
+        "2019jc",
+        "SN2022ann",
+        "SN2024abvb",
+        "sn2021csp"
+      ]
+    },
     "TDE": {
-      "count": 19,
+      "count": 20,
       "storage_file": "templates_TDE.hdf5",
       "template_names": [
-        "2018dyb",
         "2019qiz",
         "2025hee",
         "2025lxx",
@@ -5505,6 +5554,8 @@
         "OGLE16aaa",
         "PS1-10jh",
         "PTF09axc",
+        "PTF09djl",
+        "PTF09ge",
         "at2018dyb",
         "at2018fyk",
         "at2018hyz",
@@ -5513,17 +5564,6 @@
         "at2019azh",
         "iPTF16fnl",
         "sn2015L"
-      ]
-    },
-    "Icn": {
-      "count": 5,
-      "storage_file": "templates_Icn.hdf5",
-      "template_names": [
-        "2019hgp",
-        "2019jc",
-        "SN2022ann",
-        "SN2024abvb",
-        "sn2021csp"
       ]
     },
     "CV": {

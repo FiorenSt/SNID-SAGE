@@ -7,12 +7,18 @@ All notable changes to SNID SAGE will be documented in this file.
 ### Templates
 
 - Template bank version: bumped the managed built-in templates bank from `2.4` to `2.5`.
-- Templates: created 33 new templates:
+- Template metadata corrections: reclassified `ASASSN-14ae`, `LSQ12dyw`, and `at2019azh` to **TDE-H-He**; reclassified `ASASSN-15oi` and `PTF09axc` to **TDE-He** and **TDE-H**, respectively.
+- Template bank maintenance: removed the legacy duplicate built-in TDE template entry `2018dyb` (kept `at2018dyb`).
+- Template bank maintenance: removed the built-in TDE template entry `PTF09djl_2456421.5_Keck1_LRIS_None`.
+- Templates: created 39 new templates:
   - II/IIb: `2004ex`
   - SLSN/SLSN-I: `2009cb`, `PTF10bfz`
+  - SLSN/SLSN-II: `2019cqc`, `2019uba`, `2020bfe`, `2020hgr`
   - Ibn/Ibn: `2018bcc`, `iPTF13beo`
-  - TDE/TDE-H-He: `PTF09axc`
+  - TDE/TDE-H: `PTF09axc`
+  - TDE/TDE-H: `PTF09djl`
   - TDE/TDE-He: `2025hee`, `2025lxx`
+  - TDE/TDE-He: `PTF09ge`
   - Star/Symbiotic: `BDCamelopardalis`, `EGAndromedae`
   - Star/WR-WC: `HD165763`, `HD184738`, `HD192103`
   - Star/WR-WN: `HD56925`
