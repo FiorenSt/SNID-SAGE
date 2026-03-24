@@ -126,7 +126,7 @@ Custom templates are stored separately from the built-in bank.
 
 ### Location
 
-- **User folder**: Set on first use, stored in config as `paths.user_templates_dir`
+- **User folder**: Set on first use and changed later from `snid-sage-templates` via `Change User Folder`
 - **User index**: `template_index.user.json`
 - **User HDF5**: `templates_Ia.user.hdf5`, etc.
 

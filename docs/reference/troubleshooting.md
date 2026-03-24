@@ -353,14 +353,14 @@ snid batch "data/*.dat" templates/ --output-dir results/
 
 **1. Check Config Files**
 ```bash
-# Configuration is stored in user settings
-# GUI: Settings → Configure Settings
-# Changes should persist between sessions
+# Main GUI Settings covers GUI preferences only
+# User Templates Folder: manage it from snid-sage-templates -> Change User Folder
+# Use sage config show/get to inspect effective defaults
 ```
 
 **2. Reset Configuration**
-- In GUI: Settings → Reset to Defaults
-- Delete user configuration file if corrupted
+- Re-apply the needed GUI preference in `Settings`
+- Re-select the User Templates Folder from `snid-sage-templates` if needed
 
 ---
 

@@ -1,32 +1,20 @@
 ## Settings (GUI)
 
-Centralized settings used by GUI and CLI. Saved in the user config. For the full list of keys and details, see the [Configuration Guide](../reference/configuration-guide.md).
-
-### Paths
-- Templates Directory (`paths.templates_dir`)
-- Output Directory (`paths.output_dir`)
-- Data Directory (`paths.data_dir`)
-- User Templates Directory (`paths.user_templates_dir`)
-
-Notes:
-- The User Templates Directory is set the first time you create/manage user templates via a prompt in the Template Manager.
-- You can change it here at any time; the Template Manager will use this location immediately.
-
-### Analysis
-- Redshift/age bounds; thresholds (lapmin, hsigma_lap_ccc_threshold)
-- Output limits; emission clipping (emclip, emclip_z, emwidth)
-
-### Processing
-- Flattening/smoothing/median filters; A-band removal; skyline clipping; apodization
+The main GUI `Settings` dialog currently covers GUI preferences only. It is not
+a full configuration panel, and the main GUI does not expose a separate
+`Settings -> Configuration` view.
 
 ### Display
-- Theme (light/dark), plot style, DPI, grid/markers
+- UI Scale (`ui_scale_percent`)
+- Remember window position
 
-### LLM
-- Enable, provider, model, API key, tokens, temperature
+### Profile
+- Active processing profile (`optical` or `onir`)
 
-### Profiles
-- Save, load, and delete named profiles
+### Notes
+- The User Templates Folder is managed in `snid-sage-templates` via `Change User Folder`
+- Analysis parameters are configured from the analysis workflow/dialog, not from the main GUI `Settings` dialog
+- `sage config` is inspection-only in this build; see the [Configuration Guide](../reference/configuration-guide.md) for the currently exposed CLI values
 
 ## See Also
 

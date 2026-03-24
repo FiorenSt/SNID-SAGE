@@ -7,13 +7,13 @@ from PySide6 import QtWidgets, QtCore
 
 try:
     from snid_sage.shared.utils.paths.user_templates import (
-        discover_legacy_user_templates,
+        discover_user_template_libraries,
         get_default_user_templates_dir,
         clear_user_templates_dir_override,
         set_user_templates_dir,
     )
 except Exception:
-    discover_legacy_user_templates = None  # type: ignore
+    discover_user_template_libraries = None  # type: ignore
     get_default_user_templates_dir = None  # type: ignore
     clear_user_templates_dir_override = None  # type: ignore
     set_user_templates_dir = None  # type: ignore
@@ -76,9 +76,9 @@ class UserTemplatesFolderDialog(QtWidgets.QDialog):
 
         # 2) Discover existing user libraries
         try:
-            if discover_legacy_user_templates is not None:
-                legacy_paths = discover_legacy_user_templates()
-                paths.extend(legacy_paths or [])
+            if discover_user_template_libraries is not None:
+                discovered_paths = discover_user_template_libraries()
+                paths.extend(discovered_paths or [])
         except Exception:
             pass
 

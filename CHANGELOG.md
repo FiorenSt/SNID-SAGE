@@ -2,7 +2,14 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
-## [1.2.2] - 2026-03-13
+## [1.2.2] - 2026-03-24
+
+### Docs / CLI / Templates
+
+- Clarified that the main GUI does not expose a separate `Settings -> Configuration` panel.
+- Removed the unsupported `paths.user_templates_dir` config surface and aligned the docs/CLI with the actual Template Manager workflow.
+- Kept User Templates folder handling automatic by default: SNID SAGE uses the managed sibling `user_templates` folder next to the built-in templates bank unless the user explicitly changes it from `snid-sage-templates`.
+- Documented `SNID_SAGE_TEMPLATE_DIR` as the supported terminal override for the built-in templates location.
 
 ### Templates
 

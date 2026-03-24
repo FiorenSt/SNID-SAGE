@@ -2096,8 +2096,8 @@ jobs:
           sage config show --format json
           sage config show --format table
           
-          echo "Testing config init..."
-          sage config init --force || echo "Config init completed (may already exist)"
+          echo "Testing config get..."
+          sage config get paths.templates_dir
         continue-on-error: true
 
       - name: Test config commands (PowerShell)
@@ -2111,8 +2111,8 @@ jobs:
           python -m snid_sage.interfaces.cli.main config show --format json
           python -m snid_sage.interfaces.cli.main config show --format table
           
-          Write-Host "Testing config init..."
-          python -m snid_sage.interfaces.cli.main config init --force
+          Write-Host "Testing config get..."
+          python -m snid_sage.interfaces.cli.main config get paths.templates_dir
         continue-on-error: true
 
       - name: Test profile options (bash)

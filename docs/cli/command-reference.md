@@ -7,7 +7,7 @@ SNID SAGE provides a command-line interface for automated spectrum analysis, bat
 The CLI offers:
 - Single spectrum analysis with detailed outputs
 - Batch processing of multiple spectra
-- Configuration management
+- Configuration inspection
 - Template and data management
 
 ### Supported input formats
@@ -129,7 +129,7 @@ Outputs: per-spectrum result files; summary includes a `zFixed` column indicatin
 
 ### `sage config`
 
-Manage SNID SAGE configuration settings.
+Inspect SNID SAGE effective/default configuration values.
 
 #### Basic Usage
 ```powershell
@@ -140,12 +140,8 @@ sage config <command> [options]
 
 | Command | Description |
 |---|---|
-| `show` | Show current configuration |
-| `set <key> <value>` | Set configuration value |
-| `get <key>` | Get configuration value |
-| `reset` | Reset to defaults |
-| `export` | Export configuration |
-| `import <file>` | Import configuration |
+| `show` | Show current configuration/default values |
+| `get <key>` | Get one configuration/default value |
 
 #### Keys (selected)
 
@@ -157,6 +153,11 @@ sage config <command> [options]
 | `analysis.lapmin` | Minimum overlap fraction |
 | `analysis.redshift_min`, `analysis.redshift_max` | Redshift bounds |
 | `processing.apodize_percent` | Apodization percentage |
+
+Notes:
+- The User Templates Folder is managed from `snid-sage-templates` via `Change User Folder`
+- The main GUI does not currently have a separate `Settings -> Configuration` panel
+- To override the managed built-in templates location from the terminal, set `SNID_SAGE_TEMPLATE_DIR` before running SNID SAGE
 
 ### `sage templates`
 
@@ -195,6 +196,21 @@ sage templates validate
 # Import templates from CSV/TSV
 sage templates import-csv data\list.csv --dest C:\\User_templates --name-column object_name --path-column spectrum_file_path --age-column age --redshift-column redshift --type-column type --subtype-column subtype --sim-flag-column sim_flag
 ```
+
+#### Environment Override
+
+To override the managed built-in templates bank location from the terminal:
+
+```bash
+export SNID_SAGE_TEMPLATE_DIR=/path/to/templates_root
+```
+
+```powershell
+$env:SNID_SAGE_TEMPLATE_DIR = "C:\path\to\templates_root"
+```
+
+The default User Templates folder then becomes the sibling `user_templates`
+directory next to that location.
 
 ## Troubleshooting
 

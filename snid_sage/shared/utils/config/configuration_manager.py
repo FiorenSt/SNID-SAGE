@@ -77,10 +77,6 @@ class ConfigurationManager:
                     custom_validator=lambda x: not x or Path(x).exists() if x else True,
                     error_message="Templates directory must exist or be empty"
                 ),
-                'user_templates_dir': ConfigValidationRule(
-                    custom_validator=lambda x: self._validate_writable_directory(x),
-                    error_message="User templates directory must be writable"
-                ),
                 'output_dir': ConfigValidationRule(
                     custom_validator=lambda x: self._validate_writable_directory(x),
                     error_message="Output directory must be writable"
@@ -247,8 +243,6 @@ class ConfigurationManager:
                 'output_dir': str(Path.cwd() / 'results'),
                 'data_dir': str(Path.cwd() / 'data'),
                 'config_dir': str(self.config_dir),
-                # Optional: explicit user templates dir override
-                'user_templates_dir': None
             },
             'analysis': {
                 'redshift_min': -0.01,

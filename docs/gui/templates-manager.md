@@ -24,11 +24,15 @@ For step-by-step workflows and expanded CLI usage, see the [CLI Reference](../cl
 - You can:
   - Choose any directory (recommended to keep it under your documents/workspace)
   - Adopt an existing folder discovered from previous versions
-- The chosen folder is remembered in configuration (`paths.user_templates_dir`).
+- By default, if you do not choose a custom folder, SNID SAGE uses the managed
+  sibling `user_templates` directory next to the built-in templates bank.
+- If you want to override the built-in templates bank location from the terminal,
+  set `SNID_SAGE_TEMPLATE_DIR` before running SNID SAGE; the default User
+  Templates folder will then follow that location as a sibling directory.
+- The chosen folder is remembered by the Template Manager workflow.
 - You can change it later via:
   - Left panel: "Change User Folder"
   - The banner (when visible)
-  - Settings → Configuration → Paths → User Templates Directory
 
 ### Tasks
 - Browse and preview templates with metadata
