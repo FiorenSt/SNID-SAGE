@@ -133,9 +133,9 @@ site/
 # Note: site/ is excluded during development but will be built by GitHub Actions
 # for deployment to GitHub Pages
 
-# ===== LOCAL WISEREP TABLE VIEWER (PRIVATE DATA) =====
-# Viewer code under docs/table/ is tracked, but generated datasets must NOT be committed.
-docs/table/data/
+# ===== LOCAL WISEREP TABLE VIEWER =====
+# The generated web-table payload under docs/table/data/ is intended to be
+# publishable when ready. 
 
 # ===== DOCUMENTATION SUBDIRECTORIES =====
 # Keep all documentation tracked; only ignore build output

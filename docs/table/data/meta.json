@@ -1,0 +1,125 @@
+{
+  "generated_at": "2026-03-22T20:16:36.444096+00:00",
+  "source_results_csv": "WISEREP_RESULTS\\batch_results_WISEREP.csv",
+  "source_spectra_csv": "WISEREP_RESULTS\\spectra_20251124_093638.csv",
+  "rows": 45551,
+  "columns": [
+    {
+      "key": "official_name",
+      "label": "IAU name",
+      "is_flag": false
+    },
+    {
+      "key": "internal_name",
+      "label": "Internal name/s",
+      "is_flag": false
+    },
+    {
+      "key": "ra",
+      "label": "RA",
+      "is_flag": false
+    },
+    {
+      "key": "dec",
+      "label": "DEC",
+      "is_flag": false
+    },
+    {
+      "key": "tns_type",
+      "label": "WISEREP type",
+      "is_flag": false
+    },
+    {
+      "key": "type",
+      "label": "SAGE type",
+      "is_flag": false
+    },
+    {
+      "key": "subtype",
+      "label": "SAGE subtype",
+      "is_flag": false
+    },
+    {
+      "key": "z",
+      "label": "z",
+      "is_flag": false
+    },
+    {
+      "key": "z_err",
+      "label": "z error",
+      "is_flag": false
+    },
+    {
+      "key": "Q_cluster",
+      "label": "Q Cluster",
+      "is_flag": false
+    },
+    {
+      "key": "match_quality",
+      "label": "Match Quality",
+      "is_flag": true
+    },
+    {
+      "key": "type_confidence",
+      "label": "Type Confidence",
+      "is_flag": true
+    },
+    {
+      "key": "subtype_confidence",
+      "label": "Subtype Confidence",
+      "is_flag": true
+    },
+    {
+      "key": "age",
+      "label": "Age",
+      "is_flag": false
+    },
+    {
+      "key": "age_err",
+      "label": "Age Err",
+      "is_flag": false
+    },
+    {
+      "key": "second_best_subtype",
+      "label": "Second Best Subtype",
+      "is_flag": false
+    },
+    {
+      "key": "best_template",
+      "label": "Best Template",
+      "is_flag": false
+    },
+    {
+      "key": "second_best_type",
+      "label": "Second Best Type",
+      "is_flag": false
+    },
+    {
+      "key": "second_best_type_subtype",
+      "label": "Second Best Type Subtype",
+      "is_flag": false
+    },
+    {
+      "key": "second_best_type_subtype_z",
+      "label": "Second Best Type Subtype Z",
+      "is_flag": false
+    },
+    {
+      "key": "second_best_type_subtype_z_err",
+      "label": "Second Best Type Subtype Z Err",
+      "is_flag": false
+    },
+    {
+      "key": "spectra_file_name",
+      "label": "Spectra file name",
+      "is_flag": false
+    }
+  ],
+  "flag_sort_rank": {
+    "no comp": 0,
+    "very low": 1,
+    "low": 2,
+    "medium": 3,
+    "high": 4
+  }
+}
