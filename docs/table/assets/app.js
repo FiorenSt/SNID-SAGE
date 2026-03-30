@@ -1,11 +1,11 @@
-/* SNID-SAGE WISEREP Results Viewer (local-only)
+/* SNID-SAGE WISEREP Results Viewer
  *
  * Loads:
  * - data/wiserep_results.json : array of row objects
  * - data/meta.json           : column labels + flag rank mapping (optional)
  */
 
-const QUALITY_OPTIONS = ["Very Low", "Low", "Medium", "High", "No Comp"];
+const QUALITY_OPTIONS = ["Very Low", "Low", "Medium", "High"];
 const CONFIDENCE_OPTIONS = ["Very Low", "Low", "Medium", "High", "No Comp"];
 
 function qs(id) {
