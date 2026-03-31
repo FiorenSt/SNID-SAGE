@@ -85,15 +85,21 @@ sage batch --list-csv "data/spectra_list.csv" -o results/
 
 ## Research & Citation
 
-If you use SNID SAGE in your research, please cite:
+If you use SNID SAGE in your research, please cite the SNID-SAGE paper:
+
+- Stoppa, F. and Smartt, S. J., *SNID-SAGE: A Modern Framework for Interactive Supernova Classification and Spectral Analysis* ([arXiv:2603.28741](https://arxiv.org/abs/2603.28741))
+
+For the current arXiv version, the official BibTeX entry is:
 
 ```bibtex
-@software{snid_sage_2025,
-  title={SNID SAGE: A Modern Framework for Interactive Supernova
-         Classification and Spectral Analysis},
-  author={F. Stoppa},
-  year={In Prep, 2025},
-  url={https://github.com/FiorenSt/SNID-SAGE}
+@misc{stoppa2026,
+  title={SNID-SAGE: A Modern Framework for Interactive Supernova Classification and Spectral Analysis},
+  author={Fiorenzo Stoppa and Stephen J. Smartt},
+  year={2026},
+  eprint={2603.28741},
+  archivePrefix={arXiv},
+  primaryClass={astro-ph.IM},
+  url={https://arxiv.org/abs/2603.28741}
 }
 ```
 

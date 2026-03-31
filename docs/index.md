@@ -46,6 +46,7 @@
 - [Parameters](reference/parameters.md) – All settings and defaults
 - [Configuration Guide](reference/configuration-guide.md) – Profiles and paths
 - [API Reference](reference/api-reference.md) – Python integration
+- [How to Cite](reference/citation.md) – Paper details and BibTeX
 - [Troubleshooting](reference/troubleshooting.md) – Common issues and fixes
 
 ### AI Features
@@ -56,6 +57,7 @@
 
 ## Need Help?
 
+- **[How to Cite SNID-SAGE](reference/citation.md)** – Paper and BibTeX entry
 - **[Troubleshooting Guide](reference/troubleshooting.md)** – Solutions to common problems
 - **[GitHub Issues](https://github.com/FiorenSt/SNID-SAGE/issues)** – Report bugs
 - **[GitHub Discussions](https://github.com/FiorenSt/SNID-SAGE/discussions)** – Ask questions

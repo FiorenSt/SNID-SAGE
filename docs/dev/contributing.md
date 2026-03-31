@@ -15,7 +15,7 @@ Have an idea or found a problem? Open an issue:
 - **Share templates** - Contribute well-characterized supernova spectra
 - **Improve documentation** - Fix typos, add examples, clarify instructions
 - **Test and report** - Try SNID SAGE with your data and let us know how it goes
-- **Cite us** - If you use SNID SAGE in your research, please cite the paper
+- **Cite us** - If you use SNID SAGE in your research, please cite the paper using the instructions in the [citation guide](../reference/citation.md)
 
 ## Code Contributions
 
