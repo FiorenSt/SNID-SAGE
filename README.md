@@ -57,10 +57,10 @@ snid-sage
 
 ### Use the CLI
 ```bash
-# Single spectrum analysis (templates auto-discovered). Saves summary (.output) and plots by default
-sage data/sn2003jo.dat -o results/
+# Single spectrum analysis (templates auto-discovered). Saves the summary (.output) by default
+sage data/SN2018bif.csv -o results/
 
-# Batch processing (default saves per-object summary and plots)
+# Batch processing (default saves per-object summary plus standard batch outputs)
 sage batch "data/*.dat" -o results/
 
 # Batch from a CSV list with per-row redshift (if provided)
@@ -79,9 +79,9 @@ sage batch --list-csv "data/spectra_list.csv" -o results/
 ## Supported Data Formats
 
 - FITS files (.fits, .fit)
-- ASCII tables (.dat, .txt, .ascii, .asci, .flm)
+- ASCII tables (.dat, .txt, .ascii, .asci, .csv, .flm)
 - Space-separated values with flexible column detection
-- Custom formats with configurable parsers
+- Flexible text/FITS loading with automatic format detection
 
 ## Research & Citation
 

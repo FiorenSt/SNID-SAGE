@@ -1,6 +1,6 @@
 # SNID SAGE Documentation
 
-**SNID SAGE** (SuperNova IDentification – Spectral Analysis and Guided Exploration) is a Python tool for automated supernova spectral classification using cross-correlation with a library of 643+ template spectra.
+**SNID SAGE** (SuperNova IDentification – Spectral Analysis and Guided Exploration) is a Python tool for automated supernova spectral classification using cross-correlation with a library of 698 template spectra.
 
 ---
 
@@ -20,7 +20,7 @@
 |---------|-------------|
 | **GUI** | Interactive PySide6/Qt interface with real-time plotting |
 | **CLI** | Single-spectrum and batch processing from the command line |
-| **643+ Templates** | Ia, Ib, Ic, II, IIn, SLSN, TDE, KN, and more |
+| **698 Templates** | Ia, Ib, Ic, II, SLSN, TDE, KN, and more |
 | **AI Assistant** | Optional LLM-powered analysis via OpenRouter |
 | **Multi-epoch** | Templates with time evolution for age estimation |
 

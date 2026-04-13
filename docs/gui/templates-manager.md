@@ -2,14 +2,14 @@
 
 Interactive manager for exploring, creating, and organizing templates.
 
-For step-by-step workflows and expanded CLI usage, see the [CLI Reference](../cli/command-reference.md).
+Launch the standalone Template Manager with `snid-sage-templates`. For related CLI analysis commands and template-bank helpers, see the [CLI Reference](../cli/command-reference.md).
 
 ### Overview
 
 | Area | Contents |
 |---|---|
 | Left | Template browser (search, type filter) |
-| Right | Tabs for Viewer, Create, Manage, Compare, Statistics |
+| Right | Tabs for `Template Viewer`, `Create Template`, and `Manage Templates` |
 | Status bar | Template count |
 
 ### Data source and overrides
@@ -37,26 +37,12 @@ For step-by-step workflows and expanded CLI usage, see the [CLI Reference](../cl
 ### Tasks
 - Browse and preview templates with metadata
 - Create templates from spectra (wizard)
-- Edit metadata and reorganize
-- Compare templates and generate statistics
-
-### Batch Import Templates
-
-Use the Manage Templates tab and click "Batch Import…" to create many templates at once.
-
-Input file: CSV/TSV with columns (case-insensitive):
-- object_name, spectrum_file_path, age, redshift, type, subtype, sim_flag
-
-Notes:
-- Relative paths are resolved relative to the CSV file location.
-- Multiple rows with the same object_name create a single multi-epoch template.
-- Choose a destination templates folder or use your configured User Templates folder.
-- An error report file is written next to the CSV if any rows fail.
+- Edit metadata and manage user templates
 
 ### Tips
 - Use type filters to speed navigation
 - Keep metadata complete for research reuse
 
 ### Related CLI
-See `sage templates` subcommands for scripting the same operations.
+Use `snid-sage-download-templates` to refresh the managed built-in template bank.
 

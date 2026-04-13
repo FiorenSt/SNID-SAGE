@@ -96,7 +96,7 @@ sage spectrum.dat --output-dir results/
 **3. Windows Graphics Issues**
 - Update graphics drivers
 - Run as administrator
-- Try different Python version (3.9 or 3.10)
+- Try a supported Python version (3.10-3.13)
 
 ---
 
@@ -180,7 +180,7 @@ np.savetxt('spectrum_angstroms.dat', data)
 **3. Verify Rest Frame**
 ```bash
 # Specify known redshift
-snid spectrum.dat --output-dir results/ --forced-redshift 0.034
+sage spectrum.dat --output-dir results/ --forced-redshift 0.034
 ```
 
 ---
@@ -199,7 +199,7 @@ Analysis completed with low confidence
 #### Diagnosis:
 ```bash
 # Check spectrum quality
-snid spectrum.dat --output-dir results/ --verbose
+sage spectrum.dat --output-dir results/ --verbose
 ```
 
 #### Solutions:
@@ -207,24 +207,24 @@ snid spectrum.dat --output-dir results/ --verbose
 **1. Improve Data Quality**
 ```bash
 # Apply preprocessing
-snid spectrum.dat --output-dir results/ \
+sage spectrum.dat --output-dir results/ \
     --savgol-window 15 --savgol-order 3
 ```
 
 **2. Adjust Parameters**
 ```bash
 # Broader search
-snid spectrum.dat --output-dir results/ \
+sage spectrum.dat --output-dir results/ \
     --zmin 0.0 --zmax 0.1
 ```
 
 **3. Check Template Selection**
 ```bash
 # Use all templates
-snid spectrum.dat --output-dir results/
+sage spectrum.dat --output-dir results/
 
 # Try specific types
-snid spectrum.dat --output-dir results/ --type-filter Ia Ib Ic
+sage spectrum.dat --output-dir results/ --type-filter Ia Ib Ic
 ```
 
 ### Problem: Wrong classification
@@ -239,14 +239,14 @@ snid spectrum.dat --output-dir results/ --type-filter Ia Ib Ic
 **1. Visual Inspection**
 ```bash
 # Generate plots
-snid spectrum.dat --output-dir results/ --complete
-# Examine snid_comparison.png
+sage spectrum.dat --output-dir results/ --complete
+# Examine the generated flux/flattened comparison plots in the output folder
 ```
 
 **2. Manual Redshift**
 ```bash
 # Try known redshift
-snid spectrum.dat --output-dir results/ --forced-redshift 0.0234
+sage spectrum.dat --output-dir results/ --forced-redshift 0.0234
 ```
 
 #### Common Causes & Solutions:
@@ -255,7 +255,7 @@ snid spectrum.dat --output-dir results/ --forced-redshift 0.0234
 ```bash
 # Strong emission lines can affect classification
 # Try masking emission regions
-snid spectrum.dat --output-dir results/ \
+sage spectrum.dat --output-dir results/ \
     --wavelength-masks 6550:6570 4850:4870
 ```
 
@@ -267,7 +267,7 @@ snid spectrum.dat --output-dir results/ \
 **Poor S/N Ratio:**
 ```bash
 # Increase smoothing
-snid spectrum.dat --output-dir results/ --savgol-window 21
+sage spectrum.dat --output-dir results/ --savgol-window 21
 ```
 
 ---
@@ -291,7 +291,7 @@ Timeout: Request timed out after 60s
 echo $OPENROUTER_API_KEY
 
 # Set API key in GUI
-# Settings → Configure AI → Enter API key
+# AI Assistant -> Settings -> Enter API key
 ```
 
 **2. Network Issues**
@@ -318,7 +318,7 @@ curl -I https://openrouter.ai
 **1. Template Optimization**
 ```bash
 # Limit templates
-snid spectrum.dat --output-dir results/ \
+sage spectrum.dat --output-dir results/ \
     --type-filter Ia \
     --age-min -10 --age-max 30
 ```
@@ -333,10 +333,10 @@ snid spectrum.dat --output-dir results/ \
 #### Solutions:
 ```bash
 # Use minimal mode
-snid spectrum.dat --output-dir results/ --minimal
+sage spectrum.dat --output-dir results/ --minimal
 
 # Use CLI for batch processing
-snid batch "data/*.dat" templates/ --output-dir results/
+sage batch "data/*.dat" templates/ --output-dir results/
 ```
 
 ---
@@ -370,7 +370,6 @@ snid batch "data/*.dat" templates/ --output-dir results/
 
 #### "Template directory not found"
 ```bash
-# Templates should be included with installation
 # Verify installation:
 python -c "import snid_sage; print('SNID SAGE OK')"
 ```
@@ -383,7 +382,7 @@ python -c "import snid_sage; print('SNID SAGE OK')"
 #### "Memory allocation failed"
 ```bash
 # Reduce memory usage
-snid spectrum.dat --output-dir results/ --minimal
+sage spectrum.dat --output-dir results/ --minimal
 ```
 
 #### "OpenRouter authentication failed"
@@ -439,10 +438,10 @@ snid-sage
 ### CLI Batch Processing
 ```bash
 # Process all spectra in directory
-snid batch "data/*.dat" templates/ --output-dir results/
+sage batch "data/*.dat" templates/ --output-dir results/
 
 # With specific parameters
-snid batch "data/*.dat" templates/ --output-dir results/ \
+sage batch "data/*.dat" templates/ --output-dir results/ \
     --type-filter Ia Ib Ic --complete
 ```
 

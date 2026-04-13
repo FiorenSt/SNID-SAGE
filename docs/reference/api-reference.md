@@ -2,7 +2,7 @@
 
 Note: This page is a work in progress.
 
-Complete API reference for SNID SAGE's programmatic interface, including all classes, methods, and functions.
+Reference for the main programmatic entry points exposed by SNID SAGE. This page focuses on the stable, commonly used interfaces rather than every internal helper.
 
 ## Overview
 
@@ -17,8 +17,8 @@ SNID SAGE provides a Python API for:
 
 ### **Basic Usage**
 ```python
-from snid.snid import run_snid, preprocess_spectrum, run_snid_analysis
-from snid.io import read_spectrum
+from snid_sage.snid.snid import run_snid, preprocess_spectrum, run_snid_analysis
+from snid_sage.snid.io import read_spectrum
 
 # Method 1: Full pipeline
 result, trace = run_snid(
@@ -131,7 +131,7 @@ def run_snid(
 | exclude_templates | list or None | None | Templates to exclude |
 | forced_redshift | float or None | None | Force analysis at specific redshift |
 | lapmin | float | 0.3 | Minimum overlap fraction |
-| hsigma_lap_ccc_threshold | float | 1.5 | Threshold for clustering quality (HσLAP-CCC: (height × lap × CCC) / sigma_z) |
+| hsigma_lap_ccc_threshold | float | 1.5 | Threshold for clustering quality (HσLAP-CCC: `(height × lap × CCC) / sqrt(sigma_z)`) |
 | output_dir | str or None | None | Directory for output files |
 | output_main | bool | False | Generate main output file |
 | output_fluxed | bool | False | Generate fluxed spectrum file |
@@ -187,6 +187,7 @@ def preprocess_spectrum(
     grid_min_wave: Optional[float] = None,
     grid_max_wave: Optional[float] = None,
     min_overlap_angstrom: float = 2000.0,
+    profile_id: Optional[str] = None,
 ) -> Tuple[Dict[str, np.ndarray], Dict[str, Any]]
 ```
 
@@ -219,6 +220,7 @@ def preprocess_spectrum(
 | grid_min_wave | float or None | None | Minimum wavelength for grid clipping |
 | grid_max_wave | float or None | None | Maximum wavelength for grid clipping |
 | min_overlap_angstrom | float | 2000.0 | Minimum wavelength overlap required (Å) |
+| profile_id | str or None | None | Active analysis profile (`optical` or `onir`) |
 
 **Returns:**
 - `processed_spectrum` (dict): Processed spectrum data
@@ -249,15 +251,21 @@ def run_snid_analysis(
     type_filter: Optional[List[str]] = None,
     template_filter: Optional[List[str]] = None,
     exclude_templates: Optional[List[str]] = None,
-    forced_redshift: Optional[float] = None,
+    preloaded_templates: Optional[List[Dict[str, Any]]] = None,
+    peak_window_size: int = 10,
+    phase1_peak_min_height: float = 0.3,
+    phase1_peak_min_distance: int = 3,
     lapmin: float = 0.3,
     hsigma_lap_ccc_threshold: float = 1.5,
+    forced_redshift: Optional[float] = None,
     max_output_templates: int = 5,
     verbose: bool = False,
     show_plots: bool = True,
     save_plots: bool = False,
-    plot_dir: Optional[str] = None,
-    progress_callback: Optional[Callable[[str, float], None]] = None
+    plot_dir: Optional[str | Path] = None,
+    progress_callback: Optional[Callable[[str, float], None]] = None,
+    gmm_model_selection: Optional[str] = None,
+    profile_id: Optional[str] = None,
 ) -> Tuple[SNIDResult, Dict[str, Any]]
 ```
 
@@ -273,15 +281,21 @@ def run_snid_analysis(
 | type_filter | list or None | None | Type filter |
 | template_filter | list or None | None | Template name filter |
 | exclude_templates | list or None | None | Templates to exclude |
+| preloaded_templates | list or None | None | Optional preloaded templates for reuse/performance |
+| peak_window_size | int | 10 | Peak-refinement search radius |
+| phase1_peak_min_height | float | 0.3 | Minimum normalized phase-1 peak height |
+| phase1_peak_min_distance | int | 3 | Minimum distance between phase-1 peaks in bins |
 | forced_redshift | float or None | None | Force specific redshift |
 | lapmin | float | 0.3 | Minimum overlap |
-| hsigma_lap_ccc_threshold | float | 1.5 | Threshold for clustering quality (HσLAP-CCC: (height × lap × CCC) / sigma_z) |
+| hsigma_lap_ccc_threshold | float | 1.5 | Threshold for clustering quality (HσLAP-CCC: `(height × lap × CCC) / sqrt(sigma_z)`) |
 | max_output_templates | int | 5 | Maximum output templates |
 | verbose | bool | False | Verbose output |
-|     show_plots | bool | True | Show plots |
+| show_plots | bool | True | Show plots |
 | save_plots | bool | False | Save plots |
 | plot_dir | str or None | None | Plot directory |
 | progress_callback | callable or None | None | Progress callback |
+| gmm_model_selection | str or None | None | Optional GMM model-selection override |
+| profile_id | str or None | None | Active analysis profile (`optical` or `onir`) |
 
 **Returns:**
 - `SNIDResult`: Analysis results
@@ -328,27 +342,10 @@ Note: `SNIDResult` is **not** provided by `snid_sage.shared.types`.
 - `clustering_results` (dict): GMM clustering results
 - `processed_spectrum` (dict): Processed spectrum data
 
-#### **Methods**
+#### **Notes**
 
-##### **get_summary()**
-Get a text summary of results.
-
-```python
-def get_summary(self) -> str
-```
-
-**Returns:**
-- `str`: Human-readable summary
-
-##### **to_dict()**
-Convert results to dictionary.
-
-```python
-def to_dict(self) -> Dict[str, Any]
-```
-
-**Returns:**
-- `dict`: Results as dictionary
+- `SNIDResult` is a dataclass-style result container defined in `snid_sage.snid.snidtype`.
+- It provides a human-readable `__str__()` representation, but it does not currently expose documented `get_summary()` or `to_dict()` methods.
 
 ---
 
@@ -427,16 +424,23 @@ Plot correlation function.
 
 ```python
 def plot_correlation_function(
-    correlation_data: Dict,
-    output_file: Optional[str] = None,
-    show: bool = True
-)
+    result: Any,
+    figsize: Tuple[int, int] = (8, 6),
+    save_path: Optional[str] = None,
+    fig: Optional[plt.Figure] = None,
+    theme_manager=None,
+) -> plt.Figure
 ```
 
 **Parameters:**
-- `correlation_data` (dict): Correlation data
-- `output_file` (str, optional): Save to file
-- `show` (bool): Display plot
+- `result` (SNIDResult-like object): Result object containing best-match correlation data
+- `figsize` (tuple): Figure size `(width, height)`
+- `save_path` (str, optional): Path to save the figure
+- `fig` (matplotlib Figure, optional): Existing figure to draw into
+- `theme_manager` (optional): Theme manager used by the GUI plotting layer
+
+**Returns:**
+- `matplotlib.figure.Figure`: The rendered figure
 
 ---
 
@@ -583,7 +587,7 @@ def get_template_info(library_path: str) -> Dict
 
 ### **Basic Analysis**
 ```python
-from snid.snid import run_snid
+from snid_sage.snid.snid import run_snid
 
 # Simple analysis
 result, trace = run_snid(
@@ -599,7 +603,7 @@ print(f"Best template: {result.template_name}")
 
 ### **Advanced Analysis**
 ```python
-from snid.snid import preprocess_spectrum, run_snid_analysis
+from snid_sage.snid.snid import preprocess_spectrum, run_snid_analysis
 
 # Custom preprocessing
 processed, _ = preprocess_spectrum(
@@ -623,7 +627,7 @@ result, _ = run_snid_analysis(
 
 ### **Batch Processing**
 ```python
-from snid.snid import run_snid
+from snid_sage.snid.snid import run_snid
 import glob
 
 # Process multiple spectra

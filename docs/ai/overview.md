@@ -11,7 +11,7 @@ SNID SAGE includes an optional AI-powered assistant to help interpret your class
 ### 2. Configure in SNID SAGE
 1. **Load and analyze a spectrum** first
 2. Click the **AI Assistant** button (deep blue - enabled after analysis)
-3. Go to **Settings** tab → enter your API key → **Test Connection**
+3. In the **AI Assistant** window, go to the **Settings** tab → enter your API key → **Test Connection**
 
 ## Features
 
@@ -39,7 +39,7 @@ SNID SAGE includes an optional AI-powered assistant to help interpret your class
 | Claude 3 Opus | Scientific writing |
 | Gemini Pro | Multilingual support |
 
-Select models in **Settings** → **Model Selection** → **Fetch All Models**.
+Select models in the **AI Assistant** window under **Settings** → **Model Selection** → **Fetch All Models**.
 
 ## Tips for Astronomers
 

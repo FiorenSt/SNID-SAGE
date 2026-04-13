@@ -36,20 +36,20 @@ Notes:
 
 | Mode | Description |
 |---|---|
-| Default | Main outputs per spectrum plus a summary |
-| `--minimal` | Summary only (fastest, least disk) |
+| Default | Main `.output` result per spectrum plus standard batch reports and plots |
+| `--minimal` | Per-spectrum `.output` files plus batch reports (least disk; no extra plot/data artifacts) |
 | `--complete` | Full outputs and plots (largest disk) |
 
 ## Common options
 
 | Option | Description |
 |---|---|
-| `--zmin FLOAT` / `--zmax FLOAT` | Redshift search range (default: -0.01 to 1.0) |
+| `--zmin FLOAT` / `--zmax FLOAT` | Redshift search range (default: `-0.01` to `1.0` for `optical`, `-0.01` to `2.5` for `onir`) |
 | `--forced-redshift FLOAT` | Force a fixed redshift for all spectra |
 | `--type-filter TYPE...` | Restrict templates by type (e.g., Ia Ib Ic) |
 | `--template-filter NAME...` | Only use specific templates by name |
 | `--lapmin FLOAT` | Minimum overlap fraction (default: 0.3) |
-| `--hsigma-lap-ccc-threshold FLOAT` | HσLAP-CCC clustering threshold (default: 15.0) |
+| `--hsigma-lap-ccc-threshold FLOAT` | Hsigma-LAP-CCC clustering threshold (default: 1.5) |
 | `--output-dir DIR` | Output directory for results |
 | `--stop-on-error` | Stop processing upon first error |
 | `--verbose` | Verbose console output |
@@ -94,9 +94,9 @@ sage batch "data/*.dat" --output-dir results/ --workers -1
 
 | Per spectrum | Summary |
 |---|---|
-| `.output`, `.fluxed`, `.flattened` | `batch_summary.txt` (includes a `zFixed` column) |
+| `.output` in standard mode; `.output`, `.fluxed`, `.flattened`, and extra data files in `--complete` | `batch_analysis_report.txt` and `batch_results.csv` |
 
-With `--complete`, additional plots are generated (comparison, clustering, redshift–age, subtype proportions).
+With `--complete`, additional plots are generated such as `{name}_flux_spectrum.png`, `{name}_flattened_spectrum.png`, `{name}_3d_gmm_clustering.png`, `{name}_redshift_age.png`, and `{name}_cluster_subtypes.png`.
 
 ## Tips
 

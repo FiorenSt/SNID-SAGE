@@ -8,7 +8,7 @@ The CLI offers:
 - Single spectrum analysis with detailed outputs
 - Batch processing of multiple spectra
 - Configuration inspection
-- Template and data management
+- Managed template-bank download and standalone template tools
 
 ### Supported input formats
 
@@ -64,7 +64,7 @@ sage data\SN2018bif.csv --complete
 - Classification results (type, subtype, confidence)
 - Redshift and age estimates
 - Template matches and correlation scores
-- Basic plots and data files
+- Main `.output` result file by default; use `--complete` for the full extra artifact set
 
 ### `sage batch`
 
@@ -99,10 +99,10 @@ sage batch --list-csv input.csv --path-column "Spectrum Path" --redshift-column 
 | Option | Description |
 |---|---|
 | `--output-dir DIR` | Output directory for results |
-| `--zmin FLOAT` / `--zmax FLOAT` | Redshift range (default: -0.01 to 1.0) |
+| `--zmin FLOAT` / `--zmax FLOAT` | Redshift range (default: `-0.01` to `1.0` for `optical`, `-0.01` to `2.5` for `onir`) |
 | `--age-min FLOAT` / `--age-max FLOAT` | Template age bounds (days) |
 | `--forced-redshift FLOAT` | Force a fixed redshift for all spectra |
-| `--profile {optical,onir}` | Analysis profile (default: optical) |
+| `--profile {optical,onir}` | Analysis profile (defaults to `optical` when not provided) |
 | `--lapmin FLOAT` | Minimum overlap fraction (default: 0.3) |
 | `--hsigma-lap-ccc-threshold FLOAT` | HσLAP-CCC clustering threshold (default: 1.5) |
 | `--type-filter TYPE...` | Restrict templates to these types |
@@ -159,51 +159,19 @@ Notes:
 - The main GUI does not currently have a separate `Settings -> Configuration` panel
 - To override the managed built-in templates location from the terminal, set `SNID_SAGE_TEMPLATE_DIR` before running SNID SAGE
 
-### `sage templates`
+### Template Library Helpers
 
-Manage template library and template-related operations.
+Use the standalone template commands below.
 
-#### Basic Usage
-```powershell
-sage templates <command> [options]
-```
-
-#### Commands
+Use these installed helpers instead:
 
 | Command | Description |
 |---|---|
-| `list` | List available templates |
-| `info <template>` | Show template information |
-| `search <query>` | Search templates |
-| `validate` | Validate template library |
-| `update` | Update template library |
-| `import-csv <file>` | Import templates from CSV/TSV (multi-epoch) |
-
-#### Examples
-```powershell
-# List all templates
-sage templates list
-
-# Search for Type Ia templates
-sage templates search "Ia"
-
-# Show template information
-sage templates info "SN1994D"
-
-# Validate template library
-sage templates validate
-
-# Import templates from CSV/TSV
-sage templates import-csv data\list.csv --dest C:\\User_templates --name-column object_name --path-column spectrum_file_path --age-column age --redshift-column redshift --type-column type --subtype-column subtype --sim-flag-column sim_flag
-```
-
-#### Environment Override
+| `snid-sage-download-templates` | Download or refresh the managed built-in template bank |
+| `snid-sage-download-templates --force` | Re-download the managed built-in bank |
+| `snid-sage-templates` | Open the standalone Template Manager GUI |
 
 To override the managed built-in templates bank location from the terminal:
-
-```bash
-export SNID_SAGE_TEMPLATE_DIR=/path/to/templates_root
-```
 
 ```powershell
 $env:SNID_SAGE_TEMPLATE_DIR = "C:\path\to\templates_root"
@@ -218,7 +186,7 @@ directory next to that location.
 
 | Error | Cause | Solution |
 |---|---|---|
-| `Template library not found` | Missing template directory | Set `paths.templates_dir` in config |
+| `Template library not found` | Missing template directory | Run `snid-sage-download-templates --force` or set `SNID_SAGE_TEMPLATE_DIR` |
 | `Invalid spectrum format` | Unsupported file format | Convert to supported format |
 | `No templates match criteria` | Template filters too restrictive | Adjust `--type-filter` or age range |
 | `Analysis failed` | Input data quality issues | Check spectrum quality and preprocessing |

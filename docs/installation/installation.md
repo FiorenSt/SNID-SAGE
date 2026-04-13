@@ -13,7 +13,7 @@ This guide provides instructions for installing SNID SAGE on your system.
 pip install snid-sage
 ```
 
-On first run, SNID SAGE downloads templates (~50 MB) into a `SNID-SAGE/templates` folder in your current directory. Once downloaded, templates are reused across runs.
+On first run, SNID SAGE downloads templates (~500 MB) into the managed templates directory under its resolved state root. In normal installs this defaults to `SNID-SAGE/templates` under your current working directory; in editable/dev installs it may resolve to the repository root instead. You can override this with `SNID_SAGE_STATE_DIR` or `SNID_SAGE_TEMPLATE_DIR`.
 
 ### Virtual Environment Setup
 
@@ -81,7 +81,7 @@ If you need the latest development version or want to contribute:
 ```bash
 # Clone repository
 git clone https://github.com/FiorenSt/SNID-SAGE.git
-cd SNID_SAGE
+cd SNID-SAGE
 
 # Install in development mode (includes CLI and GUI)
 pip install -e .
@@ -153,11 +153,12 @@ pip install --upgrade PySide6
 
 **Template Library Issues**
 ```bash
-# Check template installation
-sage templates list
+# Force a refresh of the managed template bank
+snid-sage-download-templates --force
 
-# Reinstall templates
-pip install --upgrade snid-sage
+# Or override the template-bank location for this shell
+# PowerShell:
+$env:SNID_SAGE_TEMPLATE_DIR = "C:\path\to\templates_root"
 ```
 
 **Windows: "Enterprise signing level requirements" / blocked snid-sage.exe**

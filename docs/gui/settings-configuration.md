@@ -6,7 +6,7 @@ a full configuration panel, and the main GUI does not expose a separate
 
 ### Display
 - UI Scale (`ui_scale_percent`)
-- Remember window position
+- Remember window position (present in the dialog; behavior may vary by build)
 
 ### Profile
 - Active processing profile (`optical` or `onir`)

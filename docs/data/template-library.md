@@ -1,6 +1,6 @@
 # Template Library
 
-SNID SAGE includes a curated library of 643 supernova and transient spectra for classification.
+SNID SAGE includes a curated library of 698 supernova and transient spectra for classification.
 
 ## Built-in Templates
 
@@ -46,7 +46,7 @@ templates/
 ```json
 {
   "version": "2.0",
-  "template_count": 643,
+  "template_count": 698,
   "grid_params": {
     "NW": 1024,
     "W0": 2500.0,
@@ -93,7 +93,7 @@ templates_Ia.hdf5
 
 ## Template Manager GUI
 
-Access via **Tools → Template Manager** or the toolbar button.
+Open the standalone Template Manager with `snid-sage-templates`.
 
 ![Template Manager showing multi-epoch template sn2008bo with 12 epochs displayed as stacked spectra](../images/10.TemplateLibrary1.png)
 
@@ -102,23 +102,15 @@ The Template Manager lets you:
 - **Preview** spectra with metadata
 - **View** multi-epoch template evolution
 - **Create** new templates from your spectra
-- **Import** templates in batch from CSV
 
 ![Template creation form with fields for name, type, subtype, redshift, and age](../images/10.TemplateLibrary2.png)
 
 ### Creating Templates
 
-1. Open Template Manager → **Create** tab
+1. Open `snid-sage-templates` → **Create Template** tab
 2. Load your spectrum file
 3. Fill in metadata (name, type, subtype, age, redshift)
 4. Preview and save
-
-### Batch Import
-
-For many templates at once:
-1. Go to **Manage** tab → **Batch Import**
-2. Provide a CSV with columns: `object_name`, `spectrum_file_path`, `age`, `redshift`, `type`, `subtype`
-3. Multiple rows with the same name create multi-epoch templates
 
 ## User Templates
 
@@ -136,26 +128,23 @@ When a user HDF5 exists for a type (e.g., `templates_Ia.user.hdf5`), it **replac
 
 ## ONIR Templates
 
-For near-infrared analysis, use `--profile onir`. ONIR templates cover 2500–25000 Å and are stored in separate files (`templates_Ia_onir.hdf5`, etc.).
+For near-infrared analysis, use `--profile onir`. ONIR templates cover 2000–25000 Å and are stored in separate files (`templates_Ia_onir.hdf5`, etc.).
 
-## CLI Commands
+## Template Helpers
 
 ```powershell
-# List templates
-sage templates list
+# Open the standalone Template Manager GUI
+snid-sage-templates
 
-# Search templates
-sage templates search "94D"
+# Download or refresh the managed built-in template bank
+snid-sage-download-templates
 
-# Show template info
-sage templates info sn1994D
-
-# Import from CSV
-sage templates import-csv data\list.csv --dest User_templates\
+# Force a re-download of the managed bank
+snid-sage-download-templates --force
 ```
 
 ## See Also
 
 - [Custom Templates](custom-templates.md) - Creating your own templates
 - [Templates Manager (GUI)](../gui/templates-manager.md) - Detailed GUI guide
-- [CLI Reference](../cli/command-reference.md) - All template commands
+- [CLI Reference](../cli/command-reference.md) - CLI analysis and template-bank helpers

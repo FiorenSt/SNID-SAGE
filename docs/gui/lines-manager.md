@@ -22,7 +22,7 @@ Spin-off GUI to manage spectral lines and user presets, with a light spectrum pr
 ### Test Spectrum
 - Load a spectrum and preview with line overlays (pyqtgraph)
 - Toggle “in-range only” to limit overlays to visible wavelength range
-- Open advanced preprocessing for quick cleaning
+- Open **Advanced Preprocessing** for spectrum cleanup before checking overlays
 
 ### Presets panel
 - Create and save named preset filters

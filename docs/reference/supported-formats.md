@@ -17,7 +17,7 @@ SNID SAGE can load spectra from the following file types:
 - `.fit` - Alternative FITS extension
 
 ### Requirements
-- Requires `astropy` package: `pip install astropy`
+- FITS support is available in normal `snid-sage` installs because `astropy` is already included as a package dependency
 - Automatically detected by file extension
 
 ### Format Details
@@ -30,9 +30,6 @@ SNID SAGE can load spectra from the following file types:
 ```powershell
 # Load FITS spectrum
 sage spectrum.fits --output-dir results/
-
-# Load specific band from multi-extension FITS
-sage spectrum.fits --band 1 --output-dir results/
 ```
 
 ## ASCII/Text Files
@@ -136,17 +133,14 @@ SNID SAGE automatically detects file formats based on:
 Use these commands to check your file format:
 
 ```powershell
-# Check file type
-file spectrum.dat
-
 # View first few lines
-head -10 spectrum.dat
+Get-Content spectrum.dat -Head 10
 
 # Count lines
-wc -l spectrum.dat
+(Get-Content spectrum.dat).Count
 
-# Check for comments
-grep -c "^#" spectrum.dat
+# Count comment lines
+(Get-Content spectrum.dat | Where-Object { $_ -match "^#" }).Count
 ```
 
 ### Converting Unsupported Formats

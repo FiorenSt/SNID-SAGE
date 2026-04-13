@@ -25,7 +25,7 @@ Required fields:
 
 ### GUI Method
 
-1. **Open Template Manager** (Tools → Template Manager)
+1. Run `snid-sage-templates` to open the standalone Template Manager
 2. Go to the **Create** tab
 3. **Load spectrum** file (supports .dat, .txt, .csv, .fits)
 4. **Fill metadata**:
@@ -35,52 +35,13 @@ Required fields:
 5. **Preview** the processed template
 6. **Save** to your User Templates folder
 
-### CLI Method
+### Standalone launcher
 
 ```powershell
-# Single template
-sage templates import-csv data\spectrum.csv --dest User_templates\ `
-  --name-column object_name --path-column spectrum_file_path `
-  --type-column type --subtype-column subtype `
-  --age-column age --redshift-column redshift
+snid-sage-templates
 ```
 
-## Batch Import
-
-Import many templates at once from a CSV/TSV file.
-
-### CSV Format
-
-| object_name | spectrum_file_path | type | subtype | age | redshift |
-|-------------|-------------------|------|---------|-----|----------|
-| SN2024abc | spectra/sn2024abc_day5.dat | Ia | norm | 5.0 | 0.023 |
-| SN2024abc | spectra/sn2024abc_day10.dat | Ia | norm | 10.0 | 0.023 |
-| SN2024def | spectra/sn2024def.dat | II | IIP | 15.0 | 0.015 |
-
-- Multiple rows with the same `object_name` create a **multi-epoch template**
-- Paths can be relative to the CSV file location
-- Column names are case-insensitive
-
-### GUI Batch Import
-
-1. Template Manager → **Manage** tab
-2. Click **Batch Import**
-3. Select your CSV file
-4. Choose destination folder
-5. Review and confirm
-
-### CLI Batch Import
-
-```powershell
-sage templates import-csv data\my_templates.csv `
-  --dest C:\User_templates `
-  --name-column object_name `
-  --path-column spectrum_file_path `
-  --type-column type `
-  --subtype-column subtype `
-  --age-column age `
-  --redshift-column redshift
-```
+Templates are currently created one spectrum or epoch at a time in `snid-sage-templates`.
 
 ## File Formats
 
@@ -105,7 +66,6 @@ User_templates/
 
 Set or change this folder:
 - Template Manager → left panel → **Change User Folder**
-- Settings → Paths → User Templates Directory
 
 ## Override Behavior
 

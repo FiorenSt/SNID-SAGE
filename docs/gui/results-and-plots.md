@@ -13,7 +13,7 @@ Note: This page is a work in progress.
 
 | Plot | Description |
 |---|---|
-| Comparison | Flux and flattened comparisons vs best match |
+| Flux / Flattened comparison | Flux and flattened comparisons vs the best-match template |
 | Redshift–Age | Scatter/summary of redshift vs age |
 | 3D clustering | Type-aware GMM visualization (if available) |
 
@@ -21,19 +21,18 @@ Note: This page is a work in progress.
 
 | Method | Notes |
 |---|---|
-| File → Export | Export from main window |
-| Dialog Save/Export | Export from individual dialogs |
+| Dialog Save/Export | Export from individual dialogs and plot windows |
 | Formats | PNG for quick sharing; PDF/SVG for publications |
 
 ### CLI outputs
 
 | Mode | Files |
 |---|---|
-| Standard | `{name}.output`, `{name}.fluxed`, `{name}.flattened` |
-| Complete | Adds plot files (`comparison`, `3d_gmm_clustering`, `redshift_age`, `cluster_subtypes`) |
+| Standard | `{name}.output` |
+| Complete | Adds `{name}.fluxed`, `{name}.flattened`, plus plots such as `{name}_flux_spectrum.png`, `{name}_flattened_spectrum.png`, `{name}_3d_gmm_clustering.png`, `{name}_redshift_age.png`, and `{name}_cluster_subtypes.png` |
 
 ```powershell
-sage data\sn2003jo.dat --output-dir results\ --complete
+sage data\SN2018bif.csv --output-dir results\ --complete
 ```
 
 ## See Also

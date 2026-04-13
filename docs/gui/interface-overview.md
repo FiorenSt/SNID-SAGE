@@ -62,7 +62,7 @@ Most options are set here. For a compact list of parameters and defaults, see th
 | Detailed Analysis | Structured scientific interpretation | AI Assistant button |
 | Scientific Context | Literature-style discussion | AI Assistant button |
 | Publication Text | Methods/results blocks | AI Assistant button |
-| Configuration | Provider, Model, API key | Settings → AI |
+| Configuration | Provider, Model, API key | AI Assistant window → `Settings` tab |
  
 
 ## Notes
