@@ -4,10 +4,11 @@ Note: This page is a work in progress.
 
 How to prepare spectra before analysis.
 
-### Step 0: Cosmic-ray cleanup (new in 0.7.0)
-- Automatically detects and corrects obvious cosmic-ray hits prior to standard preprocessing.
-- Enabled by default in quick preprocessing; can be toggled in the manual wizard.
-- Keeps genuine narrow features by limiting width and amplitude thresholds.
+### Step 0: Early spike masking (automatic)
+- SNID SAGE applies an automatic early spike/outlier masking step before the standard preprocessing pipeline.
+- This is enabled by default in both the GUI and the CLI.
+- In the CLI, you can disable it with `--no-spike-masking`.
+- The current GUI workflow uses the default automatic behavior rather than exposing a separate user-facing "cosmic-ray cleanup" wizard step.
 
 ### Quick SNID Preprocessing
 
@@ -15,9 +16,9 @@ How to prepare spectra before analysis.
 |---|---|---|
 | Minimal steps to prepare a spectrum for SNID | Log rebinning, optional S-G smoothing, apodization, continuum handling | Most cases; fastest path to classification |
 
-### Manual Preprocessing
+### Advanced Preprocessing
 
-Open via: Preprocessing → Manual wizard
+Open via: **Preprocessing** → **Advanced Preprocessing**
 
 | Step | Control | Parameter | Default | CLI Flag | Notes |
 |---|---|---|---:|---|---|
@@ -31,6 +32,21 @@ Open via: Preprocessing → Manual wizard
 |  | Emission width (Å) | `emwidth` | 40.0 | `--emwidth` | |
 | 4. Apodization | Apodize percent (%) | `apodize_percent` | 10.0 | `--apodize-percent` | Typical 5–15% |
 | 5. Masks | Custom wavelength masks | `wavelength_masks` | None | `--wavelength-masks` | e.g. 6550:6600 7600:7700 |
+
+### Automatic spike-masking controls (CLI)
+
+The automatic step above corresponds to the CLI spike-masking options:
+
+| Parameter | Default | CLI Flag | Notes |
+|---|---:|---|---|
+| `spike_masking` | `True` | `--no-spike-masking` to disable | Early spike/outlier masking before smoothing |
+| `spike_floor_z` | `50.0` | `--spike-floor-z` | Minimum floor-relative robust z for spike detection |
+| `spike_baseline_window` | `501` | `--spike-baseline-window` | Running median baseline window in pixels |
+| `spike_baseline_width` | `None` | `--spike-baseline-width` | Baseline width in wavelength units; overrides pixel window |
+| `spike_rel_edge_ratio` | `2.0` | `--spike-rel-edge-ratio` | Center residual must exceed neighboring residuals by this factor |
+| `spike_min_separation` | `2` | `--spike-min-separation` | Minimum pixel separation between removed spikes |
+| `spike_max_removals` | `None` | `--spike-max-removals` | Optional cap on spikes removed per spectrum |
+| `spike_min_abs_resid` | `None` | `--spike-min-abs-resid` | Minimum absolute residual required to count as a spike |
 
 ### Best practices
 - Inspect S/N before aggressive smoothing

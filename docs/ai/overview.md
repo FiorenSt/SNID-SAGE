@@ -28,18 +28,21 @@ SNID SAGE includes an optional AI-powered assistant to help interpret your class
 1. Complete your SNID analysis
 2. Click **AI Assistant** button
 3. Choose analysis type and model
-4. Review output; copy or export
+4. Review the output and reuse it as a draft where appropriate
 
-### Recommended Models
+### Choosing A Model
 
-| Model | Best For |
-|-------|----------|
-| GPT-3.5 Turbo | Fast, everyday analysis |
-| GPT-4 Turbo | Complex cases, best quality |
-| Claude 3 Opus | Scientific writing |
-| Gemini Pro | Multilingual support |
+Available OpenRouter models can change over time, so treat any named model as
+an example rather than a canonical recommendation.
 
-Select models in the **AI Assistant** window under **Settings** → **Model Selection** → **Fetch All Models**.
+Use the **AI Assistant** window under **Settings** → **Model Selection** →
+**Fetch All Models** to refresh the current list.
+
+General guidance:
+
+- Choose a smaller/faster model for quick summaries and routine follow-up questions
+- Choose a larger model for more detailed reasoning or polished scientific writing
+- If a model is unavailable, refresh the list and pick another current option
 
 ## Tips for Astronomers
 

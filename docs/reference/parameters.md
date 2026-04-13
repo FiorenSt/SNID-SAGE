@@ -1,6 +1,6 @@
 # Parameters Reference
 
-Unified reference of configurable parameters across GUI and CLI.
+Reference for the current SNID SAGE CLI parameters and resolved config defaults.
 
 Notes:
 - Defaults below refer to the current public CLI unless a row is marked as a config key.
@@ -49,6 +49,17 @@ Notes:
 | `wavelength_masks` | list[range] or null | `None` | `--wavelength-masks WMIN:WMAX ...` | Additional wavelength ranges to mask |
 | `apodize_percent` | float | `10.0` | `--apodize-percent` | Percentage of the spectrum ends to apodize |
 
+## Output And Display Parameters
+
+| Name | Type | Effective default | CLI flag | Scope | Description |
+|---|---|---:|---|---|---|
+| `output_dir` | str or null | resolved from config | `--output-dir`, `-o` | single + batch | Output directory for results |
+| `minimal` | bool | `False` | `--minimal` | single + batch | Minimal output mode |
+| `complete` | bool | `False` | `--complete` | single + batch | Complete output mode with the extended artifact set |
+| `progress` | bool | `False` | `--progress` | single only | Show progress output during analysis |
+| `no_progress` | bool | `False` | `--no-progress` | single + batch | Disable progress output |
+| `no_plots` | bool | `False` | `--no-plots` | single + batch | Skip plot generation |
+
 ## Batch-Only Parameters
 
 | Name | Type | Effective default | CLI flag | Description |
@@ -60,8 +71,17 @@ Notes:
 | `full` | bool | `False` | `--full` | Detailed console output |
 | `workers` | int | `0` | `--workers` | Worker processes: `0` sequential, `-1` all cores, `N` fixed count |
 | `stop_on_error` | bool | `False` | `--stop-on-error` | Stop processing after the first failing spectrum |
-| `minimal` | bool | `False` | `--minimal` | Write per-spectrum `.output` files and batch reports only |
-| `complete` | bool | `False` | `--complete` | Write full output files plus the extended plot/data artifact set |
+
+## Global Logging And Verbosity Flags
+
+| Name | Type | Effective default | CLI flag | Description |
+|---|---|---:|---|---|
+| `verbose` | bool | `False` | `--verbose`, `-v` | Enable verbose output |
+| `debug` | bool | `False` | `--debug`, `-d`, `-vv` | Enable debug output |
+| `quiet` | bool | `False` | `--quiet`, `-q` | Quiet mode |
+| `silent` | bool | `False` | `--silent` | Silent mode |
+| `log_file` | str or null | `None` | `--log-file` | Write logs to a specific file |
+| `log_dir` | str or null | `None` | `--log-dir` | Write logs to an auto-named file in a directory |
 
 ## Config Keys Shown By `sage config`
 
