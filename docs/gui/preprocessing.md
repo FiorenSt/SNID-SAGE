@@ -1,7 +1,5 @@
 ## Preprocessing (GUI)
 
-Note: This page is a work in progress.
-
 How to prepare spectra before analysis.
 
 ### Step 0: Early spike masking (automatic)

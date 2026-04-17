@@ -1,7 +1,5 @@
 # API Reference
 
-Note: This page is a work in progress.
-
 Reference for the main programmatic entry points exposed by SNID SAGE. This page focuses on the stable, commonly used interfaces rather than every internal helper.
 
 ## Overview

@@ -103,6 +103,17 @@ Tips:
 - **Close dialog** to use automatic selection if unsure
 - **Multiple clusters** often indicate ambiguous cases (e.g., II vs TDE)
 
+### Step 6: Inspect `Spectral Lines` (Optional)
+
+After analysis completes, the **Spectral Lines** button becomes available in the main window.
+
+This opens a two-step line-analysis dialog:
+
+1. **Line Identification**: select the supernova or galaxy lines you want to inspect on the spectrum
+2. **Line Analysis**: focus on one selected line at a time and measure it interactively
+
+In step 2, the current workflow is manual and user-driven: you place points around the feature, SNID SAGE estimates an FWHM-style width from those points, and then derives a velocity when a rest wavelength is available for that line.
+
 ## Understanding Your Results
 
 The analysis provides a clear classification:

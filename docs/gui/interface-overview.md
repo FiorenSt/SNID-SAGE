@@ -24,7 +24,15 @@ After loading: Preprocessing
 
 After preprocessing: SNID Analysis and Redshift (manual or range search)
 
-After analysis: Results dialogs, overlays, clustering, AI Assistant
+After analysis: Results dialogs, `Spectral Lines`, clustering, AI Assistant
+
+### `Spectral Lines`
+
+`Spectral Lines` is an optional post-analysis tool in the main GUI. It opens a two-step dialog:
+
+1. **Line Identification**: choose and place the supernova or galaxy lines you want to inspect
+2. **Line Analysis**: examine one selected line at a time with the focused peak-analysis view
+
 
 ## Control Panel (key items)
 
@@ -44,14 +52,14 @@ Most options are set here. For a compact list of parameters and defaults, see th
 | Zoom | Wheel or box | |
 | Reset | Double-click | Restores view |
 | Toggle view | Flux vs flattened | Also show/hide grid and legend |
-| Overlays | Template matches, masks, line IDs, optional errors | Configure in Controls/Dialogs |
+| Overlays | Template matches, masks, line IDs, optional errors | `Spectral Lines` is opened after analysis from the left-side workflow buttons |
 
 ## Results
 
 | Area | Contents | Actions |
 |---|---|---|
 | Status | Type, best template, confidence, redshift, age | Quick overview |
-| Dialogs | Cluster summary, subtype proportions, redshift–age | Open after analysis |
+| Dialogs | Cluster summary, subtype proportions, redshift–age, `Spectral Lines` | Open after analysis |
 | Export | Save figures and data from dialogs | PNG/SVG/PDF supported |
 
 ## AI Assistant

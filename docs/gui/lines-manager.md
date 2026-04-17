@@ -2,7 +2,18 @@
 
 Note: This page is a work in progress.
 
-Spin-off GUI to manage spectral lines and user presets, with a light spectrum preview.
+The standalone **SNID-SAGE Line Manager** is launched with `snid-sage-lines`.
+
+This utility is separate from the main GUI's **Spectral Lines** button:
+
+- **`Spectral Lines`** is the in-app, post-analysis line-identification and line-analysis workflow
+- **`snid-sage-lines`** is a separate utility for managing line definitions, presets, and preview overlays
+
+This standalone Line Manager is still evolving, so expect this page and the utility itself to change.
+
+### Purpose
+
+Use the Line Manager to maintain the line database and presets that can later appear in spectral-line overlays.
 
 ### Tabs
 

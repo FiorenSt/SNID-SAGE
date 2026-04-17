@@ -34,6 +34,7 @@
 
 ### User Interfaces
 - [GUI Overview](gui/interface-overview.md) – Main window, controls, workflow
+- [Lines Manager](gui/lines-manager.md) – Standalone line and preset editor (work in progress)
 - [CLI Reference](cli/command-reference.md) – All commands and options
 - [Batch Processing](cli/batch-processing.md) – Process many spectra at once
 

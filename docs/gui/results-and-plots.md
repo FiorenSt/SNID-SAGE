@@ -1,7 +1,5 @@
 ## Results and Plots
 
-Note: This page is a work in progress.
-
 ### After analysis
 
 | Area | Contents |
