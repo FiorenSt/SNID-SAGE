@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "created_date": 1761936657.5681412,
-  "template_count": 465,
+  "template_count": 414,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 2048,
@@ -123,13 +123,6 @@
       "epochs": 1,
       "storage_file": "templates_Galaxy_onir.hdf5"
     },
-    "PS15dbp": {
-      "type": "GAP",
-      "subtype": "LBV",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_GAP_onir.hdf5"
-    },
     "PSNJ15213475": {
       "type": "GAP",
       "subtype": "LBV",
@@ -151,13 +144,6 @@
       "epochs": 2,
       "storage_file": "templates_GAP_onir.hdf5"
     },
-    "lbv2001ac": {
-      "type": "GAP",
-      "subtype": "LBV",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_GAP_onir.hdf5"
-    },
     "lbv2003hy": {
       "type": "GAP",
       "subtype": "LBV",
@@ -170,13 +156,6 @@
       "subtype": "Ia-91bg",
       "redshift": 0.0,
       "epochs": 3,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
-    "ASASSN-15hy": {
-      "type": "Ia",
-      "subtype": "Ia-03fg",
-      "redshift": 0.0,
-      "epochs": 1,
       "storage_file": "templates_Ia_onir.hdf5"
     },
     "LSQ12fhs": {
@@ -203,20 +182,6 @@
     "OGLE2012sn04": {
       "type": "Ia",
       "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
-    "PSNJ15053007": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
-    "SNLS03D3bb": {
-      "type": "Ia",
-      "subtype": "Ia-03fg",
       "redshift": 0.0,
       "epochs": 1,
       "storage_file": "templates_Ia_onir.hdf5"
@@ -310,13 +275,6 @@
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 6,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
-    "sn1994ae": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 18,
       "storage_file": "templates_Ia_onir.hdf5"
     },
     "sn1995D": {
@@ -1194,13 +1152,6 @@
       "epochs": 6,
       "storage_file": "templates_Ia_onir.hdf5"
     },
-    "sn2022vqz": {
-      "type": "Ia",
-      "subtype": "Ia-02es",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ia_onir.hdf5"
-    },
     "LSQ15rw": {
       "type": "Ib",
       "subtype": "Ib-norm",
@@ -1229,13 +1180,6 @@
       "epochs": 12,
       "storage_file": "templates_Ib_onir.hdf5"
     },
-    "sn1988L": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
     "sn1990I": {
       "type": "Ib",
       "subtype": "Ib-norm",
@@ -1250,55 +1194,6 @@
       "epochs": 6,
       "storage_file": "templates_Ib_onir.hdf5"
     },
-    "sn1991ar": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
-    "sn1995F": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
-    "sn1997X": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
-    "sn1997dc": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
-    "sn1998T": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
-    "sn1998dt": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 9,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
-    "sn1999di": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
     "sn1999dn": {
       "type": "Ib",
       "subtype": "Ib-norm",
@@ -1311,34 +1206,6 @@
       "subtype": "Ib-norm",
       "redshift": 0.0,
       "epochs": 3,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
-    "sn2001ai": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
-    "sn2001ej": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
-    "sn2002ji": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
-    "sn2004ao": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 29,
       "storage_file": "templates_Ib_onir.hdf5"
     },
     "sn2004dk": {
@@ -1362,13 +1229,6 @@
       "epochs": 4,
       "storage_file": "templates_Ib_onir.hdf5"
     },
-    "sn2005ar": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
     "sn2005bf": {
       "type": "Ib",
       "subtype": "Ib-norm",
@@ -1388,34 +1248,6 @@
       "subtype": "Ib-norm",
       "redshift": 0.0,
       "epochs": 5,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
-    "sn2006fo": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
-    "sn2006lc": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
-    "sn2006ld": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ib_onir.hdf5"
-    },
-    "sn2006lv": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 6,
       "storage_file": "templates_Ib_onir.hdf5"
     },
     "sn2007C": {
@@ -1600,27 +1432,6 @@
       "epochs": 21,
       "storage_file": "templates_Ic_onir.hdf5"
     },
-    "sn1990aa": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
-    "sn1991A": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
-    "sn1991N": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
     "sn1992ar": {
       "type": "Ic",
       "subtype": "Ic-norm",
@@ -1635,25 +1446,11 @@
       "epochs": 38,
       "storage_file": "templates_Ic_onir.hdf5"
     },
-    "sn1997dq": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
     "sn1997ef": {
       "type": "Ic",
       "subtype": "Ic-broad",
       "redshift": 0.0,
       "epochs": 28,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
-    "sn1997ei": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 2,
       "storage_file": "templates_Ic_onir.hdf5"
     },
     "sn1998bw": {
@@ -1705,13 +1502,6 @@
       "epochs": 5,
       "storage_file": "templates_Ic_onir.hdf5"
     },
-    "sn2004eu": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
     "sn2004fe": {
       "type": "Ic",
       "subtype": "Ic-norm",
@@ -1724,13 +1514,6 @@
       "subtype": "Ic-norm",
       "redshift": 0.0,
       "epochs": 1,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
-    "sn2004gk": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 30,
       "storage_file": "templates_Ic_onir.hdf5"
     },
     "sn2004gt": {
@@ -1747,25 +1530,11 @@
       "epochs": 22,
       "storage_file": "templates_Ic_onir.hdf5"
     },
-    "sn2005da": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
     "sn2005ek": {
       "type": "Ic",
       "subtype": "Ic-05ek",
       "redshift": 0.0,
       "epochs": 6,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
-    "sn2005kf": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 5,
       "storage_file": "templates_Ic_onir.hdf5"
     },
     "sn2005kl": {
@@ -1796,39 +1565,11 @@
       "epochs": 26,
       "storage_file": "templates_Ic_onir.hdf5"
     },
-    "sn2006ck": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
-    "sn2007D": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
-    "sn2007I": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
     "sn2007bg": {
       "type": "Ic",
       "subtype": "Ic-broad",
       "redshift": 0.0,
       "epochs": 5,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
-    "sn2007ce": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 9,
       "storage_file": "templates_Ic_onir.hdf5"
     },
     "sn2007cl": {
@@ -1852,32 +1593,11 @@
       "epochs": 11,
       "storage_file": "templates_Ic_onir.hdf5"
     },
-    "sn2007rz": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
-    "sn2008an": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
     "sn2009bb": {
       "type": "Ic",
       "subtype": "Ic-broad",
       "redshift": 0.0,
       "epochs": 11,
-      "storage_file": "templates_Ic_onir.hdf5"
-    },
-    "sn2009nz": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 1,
       "storage_file": "templates_Ic_onir.hdf5"
     },
     "sn2010ay": {
@@ -2090,13 +1810,6 @@
       "epochs": 3,
       "storage_file": "templates_II_onir.hdf5"
     },
-    "SSS130221-13": {
-      "type": "II",
-      "subtype": "IIn",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_II_onir.hdf5"
-    },
     "sn1979C": {
       "type": "II",
       "subtype": "IIL",
@@ -2116,13 +1829,6 @@
       "subtype": "II-87A",
       "redshift": 0.0,
       "epochs": 241,
-      "storage_file": "templates_II_onir.hdf5"
-    },
-    "sn1990K": {
-      "type": "II",
-      "subtype": "IIL",
-      "redshift": 0.0,
-      "epochs": 14,
       "storage_file": "templates_II_onir.hdf5"
     },
     "sn1992H": {
@@ -2151,20 +1857,6 @@
       "subtype": "IIb",
       "redshift": 0.0,
       "epochs": 25,
-      "storage_file": "templates_II_onir.hdf5"
-    },
-    "sn1997cy": {
-      "type": "II",
-      "subtype": "IIn",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_II_onir.hdf5"
-    },
-    "sn1997dd": {
-      "type": "II",
-      "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 3,
       "storage_file": "templates_II_onir.hdf5"
     },
     "sn1998S": {
@@ -2202,30 +1894,9 @@
       "epochs": 12,
       "storage_file": "templates_II_onir.hdf5"
     },
-    "sn2001gd": {
-      "type": "II",
-      "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_II_onir.hdf5"
-    },
-    "sn2001ig": {
-      "type": "II",
-      "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_II_onir.hdf5"
-    },
     "sn2003bg": {
       "type": "II",
       "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 14,
-      "storage_file": "templates_II_onir.hdf5"
-    },
-    "sn2004dj": {
-      "type": "II",
-      "subtype": "IIP",
       "redshift": 0.0,
       "epochs": 14,
       "storage_file": "templates_II_onir.hdf5"
@@ -2242,13 +1913,6 @@
       "subtype": "IIb",
       "redshift": 0.0,
       "epochs": 1,
-      "storage_file": "templates_II_onir.hdf5"
-    },
-    "sn2005U": {
-      "type": "II",
-      "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 4,
       "storage_file": "templates_II_onir.hdf5"
     },
     "sn2005cs": {
@@ -2279,13 +1943,6 @@
       "epochs": 7,
       "storage_file": "templates_II_onir.hdf5"
     },
-    "sn2008aq": {
-      "type": "II",
-      "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_II_onir.hdf5"
-    },
     "sn2008ax": {
       "type": "II",
       "subtype": "IIb",
@@ -2298,13 +1955,6 @@
       "subtype": "IIb",
       "redshift": 0.0,
       "epochs": 12,
-      "storage_file": "templates_II_onir.hdf5"
-    },
-    "sn2008cw": {
-      "type": "II",
-      "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 5,
       "storage_file": "templates_II_onir.hdf5"
     },
     "sn2009ip": {
@@ -2466,13 +2116,6 @@
       "subtype": "IIP",
       "redshift": 0.0,
       "epochs": 3,
-      "storage_file": "templates_II_onir.hdf5"
-    },
-    "sn2015ch": {
-      "type": "II",
-      "subtype": "IIP",
-      "redshift": 0.0,
-      "epochs": 7,
       "storage_file": "templates_II_onir.hdf5"
     },
     "sn2016adj": {
@@ -3297,29 +2940,24 @@
       ]
     },
     "GAP": {
-      "count": 6,
+      "count": 4,
       "storage_file": "templates_GAP_onir.hdf5",
       "template_names": [
-        "PS15dbp",
         "PSNJ15213475",
         "at2014ej",
         "lbv1999bw",
-        "lbv2001ac",
         "lbv2003hy"
       ]
     },
     "Ia": {
-      "count": 149,
+      "count": 144,
       "storage_file": "templates_Ia_onir.hdf5",
       "template_names": [
         "ASASSN-15ga",
-        "ASASSN-15hy",
         "LSQ12fhs",
         "LSQ12gdj",
         "LSQ15adm",
         "OGLE2012sn04",
-        "PSNJ15053007",
-        "SNLS03D3bb",
         "iPTF14atg",
         "sn1981B",
         "sn1986G",
@@ -3333,7 +2971,6 @@
         "sn1994D",
         "sn1994M",
         "sn1994Q",
-        "sn1994ae",
         "sn1995D",
         "sn1995E",
         "sn1995ac",
@@ -3459,45 +3096,27 @@
         "sn2019akg",
         "sn2019bka",
         "sn2019so",
-        "sn2022vqz",
         "sn2012ca"
       ]
     },
     "Ib": {
-      "count": 50,
+      "count": 33,
       "storage_file": "templates_Ib_onir.hdf5",
       "template_names": [
         "LSQ15rw",
         "iPTF13bvn",
         "sn1983N",
         "sn1984L",
-        "sn1988L",
         "sn1990I",
         "sn1990U",
-        "sn1991ar",
-        "sn1995F",
-        "sn1997X",
-        "sn1997dc",
-        "sn1998T",
-        "sn1998dt",
-        "sn1999di",
         "sn1999dn",
         "sn1999ex",
-        "sn2001ai",
-        "sn2001ej",
-        "sn2002ji",
-        "sn2004ao",
         "sn2004dk",
         "sn2004gq",
         "sn2004gv",
-        "sn2005ar",
         "sn2005bf",
         "sn2005hg",
         "sn2006ep",
-        "sn2006fo",
-        "sn2006lc",
-        "sn2006ld",
-        "sn2006lv",
         "sn2007C",
         "sn2007Y",
         "sn2007ag",
@@ -3534,7 +3153,7 @@
       ]
     },
     "Ic": {
-      "count": 68,
+      "count": 52,
       "storage_file": "templates_Ic_onir.hdf5",
       "template_names": [
         "LSQ12dwl",
@@ -3544,14 +3163,9 @@
         "PTF12gzk",
         "sn1983V",
         "sn1990B",
-        "sn1990aa",
-        "sn1991A",
-        "sn1991N",
         "sn1992ar",
         "sn1994I",
-        "sn1997dq",
         "sn1997ef",
-        "sn1997ei",
         "sn1998bw",
         "sn2002ap",
         "sn2003dh",
@@ -3559,31 +3173,20 @@
         "sn2003lw",
         "sn2004aw",
         "sn2004dn",
-        "sn2004eu",
         "sn2004fe",
         "sn2004ge",
-        "sn2004gk",
         "sn2004gt",
         "sn2005az",
-        "sn2005da",
         "sn2005ek",
-        "sn2005kf",
         "sn2005kl",
         "sn2005mf",
         "sn2005nb",
         "sn2006aj",
-        "sn2006ck",
-        "sn2007D",
-        "sn2007I",
         "sn2007bg",
-        "sn2007ce",
         "sn2007cl",
         "sn2007gr",
         "sn2007ru",
-        "sn2007rz",
-        "sn2008an",
         "sn2009bb",
-        "sn2009nz",
         "sn2010ay",
         "sn2010bh",
         "sn2010ma",
@@ -3615,7 +3218,7 @@
       ]
     },
     "II": {
-      "count": 103,
+      "count": 92,
       "storage_file": "templates_II_onir.hdf5",
       "template_names": [
         "ASASSN-14ha",
@@ -3626,37 +3229,27 @@
         "OGLE2013sn01",
         "PS15cww",
         "PS15yr",
-        "SSS130221-13",
         "sn1979C",
         "sn1980K",
         "sn1987A",
-        "sn1990K",
         "sn1992H",
         "sn1993J",
         "sn1996L",
         "sn1996cb",
-        "sn1997cy",
-        "sn1997dd",
         "sn1998S",
         "sn1998fa",
         "sn1999em",
         "sn1999gi",
         "sn2000H",
-        "sn2001gd",
-        "sn2001ig",
         "sn2003bg",
-        "sn2004dj",
         "sn2004et",
         "sn2004ff",
-        "sn2005U",
         "sn2005cs",
         "sn2006T",
         "sn2006bp",
         "sn2006el",
-        "sn2008aq",
         "sn2008ax",
         "sn2008bo",
-        "sn2008cw",
         "sn2009ip",
         "sn2009mg",
         "sn2011dh",
@@ -3679,7 +3272,6 @@
         "sn2015ay",
         "sn2015bm",
         "sn2015bs",
-        "sn2015ch",
         "sn2016adj",
         "sn2016aiy",
         "sn2016aqf",

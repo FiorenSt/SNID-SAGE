@@ -1,7 +1,7 @@
 {
   "version": "2.0",
-  "created_date": 1773876409.0472062,
-  "template_count": 698,
+  "created_date": 1778194998.5529256,
+  "template_count": 720,
   "grid_rebinned": true,
   "grid_params": {
     "NW": 1024,
@@ -12,80 +12,122 @@
   "templates": {
     "ASASSN-14ko": {
       "type": "AGN",
-      "subtype": "Seyfert 1.5",
+      "subtype": "AGN-Type1.5",
       "redshift": 0.042489,
       "epochs": 5,
       "storage_file": "templates_AGN.hdf5"
     },
     "IRAS19254-7245_South": {
       "type": "AGN",
-      "subtype": "AGN-Sey2",
+      "subtype": "AGN-Type2",
       "redshift": 0.0,
       "epochs": 1,
       "storage_file": "templates_AGN.hdf5"
     },
     "Mrk231": {
       "type": "AGN",
-      "subtype": "QSO-BAL",
+      "subtype": "AGN-Type1-BAL",
       "redshift": 0.0,
       "epochs": 1,
       "storage_file": "templates_AGN.hdf5"
     },
     "QSO1": {
       "type": "AGN",
-      "subtype": "QSO",
+      "subtype": "AGN-Type1",
       "redshift": 0.0,
       "epochs": 1,
       "storage_file": "templates_AGN.hdf5"
     },
     "QSO2": {
       "type": "AGN",
-      "subtype": "QSO2",
+      "subtype": "AGN-Type2",
       "redshift": 0.0,
       "epochs": 1,
       "storage_file": "templates_AGN.hdf5"
     },
     "Sey2": {
       "type": "AGN",
-      "subtype": "AGN-Sey2",
+      "subtype": "AGN-Type2",
       "redshift": 0.0,
       "epochs": 1,
       "storage_file": "templates_AGN.hdf5"
     },
     "TQSO1": {
       "type": "AGN",
-      "subtype": "QSO",
+      "subtype": "AGN-Type1",
       "redshift": 0.0,
       "epochs": 1,
       "storage_file": "templates_AGN.hdf5"
     },
     "Torus": {
       "type": "AGN",
-      "subtype": "QSO2",
+      "subtype": "AGN-Type2",
       "redshift": 0.0,
       "epochs": 1,
       "storage_file": "templates_AGN.hdf5"
     },
     "agn": {
       "type": "AGN",
-      "subtype": "AGN-type1",
+      "subtype": "AGN-Type1",
       "redshift": 0.0,
       "epochs": 1,
       "storage_file": "templates_AGN.hdf5"
     },
     "qso": {
       "type": "AGN",
-      "subtype": "QSO",
+      "subtype": "AGN-Type1",
       "redshift": 0.0,
       "epochs": 1,
       "storage_file": "templates_AGN.hdf5"
     },
     "qso2": {
       "type": "AGN",
-      "subtype": "QSO",
+      "subtype": "AGN-Type1",
       "redshift": 0.0,
       "epochs": 1,
       "storage_file": "templates_AGN.hdf5"
+    },
+    "2019fez": {
+      "type": "CV",
+      "subtype": "Nova",
+      "redshift": 0.0,
+      "epochs": 3,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "2021yul": {
+      "type": "CV",
+      "subtype": "Nova",
+      "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "2022acwk": {
+      "type": "CV",
+      "subtype": "Nova",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "2022nci": {
+      "type": "CV",
+      "subtype": "Nova",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "2022ncm": {
+      "type": "CV",
+      "subtype": "DN",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_CV.hdf5"
+    },
+    "2022oyb": {
+      "type": "CV",
+      "subtype": "Nova",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_CV.hdf5"
     },
     "AM_CVn": {
       "type": "CV",
@@ -423,13 +465,6 @@
       "epochs": 10,
       "storage_file": "templates_GAP.hdf5"
     },
-    "PS15dbp": {
-      "type": "GAP",
-      "subtype": "LBV",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_GAP.hdf5"
-    },
     "PSNJ15213475": {
       "type": "GAP",
       "subtype": "LBV",
@@ -445,13 +480,6 @@
       "storage_file": "templates_GAP.hdf5"
     },
     "lbv1999bw": {
-      "type": "GAP",
-      "subtype": "LBV",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_GAP.hdf5"
-    },
-    "lbv2001ac": {
       "type": "GAP",
       "subtype": "LBV",
       "redshift": 0.0,
@@ -500,6 +528,20 @@
       "epochs": 3,
       "storage_file": "templates_Ia.hdf5"
     },
+    "2021hem": {
+      "type": "Ia",
+      "subtype": "Ia-03fg",
+      "redshift": 0.0367,
+      "epochs": 6,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "2022xkq": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.007712,
+      "epochs": 37,
+      "storage_file": "templates_Ia.hdf5"
+    },
     "ASASSN-15ga": {
       "type": "Ia",
       "subtype": "Ia-91bg",
@@ -510,8 +552,8 @@
     "ASASSN-15hy": {
       "type": "Ia",
       "subtype": "Ia-03fg",
-      "redshift": 0.0,
-      "epochs": 1,
+      "redshift": 0.0256,
+      "epochs": 24,
       "storage_file": "templates_Ia.hdf5"
     },
     "LSQ12fhs": {
@@ -540,13 +582,6 @@
       "subtype": "Ia-91bg",
       "redshift": 0.0,
       "epochs": 1,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "PSNJ15053007": {
-      "type": "Ia",
-      "subtype": "Ia-91bg",
-      "redshift": 0.0,
-      "epochs": 4,
       "storage_file": "templates_Ia.hdf5"
     },
     "PTF09dav": {
@@ -603,13 +638,6 @@
       "subtype": "Ia-csm",
       "redshift": 0.056,
       "epochs": 10,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "SNLS03D3bb": {
-      "type": "Ia",
-      "subtype": "Ia-03fg",
-      "redshift": 0.0,
-      "epochs": 1,
       "storage_file": "templates_Ia.hdf5"
     },
     "iPTF14atg": {
@@ -729,13 +757,6 @@
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 5,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1994ae": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 18,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn1995D": {
@@ -904,13 +925,6 @@
       "subtype": "Ia-norm",
       "redshift": 0.0,
       "epochs": 34,
-      "storage_file": "templates_Ia.hdf5"
-    },
-    "sn1998co": {
-      "type": "Ia",
-      "subtype": "Ia-norm",
-      "redshift": 0.0,
-      "epochs": 7,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn1998de": {
@@ -2215,6 +2229,13 @@
       "epochs": 11,
       "storage_file": "templates_Ia.hdf5"
     },
+    "sn2012dn": {
+      "type": "Ia",
+      "subtype": "Ia-03fg",
+      "redshift": 0.010187,
+      "epochs": 20,
+      "storage_file": "templates_Ia.hdf5"
+    },
     "sn2013bh": {
       "type": "Ia",
       "subtype": "Ia-pec",
@@ -2255,6 +2276,13 @@
       "subtype": "Ia-91bg",
       "redshift": 0.0,
       "epochs": 4,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2015bq": {
+      "type": "Ia",
+      "subtype": "Ia-99aa",
+      "redshift": 0.028,
+      "epochs": 25,
       "storage_file": "templates_Ia.hdf5"
     },
     "sn2016ado": {
@@ -2348,6 +2376,13 @@
       "epochs": 2,
       "storage_file": "templates_Ia.hdf5"
     },
+    "sn2019muj": {
+      "type": "Ia",
+      "subtype": "Ia-02cx",
+      "redshift": 0.007035,
+      "epochs": 24,
+      "storage_file": "templates_Ia.hdf5"
+    },
     "sn2019so": {
       "type": "Ia",
       "subtype": "Ia-91bg",
@@ -2355,11 +2390,32 @@
       "epochs": 6,
       "storage_file": "templates_Ia.hdf5"
     },
+    "sn2020hvf": {
+      "type": "Ia",
+      "subtype": "Ia-03fg",
+      "redshift": 0.005838,
+      "epochs": 13,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2021qvv": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.001825,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
+    "sn2022ihz": {
+      "type": "Ia",
+      "subtype": "Ia-91bg",
+      "redshift": 0.006294,
+      "epochs": 8,
+      "storage_file": "templates_Ia.hdf5"
+    },
     "sn2022vqz": {
       "type": "Ia",
       "subtype": "Ia-02es",
-      "redshift": 0.0,
-      "epochs": 3,
+      "redshift": 0.016995,
+      "epochs": 16,
       "storage_file": "templates_Ia.hdf5"
     },
     "2005E": {
@@ -2376,11 +2432,25 @@
       "epochs": 5,
       "storage_file": "templates_Ib.hdf5"
     },
+    "2020zgl": {
+      "type": "Ib",
+      "subtype": "Ib-pec",
+      "redshift": 0.007715,
+      "epochs": 10,
+      "storage_file": "templates_Ib.hdf5"
+    },
     "LSQ15rw": {
       "type": "Ib",
       "subtype": "Ib-norm",
       "redshift": 0.0,
       "epochs": 3,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "MASTERJ120451": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.00189,
+      "epochs": 21,
       "storage_file": "templates_Ib.hdf5"
     },
     "PTF11kmb": {
@@ -2404,6 +2474,13 @@
       "epochs": 13,
       "storage_file": "templates_Ib.hdf5"
     },
+    "psnj2241-2147": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.01495,
+      "epochs": 3,
+      "storage_file": "templates_Ib.hdf5"
+    },
     "sn1983N": {
       "type": "Ib",
       "subtype": "Ib-norm",
@@ -2416,13 +2493,6 @@
       "subtype": "Ib-norm",
       "redshift": 0.0,
       "epochs": 12,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1988L": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 2,
       "storage_file": "templates_Ib.hdf5"
     },
     "sn1990I": {
@@ -2442,49 +2512,21 @@
     "sn1991ar": {
       "type": "Ib",
       "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1995F": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 10,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1997X": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 6,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1997dc": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn1998T": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 1,
+      "redshift": 0.015217,
+      "epochs": 2,
       "storage_file": "templates_Ib.hdf5"
     },
     "sn1998dt": {
       "type": "Ib",
       "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 9,
+      "redshift": 0.014957,
+      "epochs": 8,
       "storage_file": "templates_Ib.hdf5"
     },
     "sn1999di": {
       "type": "Ib",
       "subtype": "Ib-norm",
-      "redshift": 0.0,
+      "redshift": 0.016415,
       "epochs": 3,
       "storage_file": "templates_Ib.hdf5"
     },
@@ -2502,39 +2544,32 @@
       "epochs": 3,
       "storage_file": "templates_Ib.hdf5"
     },
-    "sn2001ai": {
+    "sn2001B": {
       "type": "Ib",
       "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2001ej": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 8,
+      "redshift": 0.0052,
+      "epochs": 10,
       "storage_file": "templates_Ib.hdf5"
     },
     "sn2002ji": {
       "type": "Ib",
       "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 12,
+      "redshift": 0.004913,
+      "epochs": 14,
       "storage_file": "templates_Ib.hdf5"
     },
     "sn2004ao": {
       "type": "Ib",
       "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 29,
+      "redshift": 0.005641,
+      "epochs": 44,
       "storage_file": "templates_Ib.hdf5"
     },
     "sn2004dk": {
       "type": "Ib",
       "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 3,
+      "redshift": 0.0052,
+      "epochs": 10,
       "storage_file": "templates_Ib.hdf5"
     },
     "sn2004gq": {
@@ -2551,11 +2586,18 @@
       "epochs": 4,
       "storage_file": "templates_Ib.hdf5"
     },
+    "sn2005O": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.01813,
+      "epochs": 3,
+      "storage_file": "templates_Ib.hdf5"
+    },
     "sn2005ar": {
       "type": "Ib",
       "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 2,
+      "redshift": 0.025298,
+      "epochs": 3,
       "storage_file": "templates_Ib.hdf5"
     },
     "sn2005bf": {
@@ -2579,32 +2621,11 @@
       "epochs": 5,
       "storage_file": "templates_Ib.hdf5"
     },
-    "sn2006fo": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2006lc": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_Ib.hdf5"
-    },
-    "sn2006ld": {
-      "type": "Ib",
-      "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ib.hdf5"
-    },
     "sn2006lv": {
       "type": "Ib",
       "subtype": "Ib-norm",
-      "redshift": 0.0,
-      "epochs": 6,
+      "redshift": 0.008309,
+      "epochs": 7,
       "storage_file": "templates_Ib.hdf5"
     },
     "sn2007C": {
@@ -2628,6 +2649,13 @@
       "epochs": 3,
       "storage_file": "templates_Ib.hdf5"
     },
+    "sn2007go": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.023503,
+      "epochs": 1,
+      "storage_file": "templates_Ib.hdf5"
+    },
     "sn2007kj": {
       "type": "Ib",
       "subtype": "Ib-norm",
@@ -2649,6 +2677,20 @@
       "epochs": 21,
       "storage_file": "templates_Ib.hdf5"
     },
+    "sn2008eb": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.007662,
+      "epochs": 2,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2008hn": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.011291,
+      "epochs": 1,
+      "storage_file": "templates_Ib.hdf5"
+    },
     "sn2009er": {
       "type": "Ib",
       "subtype": "Ib-pec",
@@ -2668,6 +2710,27 @@
       "subtype": "Ib-norm",
       "redshift": 0.0,
       "epochs": 48,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2012au": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.0045,
+      "epochs": 9,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2014C": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.002722,
+      "epochs": 26,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2014ei": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.01444,
+      "epochs": 6,
       "storage_file": "templates_Ib.hdf5"
     },
     "sn2016bau": {
@@ -2696,6 +2759,13 @@
       "subtype": "Ib-pec",
       "redshift": 0.014353,
       "epochs": 32,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2019yvr": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.005047,
+      "epochs": 4,
       "storage_file": "templates_Ib.hdf5"
     },
     "sn2020hvp": {
@@ -2731,6 +2801,13 @@
       "subtype": "Ib-pec",
       "redshift": 0.010637,
       "epochs": 5,
+      "storage_file": "templates_Ib.hdf5"
+    },
+    "sn2022zkg": {
+      "type": "Ib",
+      "subtype": "Ib-norm",
+      "redshift": 0.017102,
+      "epochs": 3,
       "storage_file": "templates_Ib.hdf5"
     },
     "sn2023ljf": {
@@ -2824,6 +2901,20 @@
       "epochs": 3,
       "storage_file": "templates_Ibn.hdf5"
     },
+    "sn2021wvg": {
+      "type": "Ibn",
+      "subtype": "Ibn",
+      "redshift": 0.0858,
+      "epochs": 2,
+      "storage_file": "templates_Ibn.hdf5"
+    },
+    "sn2022pda": {
+      "type": "Ibn",
+      "subtype": "Ibn",
+      "redshift": 0.061846,
+      "epochs": 5,
+      "storage_file": "templates_Ibn.hdf5"
+    },
     "2010X": {
       "type": "Ic",
       "subtype": "Ic-05ek",
@@ -2880,27 +2971,6 @@
       "epochs": 21,
       "storage_file": "templates_Ic.hdf5"
     },
-    "sn1990aa": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn1991A": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn1991N": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 8,
-      "storage_file": "templates_Ic.hdf5"
-    },
     "sn1992ar": {
       "type": "Ic",
       "subtype": "Ic-norm",
@@ -2915,13 +2985,6 @@
       "epochs": 38,
       "storage_file": "templates_Ic.hdf5"
     },
-    "sn1997dq": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 12,
-      "storage_file": "templates_Ic.hdf5"
-    },
     "sn1997ef": {
       "type": "Ic",
       "subtype": "Ic-broad",
@@ -2932,7 +2995,7 @@
     "sn1997ei": {
       "type": "Ic",
       "subtype": "Ic-norm",
-      "redshift": 0.0,
+      "redshift": 0.010687,
       "epochs": 2,
       "storage_file": "templates_Ic.hdf5"
     },
@@ -2941,6 +3004,20 @@
       "subtype": "Ic-broad",
       "redshift": 0.0,
       "epochs": 26,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2000cr": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.011,
+      "epochs": 6,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2002J": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.01249,
+      "epochs": 2,
       "storage_file": "templates_Ic.hdf5"
     },
     "sn2002ap": {
@@ -2988,8 +3065,8 @@
     "sn2004eu": {
       "type": "Ic",
       "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 6,
+      "redshift": 0.021658,
+      "epochs": 3,
       "storage_file": "templates_Ic.hdf5"
     },
     "sn2004fe": {
@@ -3009,8 +3086,8 @@
     "sn2004gk": {
       "type": "Ic",
       "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 30,
+      "redshift": 0.000407,
+      "epochs": 37,
       "storage_file": "templates_Ic.hdf5"
     },
     "sn2004gt": {
@@ -3027,13 +3104,6 @@
       "epochs": 22,
       "storage_file": "templates_Ic.hdf5"
     },
-    "sn2005da": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 3,
-      "storage_file": "templates_Ic.hdf5"
-    },
     "sn2005ek": {
       "type": "Ic",
       "subtype": "Ic-05ek",
@@ -3041,18 +3111,18 @@
       "epochs": 6,
       "storage_file": "templates_Ic.hdf5"
     },
-    "sn2005kf": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 5,
-      "storage_file": "templates_Ic.hdf5"
-    },
     "sn2005kl": {
       "type": "Ic",
       "subtype": "Ic-norm",
       "redshift": 0.0,
       "epochs": 4,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2005kz": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.02704,
+      "epochs": 1,
       "storage_file": "templates_Ic.hdf5"
     },
     "sn2005mf": {
@@ -3076,25 +3146,25 @@
       "epochs": 26,
       "storage_file": "templates_Ic.hdf5"
     },
-    "sn2006ck": {
+    "sn2006ei": {
       "type": "Ic",
       "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 8,
+      "redshift": 0.015441,
+      "epochs": 2,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2006lc": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0162,
+      "epochs": 5,
       "storage_file": "templates_Ic.hdf5"
     },
     "sn2007D": {
       "type": "Ic",
       "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2007I": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 4,
+      "redshift": 0.023146,
+      "epochs": 3,
       "storage_file": "templates_Ic.hdf5"
     },
     "sn2007bg": {
@@ -3102,13 +3172,6 @@
       "subtype": "Ic-broad",
       "redshift": 0.0,
       "epochs": 5,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2007ce": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 9,
       "storage_file": "templates_Ic.hdf5"
     },
     "sn2007cl": {
@@ -3121,8 +3184,15 @@
     "sn2007gr": {
       "type": "Ic",
       "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 17,
+      "redshift": 0.001728,
+      "epochs": 36,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2007iq": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.013349,
+      "epochs": 2,
       "storage_file": "templates_Ic.hdf5"
     },
     "sn2007ru": {
@@ -3132,17 +3202,10 @@
       "epochs": 11,
       "storage_file": "templates_Ic.hdf5"
     },
-    "sn2007rz": {
+    "sn2008gj": {
       "type": "Ic",
       "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2008an": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
-      "redshift": 0.0,
+      "redshift": 0.023763,
       "epochs": 2,
       "storage_file": "templates_Ic.hdf5"
     },
@@ -3151,13 +3214,6 @@
       "subtype": "Ic-broad",
       "redshift": 0.0,
       "epochs": 11,
-      "storage_file": "templates_Ic.hdf5"
-    },
-    "sn2009nz": {
-      "type": "Ic",
-      "subtype": "Ic-broad",
-      "redshift": 0.0,
-      "epochs": 1,
       "storage_file": "templates_Ic.hdf5"
     },
     "sn2010ay": {
@@ -3219,8 +3275,8 @@
     "sn2013dk": {
       "type": "Ic",
       "subtype": "Ic-norm",
-      "redshift": 0.0,
-      "epochs": 1,
+      "redshift": 0.005477,
+      "epochs": 3,
       "storage_file": "templates_Ic.hdf5"
     },
     "sn2013dx": {
@@ -3237,11 +3293,25 @@
       "epochs": 3,
       "storage_file": "templates_Ic.hdf5"
     },
+    "sn2014eh": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.010614,
+      "epochs": 7,
+      "storage_file": "templates_Ic.hdf5"
+    },
     "sn2014l": {
       "type": "Ic",
       "subtype": "Ic-norm",
       "redshift": 0.0,
       "epochs": 3,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2016coi": {
+      "type": "Ic",
+      "subtype": "Ic-broad",
+      "redshift": 0.0036,
+      "epochs": 54,
       "storage_file": "templates_Ic.hdf5"
     },
     "sn2016dsg": {
@@ -3307,6 +3377,27 @@
       "epochs": 2,
       "storage_file": "templates_Ic.hdf5"
     },
+    "sn2020adow": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.007439,
+      "epochs": 11,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2022oqm": {
+      "type": "Ic",
+      "subtype": "Ic-Ca-rich",
+      "redshift": 0.011695,
+      "epochs": 13,
+      "storage_file": "templates_Ic.hdf5"
+    },
+    "sn2023bee": {
+      "type": "Ic",
+      "subtype": "Ic-norm",
+      "redshift": 0.0067,
+      "epochs": 20,
+      "storage_file": "templates_Ic.hdf5"
+    },
     "2019hgp": {
       "type": "Icn",
       "subtype": "Icn",
@@ -3339,6 +3430,13 @@
       "type": "Icn",
       "subtype": "Icn",
       "redshift": 0.0,
+      "epochs": 2,
+      "storage_file": "templates_Icn.hdf5"
+    },
+    "sn2026ezk": {
+      "type": "Icn",
+      "subtype": "Icn",
+      "redshift": 0.058,
       "epochs": 2,
       "storage_file": "templates_Icn.hdf5"
     },
@@ -3405,13 +3503,6 @@
       "epochs": 3,
       "storage_file": "templates_II.hdf5"
     },
-    "SSS130221-13": {
-      "type": "II",
-      "subtype": "IIn",
-      "redshift": 0.0,
-      "epochs": 4,
-      "storage_file": "templates_II.hdf5"
-    },
     "sn1979C": {
       "type": "II",
       "subtype": "IIL",
@@ -3431,13 +3522,6 @@
       "subtype": "II-87A",
       "redshift": 0.0,
       "epochs": 241,
-      "storage_file": "templates_II.hdf5"
-    },
-    "sn1990K": {
-      "type": "II",
-      "subtype": "IIL",
-      "redshift": 0.0,
-      "epochs": 14,
       "storage_file": "templates_II.hdf5"
     },
     "sn1992H": {
@@ -3466,20 +3550,6 @@
       "subtype": "IIb",
       "redshift": 0.0,
       "epochs": 25,
-      "storage_file": "templates_II.hdf5"
-    },
-    "sn1997cy": {
-      "type": "II",
-      "subtype": "IIn",
-      "redshift": 0.0,
-      "epochs": 11,
-      "storage_file": "templates_II.hdf5"
-    },
-    "sn1997dd": {
-      "type": "II",
-      "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 3,
       "storage_file": "templates_II.hdf5"
     },
     "sn1998S": {
@@ -3524,18 +3594,11 @@
       "epochs": 12,
       "storage_file": "templates_II.hdf5"
     },
-    "sn2001gd": {
+    "sn2002eg": {
       "type": "II",
       "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 2,
-      "storage_file": "templates_II.hdf5"
-    },
-    "sn2001ig": {
-      "type": "II",
-      "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 10,
+      "redshift": 0.026787,
+      "epochs": 3,
       "storage_file": "templates_II.hdf5"
     },
     "sn2003bg": {
@@ -3545,11 +3608,11 @@
       "epochs": 14,
       "storage_file": "templates_II.hdf5"
     },
-    "sn2004dj": {
+    "sn2003gu": {
       "type": "II",
-      "subtype": "IIP",
-      "redshift": 0.0,
-      "epochs": 14,
+      "subtype": "IIb",
+      "redshift": 0.019313,
+      "epochs": 4,
       "storage_file": "templates_II.hdf5"
     },
     "sn2004et": {
@@ -3562,15 +3625,8 @@
     "sn2004ff": {
       "type": "II",
       "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 1,
-      "storage_file": "templates_II.hdf5"
-    },
-    "sn2005U": {
-      "type": "II",
-      "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 4,
+      "redshift": 0.022649,
+      "epochs": 5,
       "storage_file": "templates_II.hdf5"
     },
     "sn2005cs": {
@@ -3604,8 +3660,8 @@
     "sn2008aq": {
       "type": "II",
       "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 8,
+      "redshift": 0.007972,
+      "epochs": 17,
       "storage_file": "templates_II.hdf5"
     },
     "sn2008ax": {
@@ -3620,13 +3676,6 @@
       "subtype": "IIb",
       "redshift": 0.0,
       "epochs": 12,
-      "storage_file": "templates_II.hdf5"
-    },
-    "sn2008cw": {
-      "type": "II",
-      "subtype": "IIb",
-      "redshift": 0.0,
-      "epochs": 5,
       "storage_file": "templates_II.hdf5"
     },
     "sn2009ip": {
@@ -3713,6 +3762,13 @@
       "epochs": 4,
       "storage_file": "templates_II.hdf5"
     },
+    "sn2013df": {
+      "type": "II",
+      "subtype": "IIb",
+      "redshift": 0.002395,
+      "epochs": 24,
+      "storage_file": "templates_II.hdf5"
+    },
     "sn2013fc": {
       "type": "II",
       "subtype": "IIn-pec",
@@ -3769,6 +3825,13 @@
       "epochs": 5,
       "storage_file": "templates_II.hdf5"
     },
+    "sn2015Y": {
+      "type": "II",
+      "subtype": "IIb",
+      "redshift": 0.008172,
+      "epochs": 4,
+      "storage_file": "templates_II.hdf5"
+    },
     "sn2015ay": {
       "type": "II",
       "subtype": "IIP",
@@ -3788,13 +3851,6 @@
       "subtype": "IIP",
       "redshift": 0.0,
       "epochs": 3,
-      "storage_file": "templates_II.hdf5"
-    },
-    "sn2015ch": {
-      "type": "II",
-      "subtype": "IIP",
-      "redshift": 0.0,
-      "epochs": 7,
       "storage_file": "templates_II.hdf5"
     },
     "sn2016adj": {
@@ -4077,11 +4133,60 @@
       "epochs": 2,
       "storage_file": "templates_II.hdf5"
     },
+    "sn2019qt": {
+      "type": "II",
+      "subtype": "IIn",
+      "redshift": 0.0351,
+      "epochs": 1,
+      "storage_file": "templates_II.hdf5"
+    },
+    "sn2020acat": {
+      "type": "II",
+      "subtype": "IIb",
+      "redshift": 0.0079,
+      "epochs": 21,
+      "storage_file": "templates_II.hdf5"
+    },
     "sn2020pniEarly": {
       "type": "II",
       "subtype": "II-flash",
       "redshift": 0.0,
       "epochs": 4,
+      "storage_file": "templates_II.hdf5"
+    },
+    "sn2021kwc": {
+      "type": "II",
+      "subtype": "IIn",
+      "redshift": 0.0222,
+      "epochs": 7,
+      "storage_file": "templates_II.hdf5"
+    },
+    "sn2022hsu": {
+      "type": "II",
+      "subtype": "IIn",
+      "redshift": 0.0192,
+      "epochs": 9,
+      "storage_file": "templates_II.hdf5"
+    },
+    "sn2022pgf": {
+      "type": "II",
+      "subtype": "II-flash",
+      "redshift": 0.00733,
+      "epochs": 5,
+      "storage_file": "templates_II.hdf5"
+    },
+    "sn2022pjs": {
+      "type": "II",
+      "subtype": "II-flash",
+      "redshift": 0.02786,
+      "epochs": 1,
+      "storage_file": "templates_II.hdf5"
+    },
+    "sn2023aew": {
+      "type": "II",
+      "subtype": "IIb",
+      "redshift": 0.025,
+      "epochs": 26,
       "storage_file": "templates_II.hdf5"
     },
     "sn2023ixfEarly": {
@@ -4553,6 +4658,20 @@
       "epochs": 1,
       "storage_file": "templates_SLSN.hdf5"
     },
+    "sn2019xfs": {
+      "type": "SLSN",
+      "subtype": "SLSN-II",
+      "redshift": 0.116,
+      "epochs": 5,
+      "storage_file": "templates_SLSN.hdf5"
+    },
+    "2019wrm": {
+      "type": "Star",
+      "subtype": "Mdwarf",
+      "redshift": 0.0,
+      "epochs": 1,
+      "storage_file": "templates_Star.hdf5"
+    },
     "AT2018apl": {
       "type": "Star",
       "subtype": "Varstar",
@@ -4840,6 +4959,41 @@
       "epochs": 2,
       "storage_file": "templates_TDE.hdf5"
     },
+    "TDE2018zr": {
+      "type": "TDE",
+      "subtype": "TDE-H",
+      "redshift": 0.071,
+      "epochs": 10,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "TDE2022adm": {
+      "type": "TDE",
+      "subtype": "TDE-H",
+      "redshift": 0.061,
+      "epochs": 5,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "TDE2022bdw": {
+      "type": "TDE",
+      "subtype": "TDE-H",
+      "redshift": 0.03782,
+      "epochs": 6,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "TDE2022dbl": {
+      "type": "TDE",
+      "subtype": "TDE-H-He",
+      "redshift": 0.0284,
+      "epochs": 2,
+      "storage_file": "templates_TDE.hdf5"
+    },
+    "TDE2022hvp": {
+      "type": "TDE",
+      "subtype": "TDE-He",
+      "redshift": 0.12,
+      "epochs": 4,
+      "storage_file": "templates_TDE.hdf5"
+    },
     "at2018dyb": {
       "type": "TDE",
       "subtype": "TDE-H-He",
@@ -4899,7 +5053,7 @@
   },
   "by_type": {
     "Ia": {
-      "count": 271,
+      "count": 275,
       "storage_file": "templates_Ia.hdf5",
       "template_names": [
         "1999aa",
@@ -4907,13 +5061,14 @@
         "2010ae",
         "2012Z",
         "2020qxz",
+        "2021hem",
+        "2022xkq",
         "ASASSN-15ga",
         "ASASSN-15hy",
         "LSQ12fhs",
         "LSQ12gdj",
         "LSQ15adm",
         "OGLE2012sn04",
-        "PSNJ15053007",
         "PTF09dav",
         "PTF10ops",
         "PTF11kx",
@@ -4922,7 +5077,6 @@
         "SN2009dc",
         "SN2012dn",
         "SN2013dn",
-        "SNLS03D3bb",
         "iPTF14atg",
         "iPTF14bdn",
         "sn1981B",
@@ -4940,7 +5094,6 @@
         "sn1994Q",
         "sn1994S",
         "sn1994T",
-        "sn1994ae",
         "sn1995D",
         "sn1995E",
         "sn1995ac",
@@ -4965,7 +5118,6 @@
         "sn1998aq",
         "sn1998bp",
         "sn1998bu",
-        "sn1998co",
         "sn1998de",
         "sn1998dh",
         "sn1998dk",
@@ -5152,12 +5304,14 @@
         "sn2008ds",
         "sn2008ec",
         "sn2012ca",
+        "sn2012dn",
         "sn2013bh",
         "sn2013gr",
         "sn2013u",
         "sn2014eg",
         "sn2015H",
         "sn2015bo",
+        "sn2015bq",
         "sn2016ado",
         "sn2016hnk",
         "sn2016ije",
@@ -5171,12 +5325,16 @@
         "sn2018hjw",
         "sn2019akg",
         "sn2019bka",
+        "sn2019muj",
         "sn2019so",
+        "sn2020hvf",
+        "sn2021qvv",
+        "sn2022ihz",
         "sn2022vqz"
       ]
     },
     "II": {
-      "count": 108,
+      "count": 109,
       "storage_file": "templates_II.hdf5",
       "template_names": [
         "2004ex",
@@ -5188,30 +5346,24 @@
         "OGLE2013sn01",
         "PS15cww",
         "PS15yr",
-        "SSS130221-13",
         "sn1979C",
         "sn1980K",
         "sn1987A",
-        "sn1990K",
         "sn1992H",
         "sn1993J",
         "sn1996L",
         "sn1996cb",
-        "sn1997cy",
-        "sn1997dd",
         "sn1998S",
         "sn1998SEarly",
         "sn1998fa",
         "sn1999em",
         "sn1999gi",
         "sn2000H",
-        "sn2001gd",
-        "sn2001ig",
+        "sn2002eg",
         "sn2003bg",
-        "sn2004dj",
+        "sn2003gu",
         "sn2004et",
         "sn2004ff",
-        "sn2005U",
         "sn2005cs",
         "sn2006T",
         "sn2006bp",
@@ -5219,7 +5371,6 @@
         "sn2008aq",
         "sn2008ax",
         "sn2008bo",
-        "sn2008cw",
         "sn2009ip",
         "sn2009mg",
         "sn2011dh",
@@ -5232,6 +5383,7 @@
         "sn2013ak",
         "sn2013am",
         "sn2013bb",
+        "sn2013df",
         "sn2013fc",
         "sn2013fq",
         "sn2013fs",
@@ -5240,10 +5392,10 @@
         "sn2014cx",
         "sn2014dq",
         "sn2014es",
+        "sn2015Y",
         "sn2015ay",
         "sn2015bm",
         "sn2015bs",
-        "sn2015ch",
         "sn2016adj",
         "sn2016aiy",
         "sn2016aqf",
@@ -5284,73 +5436,83 @@
         "sn2018ldu",
         "sn2019asz",
         "sn2019bao",
+        "sn2019qt",
+        "sn2020acat",
         "sn2020pniEarly",
+        "sn2021kwc",
+        "sn2022hsu",
+        "sn2022pgf",
+        "sn2022pjs",
+        "sn2023aew",
         "sn2023ixfEarly",
         "sn2024ggiEarly"
       ]
     },
     "Ib": {
-      "count": 54,
+      "count": 57,
       "storage_file": "templates_Ib.hdf5",
       "template_names": [
         "2005E",
         "2016hgs",
+        "2020zgl",
         "LSQ15rw",
+        "MASTERJ120451",
         "PTF11kmb",
         "PTF12bho",
         "iPTF13bvn",
+        "psnj2241-2147",
         "sn1983N",
         "sn1984L",
-        "sn1988L",
         "sn1990I",
         "sn1990U",
         "sn1991ar",
-        "sn1995F",
-        "sn1997X",
-        "sn1997dc",
-        "sn1998T",
         "sn1998dt",
         "sn1999di",
         "sn1999dn",
         "sn1999ex",
-        "sn2001ai",
-        "sn2001ej",
+        "sn2001B",
         "sn2002ji",
         "sn2004ao",
         "sn2004dk",
         "sn2004gq",
         "sn2004gv",
+        "sn2005O",
         "sn2005ar",
         "sn2005bf",
         "sn2005hg",
         "sn2006ep",
-        "sn2006fo",
-        "sn2006lc",
-        "sn2006ld",
         "sn2006lv",
         "sn2007C",
         "sn2007Y",
         "sn2007ag",
+        "sn2007go",
         "sn2007kj",
         "sn2007uy",
         "sn2008D",
+        "sn2008eb",
+        "sn2008hn",
         "sn2009er",
         "sn2009iz",
         "sn2009jf",
+        "sn2012au",
+        "sn2014C",
+        "sn2014ei",
         "sn2016bau",
         "sn2016frp",
         "sn2018beh",
         "sn2019odp",
+        "sn2019yvr",
         "sn2020hvp",
         "sn2021hen",
         "sn2021njk",
         "sn2021ukt",
         "sn2022nyo",
+        "sn2022zkg",
         "sn2023ljf"
       ]
     },
     "GAP": {
-      "count": 14,
+      "count": 12,
       "storage_file": "templates_GAP.hdf5",
       "template_names": [
         "2008S",
@@ -5361,16 +5523,14 @@
         "AT2012jc",
         "AT2013la",
         "AT2015dl",
-        "PS15dbp",
         "PSNJ15213475",
         "at2014ej",
         "lbv1999bw",
-        "lbv2001ac",
         "lbv2003hy"
       ]
     },
     "SLSN": {
-      "count": 61,
+      "count": 62,
       "storage_file": "templates_SLSN.hdf5",
       "template_names": [
         "2009cb",
@@ -5433,7 +5593,8 @@
         "sn2018gft",
         "sn2018hti",
         "sn2018ibb",
-        "sn2019cca"
+        "sn2019cca",
+        "sn2019xfs"
       ]
     },
     "Ic": {
@@ -5448,15 +5609,13 @@
         "PTF12gzk",
         "sn1983V",
         "sn1990B",
-        "sn1990aa",
-        "sn1991A",
-        "sn1991N",
         "sn1992ar",
         "sn1994I",
-        "sn1997dq",
         "sn1997ef",
         "sn1997ei",
         "sn1998bw",
+        "sn2000cr",
+        "sn2002J",
         "sn2002ap",
         "sn2003dh",
         "sn2003jd",
@@ -5469,25 +5628,22 @@
         "sn2004gk",
         "sn2004gt",
         "sn2005az",
-        "sn2005da",
         "sn2005ek",
-        "sn2005kf",
         "sn2005kl",
+        "sn2005kz",
         "sn2005mf",
         "sn2005nb",
         "sn2006aj",
-        "sn2006ck",
+        "sn2006ei",
+        "sn2006lc",
         "sn2007D",
-        "sn2007I",
         "sn2007bg",
-        "sn2007ce",
         "sn2007cl",
         "sn2007gr",
+        "sn2007iq",
         "sn2007ru",
-        "sn2007rz",
-        "sn2008an",
+        "sn2008gj",
         "sn2009bb",
-        "sn2009nz",
         "sn2010ay",
         "sn2010bh",
         "sn2010ma",
@@ -5499,7 +5655,9 @@
         "sn2013dk",
         "sn2013dx",
         "sn2014ad",
+        "sn2014eh",
         "sn2014l",
+        "sn2016coi",
         "sn2016dsg",
         "sn2016iae",
         "sn2017dcc",
@@ -5508,11 +5666,14 @@
         "sn2018fwm",
         "sn2018gsk",
         "sn2019ape",
-        "sn2019bkc"
+        "sn2019bkc",
+        "sn2020adow",
+        "sn2022oqm",
+        "sn2023bee"
       ]
     },
     "Ibn": {
-      "count": 12,
+      "count": 14,
       "storage_file": "templates_Ibn.hdf5",
       "template_names": [
         "2010al",
@@ -5526,50 +5687,21 @@
         "sn2005la",
         "sn2006jc",
         "sn2018gjx",
-        "sn2018jmt"
-      ]
-    },
-    "Icn": {
-      "count": 5,
-      "storage_file": "templates_Icn.hdf5",
-      "template_names": [
-        "2019hgp",
-        "2019jc",
-        "SN2022ann",
-        "SN2024abvb",
-        "sn2021csp"
-      ]
-    },
-    "TDE": {
-      "count": 20,
-      "storage_file": "templates_TDE.hdf5",
-      "template_names": [
-        "2019qiz",
-        "2025hee",
-        "2025lxx",
-        "ASASSN-14ae",
-        "ASASSN-14li",
-        "ASASSN-15oi",
-        "LSQ12dyw",
-        "OGLE16aaa",
-        "PS1-10jh",
-        "PTF09axc",
-        "PTF09djl",
-        "PTF09ge",
-        "at2018dyb",
-        "at2018fyk",
-        "at2018hyz",
-        "at2018lna",
-        "at2019ahk",
-        "at2019azh",
-        "iPTF16fnl",
-        "sn2015L"
+        "sn2018jmt",
+        "sn2021wvg",
+        "sn2022pda"
       ]
     },
     "CV": {
-      "count": 13,
+      "count": 19,
       "storage_file": "templates_CV.hdf5",
       "template_names": [
+        "2019fez",
+        "2021yul",
+        "2022acwk",
+        "2022nci",
+        "2022ncm",
+        "2022oyb",
         "AM_CVn",
         "GKPer",
         "IP1",
@@ -5585,27 +5717,54 @@
         "her2021"
       ]
     },
-    "AGN": {
-      "count": 11,
-      "storage_file": "templates_AGN.hdf5",
+    "Icn": {
+      "count": 6,
+      "storage_file": "templates_Icn.hdf5",
       "template_names": [
-        "ASASSN-14ko",
-        "IRAS19254-7245_South",
-        "Mrk231",
-        "QSO1",
-        "QSO2",
-        "Sey2",
-        "TQSO1",
-        "Torus",
-        "agn",
-        "qso",
-        "qso2"
+        "2019hgp",
+        "2019jc",
+        "SN2022ann",
+        "SN2024abvb",
+        "sn2021csp",
+        "sn2026ezk"
+      ]
+    },
+    "TDE": {
+      "count": 25,
+      "storage_file": "templates_TDE.hdf5",
+      "template_names": [
+        "2019qiz",
+        "2025hee",
+        "2025lxx",
+        "ASASSN-14ae",
+        "ASASSN-14li",
+        "ASASSN-15oi",
+        "LSQ12dyw",
+        "OGLE16aaa",
+        "PS1-10jh",
+        "PTF09axc",
+        "PTF09djl",
+        "PTF09ge",
+        "TDE2018zr",
+        "TDE2022adm",
+        "TDE2022bdw",
+        "TDE2022dbl",
+        "TDE2022hvp",
+        "at2018dyb",
+        "at2018fyk",
+        "at2018hyz",
+        "at2018lna",
+        "at2019ahk",
+        "at2019azh",
+        "iPTF16fnl",
+        "sn2015L"
       ]
     },
     "Star": {
-      "count": 29,
+      "count": 30,
       "storage_file": "templates_Star.hdf5",
       "template_names": [
+        "2019wrm",
         "AT2018apl",
         "AT2018fwv",
         "AT2019fda",
@@ -5635,6 +5794,23 @@
         "SSS130402",
         "TCorBorealis",
         "ZTF21aasbxmt"
+      ]
+    },
+    "AGN": {
+      "count": 11,
+      "storage_file": "templates_AGN.hdf5",
+      "template_names": [
+        "ASASSN-14ko",
+        "IRAS19254-7245_South",
+        "Mrk231",
+        "QSO1",
+        "QSO2",
+        "Sey2",
+        "TQSO1",
+        "Torus",
+        "agn",
+        "qso",
+        "qso2"
       ]
     },
     "Galaxy": {

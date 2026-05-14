@@ -2,6 +2,17 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
+## [1.2.3] - In prep
+
+### Templates
+
+- Template bank version: bumped the managed built-in templates bank from `2.5` to `2.6`.
+- Template bank maintenance: removed 49 built-in templates with inaccurate age metadata from the optical bank and the 48 corresponding entries present in the ONIR bank.
+- Templates: added 17 Ib templates to the built-in optical bank and replaced `sn2004dk` with the updated 10-epoch Ib template.
+- Templates: added 16 Ic templates to the built-in optical bank, including 14 Ic-norm templates and 2 Ic-broad templates (`sn2007D`, `sn2016coi`); replaced the existing `sn2007gr` and `sn2013dk` Ic-norm entries with updated user-template versions.
+- Templates: added 9 more built-in optical templates: 6 IIb, 1 Ia-99aa (`sn2015bq`), 1 SLSN-II (`sn2019xfs`), and 1 Icn (`sn2026ezk`); replaced `sn2004ff` with the updated 5-epoch IIb user-template version.
+- Template metadata: normalized optical AGN subtypes to `AGN-Type1`, `AGN-Type1.5`, `AGN-Type1-BAL`, and `AGN-Type2`.
+
 ## [1.2.2] - 2026-03-24
 
 ### Docs / CLI / Templates
