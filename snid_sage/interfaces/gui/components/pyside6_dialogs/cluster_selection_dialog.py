@@ -39,6 +39,15 @@ except ImportError:
     import logging
     _LOGGER = logging.getLogger('gui.pyside6_cluster_selection')
 
+try:
+    from snid_sage.interfaces.gui.utils.display_spectrum import (
+        clip_spectrum_to_reference_range,
+        filter_processed_spectrum_display_range,
+    )
+except Exception:
+    clip_spectrum_to_reference_range = None
+    filter_processed_spectrum_display_range = None
+
 # Import math utilities
 try:
     from snid_sage.shared.utils.math_utils import get_best_metric_value, get_metric_name_for_match
@@ -985,13 +994,20 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
         input_wave = input_flux = None
         if (self.snid_result is not None and hasattr(self.snid_result, 'processed_spectrum') and
                 self.snid_result.processed_spectrum):
+            processed = self.snid_result.processed_spectrum
             # Try different keys for processed spectrum
-            if 'log_wave' in self.snid_result.processed_spectrum:
-                input_wave = self.snid_result.processed_spectrum['log_wave']
-                input_flux = self.snid_result.processed_spectrum['log_flux']
-            elif 'wave' in self.snid_result.processed_spectrum:
-                input_wave = self.snid_result.processed_spectrum['wave']
-                input_flux = self.snid_result.processed_spectrum['flux']
+            if 'log_wave' in processed:
+                input_wave = processed['log_wave']
+                input_flux = processed['log_flux']
+                if filter_processed_spectrum_display_range is not None:
+                    input_wave, input_flux = filter_processed_spectrum_display_range(
+                        input_wave,
+                        input_flux,
+                        processed,
+                    )
+            elif 'wave' in processed:
+                input_wave = processed['wave']
+                input_flux = processed['flux']
         elif (self.snid_result is not None and hasattr(self.snid_result, 'input_spectrum') and
               isinstance(self.snid_result.input_spectrum, dict)):
             input_wave = self.snid_result.input_spectrum.get('wave')
@@ -1035,13 +1051,14 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
                     # Try different ways to access template spectrum
                     t_wave = t_flux = None
                     
-                    if 'spectra' in match and isinstance(match['spectra'], dict):
-                        if 'flux' in match['spectra']:
-                            t_wave = match['spectra']['flux'].get('wave')
-                            t_flux = match['spectra']['flux'].get('flux')
-                        elif 'wave' in match['spectra']:
-                            t_wave = match['spectra']['wave']
-                            t_flux = match['spectra']['flux']
+                    spectra = match.get('display_spectra') or match.get('spectra')
+                    if isinstance(spectra, dict):
+                        if 'flux' in spectra:
+                            t_wave = spectra['flux'].get('wave')
+                            t_flux = spectra['flux'].get('flux')
+                        elif 'wave' in spectra:
+                            t_wave = spectra['wave']
+                            t_flux = spectra['flux']
                     elif 'wave' in match:
                         t_wave = match['wave']
                         t_flux = match['flux']
@@ -1050,6 +1067,8 @@ class PySide6ClusterSelectionDialog(QtWidgets.QDialog):
                         t_flux = match['template_flux']
                     
                     if t_wave is not None and t_flux is not None:
+                        if input_wave is not None and clip_spectrum_to_reference_range is not None:
+                            t_wave, t_flux = clip_spectrum_to_reference_range(t_wave, t_flux, input_wave)
                         # Clean template name to remove _epoch_X suffix
                         template_name = clean_template_name(match.get('name', 'Unknown'))
                         ax.plot(

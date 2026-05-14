@@ -8,6 +8,7 @@ manual preprocessing wizard, and SNID preprocessing pipeline.
 
 import os
 import json
+import numpy as np
 # Use PySide6 message dialogs
 from snid_sage.interfaces.gui.utils.pyside6_message_utils import messagebox
 from snid_sage.snid.snid import preprocess_spectrum
@@ -288,6 +289,15 @@ class PreprocessingController:
                 pass
             display_flux = (tapered_flux + 1.0) * recon_continuum  # Correct unflatten with extended continuum
             display_flat = tapered_flux                      # Apodized continuum-removed
+            try:
+                mask_logbins = processed_spectrum.get('mask_logbins')
+                if mask_logbins is not None:
+                    mask_arr = np.asarray(mask_logbins, dtype=bool)
+                    if mask_arr.size == display_flux.size:
+                        display_flux = display_flux.copy()
+                        display_flux[mask_arr] = 0.0
+            except Exception:
+                pass
             
             # Store both versions in processed_spectrum for view switching
             processed_spectrum['display_flux'] = display_flux   # For "Flux" button - apodized flux with continuum

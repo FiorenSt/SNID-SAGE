@@ -1013,7 +1013,7 @@ def write_template_spectra_data(match: Dict[str, Any], template_index: int,
     header += f"# Redshift: {redshift:.6f}\n"
     header += f"# Template Index: {template_index}"
     
-    spectra_data = match.get('spectra', {})
+    spectra_data = match.get('display_spectra') or match.get('spectra', {})
     
     # Write flattened spectrum data
     if 'flat' in spectra_data:

@@ -317,9 +317,10 @@ def plot_comparison(result: Any, figsize: Tuple[int, int] = (12, 9),
     
     # Plot template using the spectral data from the match
     try:
-        if 'spectra' in best_match and 'flux' in best_match['spectra']:
-            template_wave = best_match['spectra']['flux']['wave']
-            template_flux = best_match['spectra']['flux']['flux']
+        template_spectra = best_match.get('display_spectra') or best_match.get('spectra')
+        if isinstance(template_spectra, dict) and 'flux' in template_spectra:
+            template_wave = template_spectra['flux']['wave']
+            template_flux = template_spectra['flux']['flux']
             
             ax_top.plot(
                 template_wave,
@@ -1106,9 +1107,10 @@ def plot_flux_comparison(match: Dict[str, Any], result: Any,
     template_plotted = False
     try:
         # First try: Use pre-computed template flux data from the match
-        if 'spectra' in match and 'flux' in match['spectra']:
-            template_wave = match['spectra']['flux']['wave']
-            template_flux = match['spectra']['flux']['flux']
+        template_spectra = match.get('display_spectra') or match.get('spectra')
+        if isinstance(template_spectra, dict) and 'flux' in template_spectra:
+            template_wave = template_spectra['flux']['wave']
+            template_flux = template_spectra['flux']['flux']
             
             # DON'T filter templates - they are already properly trimmed by SNID analysis
             # snid_sage.snid.py
@@ -1383,9 +1385,10 @@ def plot_flat_comparison(match: Dict[str, Any], result: Any,
     template_plotted = False
     try:
         # First try: Use pre-computed template flat data from the match (like GUI)
-        if 'spectra' in match and 'flat' in match['spectra']:
-            template_wave = match['spectra']['flat']['wave']
-            template_flux = match['spectra']['flat']['flux']
+        template_spectra = match.get('display_spectra') or match.get('spectra')
+        if isinstance(template_spectra, dict) and 'flat' in template_spectra:
+            template_wave = template_spectra['flat']['wave']
+            template_flux = template_spectra['flat']['flux']
             
             # DON'T filter templates - they are already properly trimmed by SNID analysis
             # snid_sage.snid.py

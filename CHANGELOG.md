@@ -13,6 +13,10 @@ All notable changes to SNID SAGE will be documented in this file.
 - Templates: added 9 more built-in optical templates: 6 IIb, 1 Ia-99aa (`sn2015bq`), 1 SLSN-II (`sn2019xfs`), and 1 Icn (`sn2026ezk`); replaced `sn2004ff` with the updated 5-epoch IIb user-template version.
 - Template metadata: normalized optical AGN subtypes to `AGN-Type1`, `AGN-Type1.5`, `AGN-Type1-BAL`, and `AGN-Type2`.
 
+### Bug Fixes
+
+- Fixed edge-cut preprocessing so GUI/CLI masking treats removed spectrum ends as absent for apodization, analysis, template overlays, and Flux/Flat displays.
+
 ## [1.2.2] - 2026-03-24
 
 ### Docs / CLI / Templates

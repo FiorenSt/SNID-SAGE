@@ -12,6 +12,11 @@ import os
 import numpy as np
 from PySide6 import QtWidgets, QtCore, QtGui
 
+try:
+    from snid_sage.interfaces.gui.utils.display_spectrum import filter_processed_spectrum_display_range
+except Exception:
+    filter_processed_spectrum_display_range = None
+
 from snid_sage.shared.utils.line_detection.user_line_store import (
     get_effective_line_db,
     load_user_lines,
@@ -911,7 +916,7 @@ class SNIDLineManagerGUI(QtWidgets.QMainWindow):
         # 1) Use log_wave for x when available
         # 2) For y, reconstruct from tapered_flat + extended continuum if possible,
         #    else use flux_view/display_flux, else fall back to log_flux
-        # 3) Trim to valid [left_edge, right_edge] if available
+        # 3) Trim display-only padding and cut masked edges
         try:
             if isinstance(spectrum, dict) and ('log_wave' in spectrum or 'log_flux' in spectrum):
                 log_wave = spectrum.get('log_wave')
@@ -983,15 +988,13 @@ class SNIDLineManagerGUI(QtWidgets.QMainWindow):
 
     def _apply_zero_padding_filter(self, wave: np.ndarray, flux: np.ndarray, processed_spectrum: Optional[Dict[str, Any]] = None) -> Tuple[np.ndarray, np.ndarray]:
         try:
-            if processed_spectrum and 'left_edge' in processed_spectrum and 'right_edge' in processed_spectrum:
-                left_edge = int(processed_spectrum['left_edge'])
-                right_edge = int(processed_spectrum['right_edge'])
-                return wave[left_edge:right_edge+1], flux[left_edge:right_edge+1]
+            if filter_processed_spectrum_display_range is not None:
+                return filter_processed_spectrum_display_range(wave, flux, processed_spectrum)
             valid_mask = (flux != 0) & np.isfinite(flux)
             if np.any(valid_mask):
                 left_edge = int(np.argmax(valid_mask))
                 right_edge = int(len(flux) - 1 - np.argmax(valid_mask[::-1]))
-                return wave[left_edge:right_edge+1], flux[left_edge:right_edge+1]
+                return wave[left_edge:right_edge + 1], flux[left_edge:right_edge + 1]
             return wave, flux
         except Exception:
             return wave, flux

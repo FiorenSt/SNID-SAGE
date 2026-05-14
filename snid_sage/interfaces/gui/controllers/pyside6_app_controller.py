@@ -43,6 +43,7 @@ except ImportError:
 from snid_sage.snid.snid import run_snid as python_snid, preprocess_spectrum, run_snid_analysis
 from snid_sage.snid.preprocessing import enforce_positive_flux
 from snid_sage.shared.exceptions.core_exceptions import SpectrumProcessingError
+from snid_sage.interfaces.gui.utils.display_spectrum import filter_processed_spectrum_display_range
 
 # Import configuration and utilities
 from snid_sage.shared.utils.config.configuration_manager import ConfigurationManager
@@ -600,7 +601,8 @@ class PySide6AppController(QtCore.QObject):
     def _apply_zero_padding_filter(self, wave, flux, processed_spectrum=None):
         """Filter out zero-padded regions from spectrum data
         
-        Uses the nonzero region boundaries calculated during preprocessing.
+        Uses the selected display flux and mask bins to hide leading/trailing
+        regions that are padding or were cut during preprocessing.
         
         Parameters:
         -----------
@@ -616,28 +618,7 @@ class PySide6AppController(QtCore.QObject):
         tuple : (filtered_wave, filtered_flux)
             Arrays with zero-padded regions removed
         """
-        try:
-            import numpy as np
-            
-            # If we have processed spectrum with edge information, use it
-            if processed_spectrum and 'left_edge' in processed_spectrum and 'right_edge' in processed_spectrum:
-                left_edge = processed_spectrum['left_edge']
-                right_edge = processed_spectrum['right_edge']
-                return wave[left_edge:right_edge+1], flux[left_edge:right_edge+1]
-            
-            # Fallback: find valid regions manually (including negative values for continuum-subtracted spectra)
-            valid_mask = (flux != 0) & np.isfinite(flux)
-            if np.any(valid_mask):
-                left_edge = np.argmax(valid_mask)
-                right_edge = len(flux) - 1 - np.argmax(valid_mask[::-1])
-                return wave[left_edge:right_edge+1], flux[left_edge:right_edge+1]
-            
-            # If no nonzero data found, return original arrays
-            return wave, flux
-            
-        except Exception as e:
-            _LOGGER.warning(f"Warning: Error filtering nonzero spectrum: {e}")
-            return wave, flux
+        return filter_processed_spectrum_display_range(wave, flux, processed_spectrum)
     
     def run_preprocessing(self, **kwargs) -> bool:
         """

@@ -19,6 +19,11 @@ except ImportError:
     import logging
     _LOGGER = logging.getLogger('gui.emission_line_controller')
 
+try:
+    from snid_sage.interfaces.gui.utils.display_spectrum import filter_processed_spectrum_display_range
+except Exception:
+    filter_processed_spectrum_display_range = None
+
 # Import the multi-step emission dialog
 try:
     # Refactored, matplotlib-free PySide6 dialog
@@ -210,8 +215,13 @@ class EmissionLineOverlayController:
                 if ('log_wave' in self.gui.processed_spectrum and 
                     'display_flat' in self.gui.processed_spectrum):
                     
-                    # Apply zero-region filtering like other parts of the GUI
                     filtered_wave, filtered_flux = self.gui.processed_spectrum['log_wave'], self.gui.processed_spectrum['display_flat']
+                    if filter_processed_spectrum_display_range is not None:
+                        filtered_wave, filtered_flux = filter_processed_spectrum_display_range(
+                            filtered_wave,
+                            filtered_flux,
+                            self.gui.processed_spectrum,
+                        )
                     
                     return {
                         'wavelength': filtered_wave,
@@ -222,8 +232,13 @@ class EmissionLineOverlayController:
                 elif ('log_wave' in self.gui.processed_spectrum and 
                       'flat_flux' in self.gui.processed_spectrum):
                     
-                    # Apply zero-region filtering like other parts of the GUI
                     filtered_wave, filtered_flux = self.gui.processed_spectrum['log_wave'], self.gui.processed_spectrum['flat_flux']
+                    if filter_processed_spectrum_display_range is not None:
+                        filtered_wave, filtered_flux = filter_processed_spectrum_display_range(
+                            filtered_wave,
+                            filtered_flux,
+                            self.gui.processed_spectrum,
+                        )
                     
                     return {
                         'wavelength': filtered_wave,
@@ -238,8 +253,13 @@ class EmissionLineOverlayController:
                 processed = self.gui.snid_results.processed_spectrum
                 if 'log_wave' in processed and 'flat_flux' in processed:
                     
-                    # Apply zero-region filtering like other parts of the GUI
                     filtered_wave, filtered_flux = processed['log_wave'], processed['flat_flux']
+                    if filter_processed_spectrum_display_range is not None:
+                        filtered_wave, filtered_flux = filter_processed_spectrum_display_range(
+                            filtered_wave,
+                            filtered_flux,
+                            processed,
+                        )
                     
                     return {
                         'wavelength': filtered_wave,

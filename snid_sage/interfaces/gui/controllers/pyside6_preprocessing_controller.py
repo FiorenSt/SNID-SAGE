@@ -191,6 +191,15 @@ class PySide6PreprocessingController:
                     pass
                 display_flux = (tapered_flux + 1.0) * recon_continuum  # Correct unflatten with extended continuum
                 display_flat = tapered_flux                      # Apodized continuum-removed
+                try:
+                    mask_logbins = processed_spectrum.get('mask_logbins')
+                    if mask_logbins is not None:
+                        mask_arr = np.asarray(mask_logbins, dtype=bool)
+                        if mask_arr.size == display_flux.size:
+                            display_flux = display_flux.copy()
+                            display_flux[mask_arr] = 0.0
+                except Exception:
+                    pass
                 
                 # Store simplified view arrays for GUI plotting
                 processed_spectrum['display_flux'] = display_flux

@@ -27,6 +27,11 @@ except ImportError:
     _LOGGER.warning("Manual redshift dialog not available")
     show_manual_redshift_dialog = None
 
+try:
+    from snid_sage.interfaces.gui.utils.display_spectrum import filter_processed_spectrum_display_range
+except Exception:
+    filter_processed_spectrum_display_range = None
+
 
 class LineDetectionController:
     """Controller for handling line detection and galaxy redshift analysis"""
@@ -433,10 +438,23 @@ class LineDetectionController:
                         _LOGGER.error("No flattened spectrum data available in processed_spectrum")
                         return None
                     
-                    # Apply zero-region filtering like the main GUI
-                    filtered_wave, filtered_flux = self._filter_nonzero_spectrum(
-                        log_wave, flat_flux, processed
-                    )
+                    if filter_processed_spectrum_display_range is not None:
+                        filtered_wave, filtered_flux = filter_processed_spectrum_display_range(
+                            log_wave,
+                            flat_flux,
+                            processed,
+                        )
+                    else:
+                        log_wave_arr = np.asarray(log_wave, dtype=float)
+                        flat_flux_arr = np.asarray(flat_flux, dtype=float)
+                        valid_mask = (flat_flux_arr != 0) & np.isfinite(flat_flux_arr)
+                        if np.any(valid_mask):
+                            left_edge = int(np.argmax(valid_mask))
+                            right_edge = int(len(flat_flux_arr) - 1 - np.argmax(valid_mask[::-1]))
+                            filtered_wave = log_wave_arr[left_edge:right_edge + 1]
+                            filtered_flux = flat_flux_arr[left_edge:right_edge + 1]
+                        else:
+                            filtered_wave, filtered_flux = log_wave_arr, flat_flux_arr
                     
                     if filtered_wave is not None and filtered_flux is not None and len(filtered_wave) > 0:
                         _LOGGER.info(f"🎯 Redshift dialog: Using preprocessed flattened spectrum ({spectrum_type})")

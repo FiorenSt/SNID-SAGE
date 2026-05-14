@@ -20,6 +20,11 @@ except ImportError:
     import logging
     _LOGGER = logging.getLogger('gui.pyside6_helpers')
 
+try:
+    from snid_sage.interfaces.gui.utils.display_spectrum import filter_processed_spectrum_display_range
+except Exception:
+    filter_processed_spectrum_display_range = None
+
 
 class PySide6Helpers:
     """Collection of helper methods for PySide6 GUI operations"""
@@ -96,7 +101,8 @@ class PySide6Helpers:
     def filter_nonzero_spectrum(wave, flux, processed_spectrum=None):
         """Filter out zero-padded regions from spectrum data
         
-        Uses the nonzero region boundaries calculated during preprocessing.
+        Uses the selected display flux and mask bins to hide leading/trailing
+        regions that are padding or were cut during preprocessing.
         
         Parameters:
         -----------
@@ -113,21 +119,15 @@ class PySide6Helpers:
             Arrays with zero-padded regions removed
         """
         try:
-            # If we have processed spectrum with edge information, use it
-            if processed_spectrum and 'left_edge' in processed_spectrum and 'right_edge' in processed_spectrum:
-                left_edge = processed_spectrum['left_edge']
-                right_edge = processed_spectrum['right_edge']
-                return wave[left_edge:right_edge+1], flux[left_edge:right_edge+1]
-            
-            # Fallback: find valid regions manually (including negative values for continuum-subtracted spectra)
-            import numpy as np
+            if filter_processed_spectrum_display_range is not None:
+                return filter_processed_spectrum_display_range(wave, flux, processed_spectrum)
+
             valid_mask = (flux != 0) & np.isfinite(flux)
             if np.any(valid_mask):
                 left_edge = np.argmax(valid_mask)
                 right_edge = len(flux) - 1 - np.argmax(valid_mask[::-1])
-                return wave[left_edge:right_edge+1], flux[left_edge:right_edge+1]
-            
-            # If no nonzero data found, return original arrays
+                return wave[left_edge:right_edge + 1], flux[left_edge:right_edge + 1]
+
             return wave, flux
             
         except Exception as e:

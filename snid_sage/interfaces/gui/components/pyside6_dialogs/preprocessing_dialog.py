@@ -1294,9 +1294,6 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             else:
                 preview_wave, preview_flux = self._canonical_stage("after_step4")
 
-            current_wave, current_flux = self._apply_zero_padding_removal(current_wave, current_flux)
-            preview_wave, preview_flux = self._apply_zero_padding_removal(preview_wave, preview_flux)
-            
             # ------------------------------------------------------------------
             # Mask visualization + propagation parity
             #
@@ -1389,6 +1386,11 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
                 # Log-grid stages: show masked bins as zeros on both plots
                 current_flux = _apply_logbin_zero(current_flux, mask_logbins)
                 preview_flux = _apply_logbin_zero(preview_flux, mask_logbins)
+
+            # End cuts become zero only after applying the log-bin mask above.
+            # Trim again so leading/trailing cut regions stay visually removed.
+            current_wave, current_flux = self._apply_zero_padding_removal(current_wave, current_flux)
+            preview_wave, preview_flux = self._apply_zero_padding_removal(preview_wave, preview_flux)
             # Update with current state in top plot and preview in bottom plot
             self.plot_manager.update_standard_preview(
                 current_wave, current_flux, preview_wave, preview_flux, mask_regions
@@ -1579,6 +1581,15 @@ class PySide6PreprocessingDialog(QtWidgets.QDialog):
             ps["has_continuum"] = True
             ps["display_flat"] = tapered
             ps["display_flux"] = (tapered + 1.0) * recon_cont
+            try:
+                mask_logbins = ps.get("mask_logbins")
+                if mask_logbins is not None:
+                    mask_arr = np.asarray(mask_logbins, dtype=bool)
+                    if mask_arr.size == np.asarray(ps["display_flux"]).size:
+                        ps["display_flux"] = np.asarray(ps["display_flux"], dtype=float).copy()
+                        ps["display_flux"][mask_arr] = 0.0
+            except Exception:
+                pass
             ps["flat_view"] = ps["display_flat"]
             ps["flux_view"] = ps["display_flux"]
         except Exception:

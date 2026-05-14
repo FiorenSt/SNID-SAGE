@@ -55,6 +55,15 @@ except ImportError:
     import logging
     _LOGGER = logging.getLogger('gui.pyside6_gmm')
 
+try:
+    from snid_sage.interfaces.gui.utils.display_spectrum import (
+        clip_spectrum_to_reference_range,
+        filter_processed_spectrum_display_range,
+    )
+except Exception:
+    clip_spectrum_to_reference_range = None
+    filter_processed_spectrum_display_range = None
+
 # Enhanced dialog button styling
 try:
     from snid_sage.interfaces.gui.utils.dialog_button_enhancer import enhance_dialog_with_preset
@@ -692,6 +701,12 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
                 if 'log_wave' in ps and 'log_flux' in ps:
                     input_wave = ps['log_wave']
                     input_flux = ps['log_flux']
+                    if filter_processed_spectrum_display_range is not None:
+                        input_wave, input_flux = filter_processed_spectrum_display_range(
+                            input_wave,
+                            input_flux,
+                            ps,
+                        )
                 elif 'wave' in ps and 'flux' in ps:
                     input_wave = ps['wave']
                     input_flux = ps['flux']
@@ -715,13 +730,14 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
             if best_match is not None:
                 try:
                     t_wave = t_flux = None
-                    if 'spectra' in best_match and isinstance(best_match['spectra'], dict):
-                        if 'flux' in best_match['spectra']:
-                            t_wave = best_match['spectra']['flux'].get('wave')
-                            t_flux = best_match['spectra']['flux'].get('flux')
-                        elif 'wave' in best_match['spectra']:
-                            t_wave = best_match['spectra']['wave']
-                            t_flux = best_match['spectra']['flux']
+                    spectra = best_match.get('display_spectra') or best_match.get('spectra')
+                    if isinstance(spectra, dict):
+                        if 'flux' in spectra:
+                            t_wave = spectra['flux'].get('wave')
+                            t_flux = spectra['flux'].get('flux')
+                        elif 'wave' in spectra:
+                            t_wave = spectra['wave']
+                            t_flux = spectra['flux']
                     elif 'wave' in best_match:
                         t_wave = best_match['wave']
                         t_flux = best_match['flux']
@@ -733,6 +749,8 @@ class PySide6GMMClusteringDialog(QtWidgets.QDialog):
                         t_f = np.asarray(t_flux, dtype=float)
                         finite_t = np.isfinite(t_w) & np.isfinite(t_f)
                         t_w, t_f = t_w[finite_t], t_f[finite_t]
+                        if input_wave is not None and clip_spectrum_to_reference_range is not None:
+                            t_w, t_f = clip_spectrum_to_reference_range(t_w, t_f, input_wave)
                         self.overlay_ax.plot(
                             t_w,
                             t_f,

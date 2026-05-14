@@ -53,6 +53,8 @@ except Exception:
     _REST_AXIS_AVAILABLE = False
     RestWavelengthAxisItem = None  # type: ignore
 
+from snid_sage.interfaces.gui.utils.display_spectrum import clip_spectrum_to_reference_range
+
 # Import logging
 try:
     from snid_sage.shared.utils.logging import get_logger
@@ -839,13 +841,14 @@ class PySide6PlotManager:
             
             # Get template spectrum data
             try:
+                spectra_key = 'display_spectra' if 'display_spectra' in current_match else 'spectra'
                 if view_type == 'flux':
-                    template_wave = current_match['spectra']['flux']['wave']
-                    template_flux = current_match['spectra']['flux']['flux']
+                    template_wave = current_match[spectra_key]['flux']['wave']
+                    template_flux = current_match[spectra_key]['flux']['flux']
                     y_label = 'Flux'
                 else:  # flat view
-                    template_wave = current_match['spectra']['flat']['wave']
-                    template_flux = current_match['spectra']['flat']['flux']
+                    template_wave = current_match[spectra_key]['flat']['wave']
+                    template_flux = current_match[spectra_key]['flat']['flux']
                     y_label = 'Flattened Flux'
                 
                 # Clean template data
@@ -853,6 +856,11 @@ class PySide6PlotManager:
                 template_flux = np.asarray(template_flux, dtype=float)
                 finite_template = np.isfinite(template_wave) & np.isfinite(template_flux)
                 template_wave, template_flux = template_wave[finite_template], template_flux[finite_template]
+                template_wave, template_flux = clip_spectrum_to_reference_range(
+                    template_wave,
+                    template_flux,
+                    obs_wave,
+                )
                 
             except (KeyError, TypeError) as e:
                 _LOGGER.error(f"Error accessing template spectrum data: {e}")

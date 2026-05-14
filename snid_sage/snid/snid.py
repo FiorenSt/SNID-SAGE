@@ -489,6 +489,16 @@ def preprocess_spectrum(
         flat_flux = log_flux.copy()
         cont = np.ones_like(log_flux)  # Dummy continuum
         _LOG.info("Step 4: Skipped continuum fitting (assuming input is pre-flattened)")
+
+    # Masked log bins are not part of the usable spectrum. Zero them before
+    # apodization so cut edge masks define the taper range itself.
+    try:
+        mask_logbins = trace.get("mask_logbins")
+        if mask_logbins is not None and mask_logbins.size == flat_flux.size and np.any(mask_logbins):
+            flat_flux = flat_flux.copy()
+            flat_flux[mask_logbins] = 0.0
+    except Exception:
+        pass
     
     trace["step4_flux"], trace["step4_cont"] = flat_flux.copy(), cont.copy()
 
@@ -531,6 +541,16 @@ def preprocess_spectrum(
             tapered_flux[mask_logbins] = 0.0
     except Exception:
         pass
+
+    # Final display/reporting edges must reflect the actual spectrum support
+    # after end masks and apodization, not just the pre-mask log_flux extent.
+    final_valid_mask = (tapered_flux != 0) & np.isfinite(tapered_flux)
+    if np.any(final_valid_mask):
+        left_edge = int(np.argmax(final_valid_mask))
+        right_edge = int(len(tapered_flux) - 1 - np.argmax(final_valid_mask[::-1]))
+    else:
+        left_edge = 0
+        right_edge = len(tapered_flux) - 1
 
     # ============================================================================
     # PREPARE OUTPUT
@@ -694,6 +714,7 @@ def _process_template_peaks(
             apodize_percent = 10.0  # Default value
             work_d = apodize(work_d, 0, len(work_d) - 1, percent=apodize_percent)
             work_t = apodize(work_t, 0, len(work_t) - 1, percent=apodize_percent)
+            display_work_t = work_t.copy()
             
             # Pad to NW
             work_d = pad_to_NW(work_d, NW_grid)
@@ -810,13 +831,19 @@ def _process_template_peaks(
                 # HLAP is computed for downstream scoring (HσLAP-CCC) and reporting.
                 hlap = float(hgt_p) * float(lap) if (np.isfinite(hgt_p) and np.isfinite(lap)) else 0.0
                 
-                # Prepare spectra data for plotting (required by GUI plotting system)
-                # Use the same approach as the original working code - global spectrum edges
+                # Keep analysis spectra aligned to [left_edge:right_edge] for
+                # downstream metrics, and provide a display spectrum on the same
+                # wavelength span with the apodized phase-2 overlap inserted.
                 plot_wave = log_wave[left_edge:right_edge+1]
                 plot_template_flat = tpl_shifted[left_edge:right_edge+1]
-                
-                # For flux view, reconstruct from flattened: (flat + 1) * continuum
                 plot_template_flux = (plot_template_flat + 1.0) * cont[left_edge:right_edge+1]
+                display_wave = plot_wave
+                display_template_flat = np.zeros_like(plot_template_flat, dtype=float)
+                display_start = max(0, int(start_trim) - int(left_edge))
+                display_end = min(display_template_flat.size, display_start + display_work_t.size)
+                if display_end > display_start:
+                    display_template_flat[display_start:display_end] = display_work_t[:display_end - display_start]
+                display_template_flux = (display_template_flat + 1.0) * cont[left_edge:right_edge+1]
                 
                 # Create match object (matching original SNID structure) and attach
             # global antisymmetry diagnostics.
@@ -848,6 +875,16 @@ def _process_template_peaks(
                         "flat": {
                             "wave": plot_wave,
                             "flux": plot_template_flat,
+                        },
+                    },
+                    "display_spectra": {
+                        "flux": {
+                            "wave": display_wave,
+                            "flux": display_template_flux,
+                        },
+                        "flat": {
+                            "wave": display_wave,
+                            "flux": display_template_flat,
                         },
                     },
                 "correlation_data": {
@@ -1215,6 +1252,7 @@ def _process_forced_redshift_match(
         apodize_percent = 10.0
         work_d = apodize(work_d, 0, len(work_d) - 1, percent=apodize_percent)
         work_t = apodize(work_t, 0, len(work_t) - 1, percent=apodize_percent)
+        display_work_t = work_t.copy()
         
         # Pad to NW
         work_d = pad_to_NW(work_d, NW_grid)
@@ -1298,6 +1336,14 @@ def _process_forced_redshift_match(
             except Exception:
                 overlap_indices = None
 
+            display_template_flat = np.zeros(int(right_edge) - int(left_edge) + 1, dtype=float)
+            display_start = max(0, int(start_trim) - int(left_edge))
+            display_end = min(display_template_flat.size, display_start + display_work_t.size)
+            if display_end > display_start:
+                display_template_flat[display_start:display_end] = display_work_t[:display_end - display_start]
+            display_wave = log_wave[left_edge:right_edge+1]
+            display_template_flux = (display_template_flat + 1.0) * cont[left_edge:right_edge+1]
+
             # Create match dictionary
             match_info: Dict[str, Any] = {
                 "template": tpl,
@@ -1342,6 +1388,16 @@ def _process_forced_redshift_match(
                     "flux": {
                         "wave": log_wave[left_edge:right_edge+1],
                         "flux": (tpl_shifted[left_edge:right_edge+1] + 1.0) * cont[left_edge:right_edge+1],
+                    },
+                },
+                "display_spectra": {
+                    "flat": {
+                        "wave": display_wave,
+                        "flux": display_template_flat,
+                    },
+                    "flux": {
+                        "wave": display_wave,
+                        "flux": display_template_flux,
                     },
                 },
                 "forced_redshift": True,  # Flag to indicate this was forced
