@@ -53,6 +53,7 @@ TEMPLATES_FILES: List[str] = [
     "template_index_onir.json",
     "templates_AGN_onir.hdf5",
     "templates_AGN.hdf5",
+    "templates_CV_onir.hdf5",
     "templates_CV.hdf5",
     "templates_Galaxy_onir.hdf5",
     "templates_Galaxy.hdf5",
