@@ -1,4 +1,4 @@
-# SNID SAGE - Advanced Supernova Spectral Analysis
+# SNID-SAGE - Advanced Supernova Spectral Analysis
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -6,7 +6,7 @@
 
 <img src="docs/images/5.MatchTemplateFlux.png" alt="Match Template Flux" style="border: 2px solid #333; border-radius: 4px;">
 
-**SNID SAGE** (SuperNova IDentification – Spectral Analysis and Guided Exploration) is your go-to tool for analyzing supernova spectra. It combines an intuitive PySide6/Qt graphical interface with the original SNID (Blondin & Tonry 2007) cross-correlation techniques, enhanced with modern clustering for classification choice, high-performance plotting via `pyqtgraph`, and LLM-powered analysis summaries and interactive chat assistance.
+**SNID-SAGE** (SuperNova IDentification – Spectral Analysis and Guided Exploration) is your go-to tool for analyzing supernova spectra. It combines an intuitive PySide6/Qt graphical interface with the original SNID (Blondin & Tonry 2007) cross-correlation techniques, enhanced with modern clustering for classification choice, high-performance plotting via `pyqtgraph`, and LLM-powered analysis summaries and interactive chat assistance.
 
 
 
@@ -85,21 +85,26 @@ sage batch --list-csv "data/spectra_list.csv" -o results/
 
 ## Research & Citation
 
-If you use SNID SAGE in your research, please cite the SNID-SAGE paper:
+If you use SNID-SAGE in your research, please cite the published SNID-SAGE paper:
 
-- Stoppa, F. and Smartt, S. J., *SNID-SAGE: A Modern Framework for Interactive Supernova Classification and Spectral Analysis* ([arXiv:2603.28741](https://arxiv.org/abs/2603.28741))
+- Stoppa, F. and Smartt, S. J., *SNID-SAGE: a modern framework for interactive supernova classification and spectral analysis* (https://doi.org/10.1093/mnras/stag1066)
 
-For the current arXiv version, the official BibTeX entry is:
+For the published version, the BibTeX entry is:
 
 ```bibtex
-@misc{stoppa2026,
-  title={SNID-SAGE: A Modern Framework for Interactive Supernova Classification and Spectral Analysis},
-  author={Fiorenzo Stoppa and Stephen J. Smartt},
-  year={2026},
-  eprint={2603.28741},
-  archivePrefix={arXiv},
-  primaryClass={astro-ph.IM},
-  url={https://arxiv.org/abs/2603.28741}
+@article{Stoppa2026,
+    author = {Stoppa, Fiorenzo and Smartt, Stephen J},
+    title = {SNID–SAGE: a modern framework for interactive supernova classification and spectral analysis},
+    journal = {Monthly Notices of the Royal Astronomical Society},
+    volume = {549},
+    number = {4},
+    pages = {stag1066},
+    year = {2026},
+    month = {07},
+    issn = {0035-8711},
+    doi = {10.1093/mnras/stag1066},
+    url = {https://doi.org/10.1093/mnras/stag1066},
+    eprint = {https://academic.oup.com/mnras/article-pdf/549/4/stag1066/68483078/stag1066.pdf},
 }
 ```
 
