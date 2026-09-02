@@ -8,7 +8,7 @@ Ensures all output formats (display, export, save) use the same information and 
 
 import os
 from datetime import datetime
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional, List, Tuple, Collection, Iterable
 from pathlib import Path
 import numpy as np
 import re
@@ -44,6 +44,44 @@ def clean_template_name(template_name: str) -> str:
     cleaned_name = re.sub(pattern, '', template_name)
     
     return cleaned_name
+
+
+def template_name_in_filter(
+    template_name: Optional[str],
+    name_filter: Optional[Collection[str]],
+) -> bool:
+    """Return True if a template name matches an include/exclude name set.
+
+    After unified load, multi-epoch templates are renamed to ``{base}_epoch_{i}``.
+    GUI/CLI filters still use the index base name (e.g. ``sn2003bg``). A name
+    matches if the full name *or* the epoch-stripped base name is in the set.
+    """
+    if not template_name or not name_filter:
+        return False
+    names = name_filter if isinstance(name_filter, (set, frozenset)) else set(name_filter)
+    if template_name in names:
+        return True
+    base = clean_template_name(template_name)
+    return bool(base) and base in names
+
+
+def filter_templates_by_name(
+    templates: Iterable[Dict[str, Any]],
+    name_filter: Optional[Collection[str]],
+    *,
+    exclude: bool = False,
+) -> List[Dict[str, Any]]:
+    """Filter template dicts by base or epoch-expanded name.
+
+    If ``name_filter`` is empty/None, ``templates`` is returned unchanged.
+    When ``exclude`` is True, matching names are dropped instead of kept.
+    """
+    if not name_filter:
+        return list(templates)
+    names = name_filter if isinstance(name_filter, (set, frozenset)) else set(name_filter)
+    if exclude:
+        return [t for t in templates if not template_name_in_filter(t.get('name', ''), names)]
+    return [t for t in templates if template_name_in_filter(t.get('name', ''), names)]
 
 
 class UnifiedResultsFormatter:

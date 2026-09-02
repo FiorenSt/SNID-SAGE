@@ -19,7 +19,10 @@ from .integration import (
     enable_caching_for_gui,
     get_cache_status,
     clear_global_cache,
-    load_templates_unified
+    load_templates_unified,
+    usable_template_fft,
+    resolve_template_fft,
+    unique_templates_by_name,
 )
 
 __all__ = [
@@ -33,5 +36,8 @@ __all__ = [
     'enable_caching_for_gui',
     'get_cache_status',
     'clear_global_cache',
-    'load_templates_unified'
+    'load_templates_unified',
+    'usable_template_fft',
+    'resolve_template_fft',
+    'unique_templates_by_name',
 ] 

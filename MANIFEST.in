@@ -11,8 +11,9 @@ include DIRECTORY_SCHEMA.md
 
 # GUI launcher is now integrated into the package
 
-# Include the main snid_sage package
+# Include the main snid_sage package (Windows checkouts may be SNID_SAGE)
 recursive-include snid_sage *.py
+recursive-include SNID_SAGE *.py
 
 # Include package data (essential only)
 recursive-include snid_sage/data *.fits *.dat *.txt *.ascii *.asci *.flm

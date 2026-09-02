@@ -22,6 +22,20 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Bins used by CCC and residual noise: finite in both arrays and above this
+# absolute flux tolerance in both. Masked/zeroed log-bins must not enter σz.
+_JOINT_VALID_TOL = 1e-12
+
+
+def _joint_valid_mask(
+    a: np.ndarray,
+    b: np.ndarray,
+    *,
+    tol: float = _JOINT_VALID_TOL,
+) -> np.ndarray:
+    """True where both spectra are finite and above ``tol`` in absolute flux."""
+    return np.isfinite(a) & np.isfinite(b) & (np.abs(a) > tol) & (np.abs(b) > tol)
+
 
 def concordance_correlation_coefficient_trimmed(
     spec1: np.ndarray,
@@ -43,8 +57,7 @@ def concordance_correlation_coefficient_trimmed(
     a = a[:n]
     b = b[:n]
 
-    tol = 1e-12
-    mask = np.isfinite(a) & np.isfinite(b) & (np.abs(a) > tol) & (np.abs(b) > tol)
+    mask = _joint_valid_mask(a, b)
     if not np.any(mask):
         return 0.0
     a = a[mask]
@@ -103,23 +116,29 @@ def residual_noise_clipped_std(
     """
     Compute residual noise as std(residuals) after clipping extreme residuals.
 
+    Bins are the same joint-valid set used by CCC: finite in both arrays and
+    above ``_JOINT_VALID_TOL`` in both. Masked/zeroed flux (e.g. 0 minus a
+    live template) is excluded so it cannot inflate sigma_z.
+
     Clipping rule: compute threshold = quantile(|residual|, clip_percentile/100),
     then keep bins with |residual| <= threshold, compute std on kept residuals.
+
+    ``n_bins`` in diagnostics is the joint-valid count before percentile clip.
 
     Returns (noise_std, diagnostics).
     """
     a = np.asarray(a_window, dtype=float)
     b = np.asarray(b_window, dtype=float)
     n = min(len(a), len(b))
+    empty_diag = {"n_bins": 0.0, "n_kept": 0.0, "clip_threshold": float("nan")}
     if n == 0:
-        return float("nan"), {"n_bins": 0.0, "n_kept": 0.0, "clip_threshold": float("nan")}
+        return float("nan"), empty_diag
     a = a[:n]
     b = b[:n]
-    resid = a - b
-    mask = np.isfinite(resid)
-    resid = resid[mask]
+    mask = _joint_valid_mask(a, b)
+    resid = (a - b)[mask]
     if resid.size == 0:
-        return float("nan"), {"n_bins": float(n), "n_kept": 0.0, "clip_threshold": float("nan")}
+        return float("nan"), empty_diag
 
     abs_resid = np.abs(resid)
     try:
@@ -154,11 +173,7 @@ def _common_checks(spec1: np.ndarray, spec2: np.ndarray) -> Tuple[np.ndarray, np
     if n == 0:
         return np.array([]), np.array([])
     s1, s2 = s1[:n], s2[:n]
-    # Joint mask: finite in both and above tolerance in both (avoid biasing toward one array)
-    tol = 1e-12
-    finite_mask = np.isfinite(s1) & np.isfinite(s2)
-    non_zero_both = (np.abs(s1) > tol) & (np.abs(s2) > tol)
-    mask = finite_mask & non_zero_both
+    mask = _joint_valid_mask(s1, s2)
     if not np.any(mask):
         return np.array([]), np.array([])
     a = s1[mask].astype(float)
@@ -208,9 +223,7 @@ def concordance_correlation_coefficient(spec1: np.ndarray, spec2: np.ndarray) ->
     a = a[:n]
     b = b[:n]
     
-    # Remove invalid values (non-finite)
-    tol = 1e-12
-    mask = np.isfinite(a) & np.isfinite(b) & (np.abs(a) > tol) & (np.abs(b) > tol)
+    mask = _joint_valid_mask(a, b)
     if not np.any(mask):
         return 0.0
     
@@ -382,8 +395,7 @@ def prepare_overlap_window(
         end_idx = None
 
     if start_idx is None or end_idx is None:
-        tol = 1e-12
-        joint_mask = np.isfinite(a) & np.isfinite(b) & (np.abs(a) > tol) & (np.abs(b) > tol)
+        joint_mask = _joint_valid_mask(a, b)
         if not np.any(joint_mask):
             return None
         idxs = np.flatnonzero(joint_mask)

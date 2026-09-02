@@ -11,4 +11,10 @@ __version__ = "1.0.0"
 __author__ = "Fiorenzo Stoppa"
 
 # Add results formatter export
-from .results_formatter import UnifiedResultsFormatter, create_unified_formatter, clean_template_name 
+from .results_formatter import (
+    UnifiedResultsFormatter,
+    create_unified_formatter,
+    clean_template_name,
+    template_name_in_filter,
+    filter_templates_by_name,
+) 

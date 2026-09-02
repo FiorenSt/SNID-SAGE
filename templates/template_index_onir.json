@@ -2560,11 +2560,11 @@
       "storage_file": "templates_Ic_onir.hdf5"
     },
     "sn2023bee": {
-      "type": "Ic",
-      "subtype": "Ic-norm",
+      "type": "Ia",
+      "subtype": "Ia-norm",
       "redshift": 0.0067,
       "epochs": 20,
-      "storage_file": "templates_Ic_onir.hdf5"
+      "storage_file": "templates_Ia_onir.hdf5"
     },
     "2019hgp": {
       "type": "Icn",
@@ -4314,7 +4314,7 @@
       ]
     },
     "Ia": {
-      "count": 156,
+      "count": 157,
       "storage_file": "templates_Ia_onir.hdf5",
       "template_names": [
         "1999aa",
@@ -4472,7 +4472,8 @@
         "sn2020hvf",
         "sn2021qvv",
         "sn2022ihz",
-        "sn2022vqz"
+        "sn2022vqz",
+        "sn2023bee"
       ]
     },
     "Ib": {
@@ -4559,7 +4560,7 @@
       ]
     },
     "Ic": {
-      "count": 69,
+      "count": 68,
       "storage_file": "templates_Ic_onir.hdf5",
       "template_names": [
         "2010X",
@@ -4629,8 +4630,7 @@
         "sn2019ape",
         "sn2019bkc",
         "sn2020adow",
-        "sn2022oqm",
-        "sn2023bee"
+        "sn2022oqm"
       ]
     },
     "Icn": {

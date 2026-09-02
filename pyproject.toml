@@ -93,29 +93,8 @@ snid-sage-download-templates = "snid_sage.shared.templates_manager:cli_download_
 
 [tool.setuptools]
 include-package-data = false
-
-[tool.setuptools.packages.find]
-include = ["snid_sage*"]
-exclude = [
-    "tests*", 
-    "docs*", 
-    "temp_test_results*", 
-    "snid_test_output*",
-    "venv*",
-    "build*",
-    "dist*",
-    ".venv*",
-    "__pycache__*",
-    "*.pyc",
-    "*.pyo",
-    "*.pyd",
-    ".pytest_cache*",
-    ".mypy_cache*",
-    ".coverage*",
-    "htmlcov*",
-    ".tox*",
-    ".eggs*"
-]
+# Package discovery lives in setup.py so a Windows checkout named SNID_SAGE
+# still installs and imports as snid_sage (Linux/PyPI already use snid_sage).
 
 [tool.setuptools.package-data]
 "snid_sage" = [

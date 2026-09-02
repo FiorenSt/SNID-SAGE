@@ -73,6 +73,61 @@ def get_unified_storage(template_dir: str | None, profile_id: str | None = None)
     
     return _GLOBAL_STORAGE[key]
 
+def usable_template_fft(stored: Any, flux: np.ndarray) -> bool:
+    """Return True if `stored` is a usable unfiltered FFT of `flux`.
+
+    Runtime does not recompute ``np.fft.fft(flux)`` to verify numerical
+    identity (that would erase the saving). Callers must ensure `stored`
+    was built as ``np.fft.fft(flux)`` of the same log-grid array.
+    """
+    if stored is None:
+        return False
+    try:
+        arr = np.asarray(stored)
+        flux_arr = np.asarray(flux)
+    except Exception:
+        return False
+    if arr.ndim != 1 or flux_arr.ndim != 1:
+        return False
+    if arr.size == 0 or arr.size != flux_arr.size:
+        return False
+    if not np.iscomplexobj(arr):
+        return False
+    try:
+        return bool(np.all(np.isfinite(arr)))
+    except Exception:
+        return False
+
+
+def resolve_template_fft(template: Dict[str, Any], flux: Optional[np.ndarray] = None) -> np.ndarray:
+    """Return the Phase-1 template FFT, reusing ``pre_computed_fft`` when valid.
+
+    Falls back to ``np.fft.fft(flux)`` when the stored FFT is missing or
+    unusable (wrong shape, non-complex, non-finite). RMS must still be
+    computed from the returned FFT with the active bandpass.
+    """
+    if flux is None:
+        flux = np.asarray(template.get('flux', np.array([])), dtype=float)
+    else:
+        flux = np.asarray(flux)
+    stored = template.get('pre_computed_fft') if isinstance(template, dict) else None
+    if usable_template_fft(stored, flux):
+        return np.asarray(stored, dtype=np.complex128)
+    return np.fft.fft(flux)
+
+
+def unique_templates_by_name(templates: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    """Last-wins unique templates keyed by name (same as SimpleFFTCorrelator)."""
+    by_name: Dict[str, Dict[str, Any]] = {}
+    for template in templates:
+        name = template.get('name', '') if isinstance(template, dict) else ''
+        flux = template.get('flux', np.array([])) if isinstance(template, dict) else np.array([])
+        if flux is None or len(flux) == 0:
+            continue
+        by_name[name] = template
+    return by_name
+
+
 def integrate_fft_optimization(templates: List[Dict[str, Any]],
                              k1: int, k2: int, k3: int, k4: int,
                              use_vectorized: Optional[bool] = None,
@@ -155,8 +210,8 @@ class SimpleFFTCorrelator:
             self.templates[name] = template
             self.template_names.append(name)
             
-            # Pre-compute FFT
-            fft_data = np.fft.fft(flux)
+            # Reuse HDF5/bank FFT when it matches this flux array; otherwise FFT flux.
+            fft_data = resolve_template_fft(template, flux)
             template_fft_list.append(fft_data)
             
             # Pre-compute RMS

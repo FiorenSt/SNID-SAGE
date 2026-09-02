@@ -2,6 +2,20 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
+## [1.2.4] - 2026-09-02
+
+### Bug Fixes
+
+- HσLAP-CCC residual noise (`sigma_z`) now ignores the same masked/near-zero bins that CCC already drops, so wavelength masks no longer inflate noise and under-score matches.
+- Phase-1 now reuses stored template FFTs (forced-redshift no longer recomputes them), so correlation is unchanged and slightly cheaper.
+- Forced-redshift (and CLI batch) template include/exclude now matches GUI base names to epoch-expanded templates (e.g. `sn2003bg` keeps `sn2003bg_epoch_*`). Selecting all objects no longer silently drops most multi-epoch templates, including IIb.
+- Configuration dialog: checking every type box is equivalent to using all types (including Ibn/Icn); Exclude selected templates now actually excludes; IIb is listed under II.
+
+### Templates
+
+- New Template bank version; from `2.6` to `2.7`.
+- Template metadata correction: reclassified `sn2023bee` from **Ic/Ic-norm** to **Ia/Ia-norm** (moved into Ia HDF5 banks in optical and ONIR). Early spectra had been misclassified as Ic; TNS and later papers identify it as a normal Type Ia.
+
 ## [1.2.3] - 2026-05-17
 
 ### Templates

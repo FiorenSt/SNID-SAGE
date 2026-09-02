@@ -123,6 +123,7 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
             # Template filtering
             'type_filter': [],  # Empty = all types
             'template_filter': [],  # Empty = all templates
+            'exclude_templates': [],  # Empty = exclude none
             'template_mode': 'include',  # 'include' or 'exclude'
             
             # Advanced parameters
@@ -433,9 +434,9 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
         # Expanded to include all categories supported by SNID templates
         self.sn_types = {
             'Ia': ['Ia', 'Ia-norm', 'Ia-91T', 'Ia-91bg', 'Ia-csm', 'Ia-pec', 'Ia-02cx', 'Ia-03fg', 'Ia-02es', 'Ia-Ca-rich'],
-            'Ib': ['Ib', 'Ib-norm', 'Ib-pec', 'IIb', 'Ibn', 'Ib-Ca-rich', 'Ib-csm'],
+            'Ib': ['Ib', 'Ib-norm', 'Ib-pec', 'Ibn', 'Ib-Ca-rich', 'Ib-csm'],
             'Ic': ['Ic', 'Ic-norm', 'Ic-pec', 'Ic-broad', 'Icn', 'Ic-Ca-rich', 'Ic-csm', 'Ic-05ek'],
-            'II': ['II', 'IIP', 'II-pec', 'II-87A', 'IIn', 'IIL', 'IIn-pec'],
+            'II': ['II', 'IIP', 'II-pec', 'II-87A', 'IIn', 'IIL', 'IIn-pec', 'IIb'],
             'SLSN': ['SLSN', 'SLSN-I', 'SLSN-Ib', 'SLSN-Ic', 'SLSN-II', 'SLSN-IIn'],
             'LFBOT': ['LFBOT', '18cow', '20xnd'],
             'TDE': ['TDE', 'TDE-H', 'TDE-He', 'TDE-H-He', 'TDE-Ftless'],
@@ -883,17 +884,19 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
                 if type_name in self.type_buttons:
                     self.type_buttons[type_name].setChecked(True)
         
-        # Load template selection
-        if 'template_filter' in params and params['template_filter']:
+        # Load template selection (include list or exclude list)
+        template_list = None
+        if params.get('exclude_templates'):
+            template_list = params['exclude_templates']
+            self.exclude_mode_radio.setChecked(True)
+        elif params.get('template_filter'):
             template_list = params['template_filter']
+            self.include_mode_radio.setChecked(True)
+
+        if template_list:
             if isinstance(template_list, str):
                 template_list = [t.strip() for t in template_list.split(',') if t.strip()]
-            
-            if self.include_mode_radio.isChecked():
-                self.selected_templates = set(template_list)
-            else:
-                self.selected_templates = set(template_list) # Exclude mode
-            
+            self.selected_templates = set(template_list)
             self._update_available_templates()
             self._update_selected_templates()
     
@@ -930,17 +933,24 @@ class PySide6ConfigurationDialog(QtWidgets.QDialog):
             else:
                 result['forced_redshift'] = None
             
-            # Type filter
-            if self.selected_types:
+            # Type filter: unchecked OR every type checked means use the entire bank
+            if self.selected_types and len(self.selected_types) < len(self.type_buttons):
                 result['type_filter'] = list(self.selected_types)
             else:
                 result['type_filter'] = None
             
-            # Template filter
+            # Template include/exclude (empty selected list = no name filter)
             if self.selected_templates:
-                result['template_filter'] = list(self.selected_templates)
+                selected_list = list(self.selected_templates)
+                if self.exclude_mode_radio.isChecked():
+                    result['exclude_templates'] = selected_list
+                    result['template_filter'] = None
+                else:
+                    result['template_filter'] = selected_list
+                    result['exclude_templates'] = None
             else:
                 result['template_filter'] = None
+                result['exclude_templates'] = None
             
             # Options
             result['verbose'] = self.widgets['verbose'].isChecked()

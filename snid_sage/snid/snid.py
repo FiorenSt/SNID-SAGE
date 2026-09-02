@@ -942,17 +942,16 @@ def _run_forced_redshift_analysis_optimized(
     # Always reject fallback-width peaks (unreliable) in forced-redshift mode.
 ) -> List[Dict[str, Any]]:
     """
-    OPTIMIZED forced redshift analysis using vectorized FFT correlation.
-    
-    This function uses the same optimizations as normal analysis but skips the redshift search,
-    making it significantly faster while maintaining the same quality and template handling.
+    Forced-redshift analysis: skip Phase-1 CCF search, keep Phase-2 metrics.
+
+    Redshift is taken from ``forced_lag``. Template RMS still uses the stored
+    (or live) unfiltered Phase-1 FFT with the active bandpass. Height/width
+    come from the overlap-trimmed Phase-2 correlation after ``shiftit``.
     """
     import math
     import time
-    from .fft_tools import shiftit, overlap, calculate_rms, apply_filter as bandpass, dtft_drms
-    from .preprocessing import apodize, pad_to_NW
-    from .core.integration import integrate_fft_optimization
-    from .core.config import SNIDConfig
+    from .fft_tools import shiftit, overlap, calculate_rms
+    from .core.integration import resolve_template_fft, unique_templates_by_name
     
     matches = []
     
@@ -1003,13 +1002,16 @@ def _run_forced_redshift_analysis_optimized(
             templates, _ = load_templates(templates_dir, flatten=True, profile_id=profile.id)
             _LOG.info(f"✅ Loaded {len(templates)} templates using STANDARD method for forced redshift analysis")
 
-    # Apply the same filtering semantics as normal analysis (defensive even when preloaded)
+    # Apply the same filtering semantics as normal analysis (defensive even when preloaded).
+    # Match base names from the GUI/CLI against epoch-expanded names (e.g. sn2003bg_epoch_0).
+    from snid_sage.shared.utils import filter_templates_by_name
+
     if template_filter:
-        templates = [t for t in templates if t.get('name', '') in template_filter]
+        templates = filter_templates_by_name(templates, template_filter)
         _LOG.info(f"Forced analysis: applied template filter: {len(templates)} templates remaining")
     if exclude_templates:
         original_count = len(templates)
-        templates = [t for t in templates if t.get('name', '') not in exclude_templates]
+        templates = filter_templates_by_name(templates, exclude_templates, exclude=True)
         _LOG.info(f"Forced analysis: excluded {original_count - len(templates)} templates: {len(templates)} remaining")
     if type_filter:
         original_count = len(templates)
@@ -1040,12 +1042,12 @@ def _run_forced_redshift_analysis_optimized(
         _LOG.info(f"Age filtering for forced analysis: {original_count} -> {len(templates)} templates")
 
     # ============================================================================
-    # VECTORIZED FFT OPTIMIZATION (REQUIRED)
+    # PHASE-1 CCF IS NOT USED IN FORCED-Z
     # ============================================================================
-    # Forced-redshift analysis is also required to use the optimized/vectorized
-    # correlation backend. If it's unavailable, treat as a fatal configuration error.
-    config = SNIDConfig(use_vectorized_fft=True)
-    _LOG.info("🚀 Vectorized FFT optimization enabled for forced redshift analysis")
+    # Redshift is fixed; height/width come from Phase-2 after shiftit + overlap.
+    # Skip the unused batch IFFT. Template RMS is still computed from the
+    # stored/live Phase-1 FFT (same skip as the correlator path).
+    _LOG.info("Forced redshift: skipping Phase-1 CCF; using stored/live template FFTs for RMS only")
 
     # ============================================================================
     # GROUP TEMPLATES BY TYPE (SAME AS NORMAL ANALYSIS)
@@ -1111,28 +1113,23 @@ def _run_forced_redshift_analysis_optimized(
             batch_start_time = time.time()
 
             # ========================================================================
-            # VECTORIZED correlation for this batch (ALWAYS)
+            # Forced-z: RMS skip + shift/overlap/Phase-2 (no Phase-1 CCF)
             # ========================================================================
             batch_matches: List[Dict[str, Any]] = []
 
-            # Use optimized vectorized correlation for the batch (no size threshold).
-            correlator = integrate_fft_optimization(batch_templates, k1, k2, k3, k4, config=config)
-            correlation_results = correlator.correlate_snid_style(dtft, drms)
-            if not correlation_results:
-                raise RuntimeError(f"Vectorized correlation returned no results for {sn_type} batch {batch_idx}")
+            templates_by_name = unique_templates_by_name(batch_templates)
+            if not templates_by_name:
+                raise RuntimeError(f"No usable templates for {sn_type} batch {batch_idx}")
 
-            # Process correlation results for forced redshift
-            for template_name, corr_result in correlation_results.items():
-                template_data = corr_result['template']
-                template_meta = template_data.metadata
-                template_rms = corr_result['template_rms']
-
-                if drms <= 0 or template_rms <= 0:
-                    continue
-
-                # Get template flux
+            for _template_name, template_meta in templates_by_name.items():
                 tplate = template_meta.get('flux', None)
                 if tplate is None or len(tplate) != NW_grid:
+                    continue
+
+                template_fft = resolve_template_fft(template_meta, tplate)
+                template_rms = calculate_rms(template_fft, k1, k2, k3, k4)
+
+                if drms <= 0 or template_rms <= 0:
                     continue
 
                 # FORCE: Directly shift template to the forced redshift
@@ -1169,7 +1166,7 @@ def _run_forced_redshift_analysis_optimized(
                     right_edge,
                     lap,
                     lpeak,
-                    corr_result["correlation"],
+                    None,
                 )
 
                 if match_info is not None:
@@ -1664,13 +1661,15 @@ def run_snid_analysis(
                 _LOG.warning(f"Unified storage failed, falling back to filesystem loader: {e}")
                 templates, _ = load_templates(templates_dir, flatten=True, profile_id=profile.id)
 
-                # Apply template filtering to filesystem templates
+                # Apply template filtering to filesystem templates (base names match epoch-expanded names)
+                from snid_sage.shared.utils import filter_templates_by_name
+
                 if template_filter:
-                    templates = [t for t in templates if t.get('name', '') in template_filter]
+                    templates = filter_templates_by_name(templates, template_filter)
                     _LOG.info(f"Applied template filter: {len(templates)} templates remaining")
                 elif exclude_templates:
                     original_count = len(templates)
-                    templates = [t for t in templates if t.get('name', '') not in exclude_templates]
+                    templates = filter_templates_by_name(templates, exclude_templates, exclude=True)
                     _LOG.info(f"Excluded {original_count - len(templates)} templates: {len(templates)} remaining")
 
                 _LOG.info(f"✅ Loaded {len(templates)} templates using STANDARD method")

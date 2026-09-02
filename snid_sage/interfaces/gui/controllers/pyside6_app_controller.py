@@ -843,9 +843,11 @@ class PySide6AppController(QtCore.QObject):
             if hasattr(self, 'main_window'):
                 self.main_window.current_type_filter = config_params.get('type_filter', None)
                 self.main_window.current_template_filter = config_params.get('template_filter', None)
+                self.main_window.current_exclude_templates = config_params.get('exclude_templates', None)
                 self.main_window.current_age_range = config_params.get('age_range', None)
                 _LOGGER.debug(f"Set GUI parameters: type_filter={self.main_window.current_type_filter}, "
                             f"template_filter={self.main_window.current_template_filter}, "
+                            f"exclude_templates={self.main_window.current_exclude_templates}, "
                             f"age_range={self.main_window.current_age_range}")
             
             return self.run_analysis(**config_params)
@@ -1077,6 +1079,7 @@ class PySide6AppController(QtCore.QObject):
                 age_range=analysis_kwargs.get('age_range', None),
                 type_filter=analysis_kwargs.get('type_filter', None),
                 template_filter=analysis_kwargs.get('template_filter', None),
+                exclude_templates=analysis_kwargs.get('exclude_templates', None),
                 peak_window_size=analysis_kwargs.get('peak_window_size', 10),
                 lapmin=analysis_kwargs.get('lapmin', 0.3),
                 hsigma_lap_ccc_threshold=float(analysis_kwargs.get('hsigma_lap_ccc_threshold', 1.5)),

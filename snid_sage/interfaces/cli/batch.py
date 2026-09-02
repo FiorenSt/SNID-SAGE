@@ -312,10 +312,12 @@ class BatchTemplateManager:
             templates = [t for t in templates if t.get('type', '') in type_filter]
             self._log.info(f"🔍 Type filtering: {original_count} -> {len(templates)} templates")
         
-        # Apply template name filtering
+        # Apply template name filtering (base names match epoch-expanded names)
         if template_filter is not None and len(template_filter) > 0:
+            from snid_sage.shared.utils import filter_templates_by_name
+
             pre_filter_count = len(templates)
-            templates = [t for t in templates if t.get('name', '') in template_filter]
+            templates = filter_templates_by_name(templates, template_filter)
             self._log.info(f"🔍 Template name filtering: {pre_filter_count} -> {len(templates)} templates")
             
             if len(templates) == 0 and pre_filter_count > 0:
@@ -542,11 +544,16 @@ def process_single_spectrum_optimized(
         # Apply exclude list defensively (BatchTemplateManager name filter supports includes; exclude is separate)
         exclude_templates = getattr(args, 'exclude_templates', None)
         if exclude_templates:
+            from snid_sage.shared.utils import filter_templates_by_name
+
             try:
-                exclude_set = set(exclude_templates)
-                filtered_templates = [t for t in filtered_templates if t.get('name', '') not in exclude_set]
+                filtered_templates = filter_templates_by_name(
+                    filtered_templates, exclude_templates, exclude=True
+                )
             except Exception:
-                filtered_templates = [t for t in filtered_templates if t.get('name', '') not in list(exclude_templates)]
+                filtered_templates = filter_templates_by_name(
+                    filtered_templates, list(exclude_templates), exclude=True
+                )
         
         if not filtered_templates:
             return spectrum_name, False, "No templates after filtering", {
