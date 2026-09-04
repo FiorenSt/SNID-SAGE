@@ -1,0 +1,12 @@
+.git
+.github
+docs
+mkdocs.yml
+**/__pycache__
+*.pyc
+.pytest_cache
+.mypy_cache
+build
+dist
+*.egg-info
+templates/Individual_templates
