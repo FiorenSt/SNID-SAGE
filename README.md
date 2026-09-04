@@ -87,19 +87,26 @@ sage batch --list-csv "data/spectra_list.csv" -o results/
 
 If you use SNID SAGE in your research, please cite the SNID-SAGE paper:
 
-- Stoppa, F. and Smartt, S. J., *SNID-SAGE: A Modern Framework for Interactive Supernova Classification and Spectral Analysis* ([arXiv:2603.28741](https://arxiv.org/abs/2603.28741))
-
-For the current arXiv version, the official BibTeX entry is:
+- Stoppa, F. and Smartt, S. J., 2026, MNRAS, 549, stag1066 ([doi:10.1093/mnras/stag1066](https://doi.org/10.1093/mnras/stag1066), [ADS](https://ui.adsabs.harvard.edu/abs/2026MNRAS.549g1066S))
 
 ```bibtex
-@misc{stoppa2026,
-  title={SNID-SAGE: A Modern Framework for Interactive Supernova Classification and Spectral Analysis},
-  author={Fiorenzo Stoppa and Stephen J. Smartt},
-  year={2026},
-  eprint={2603.28741},
-  archivePrefix={arXiv},
-  primaryClass={astro-ph.IM},
-  url={https://arxiv.org/abs/2603.28741}
+@ARTICLE{2026MNRAS.549g1066S,
+       author = {{Stoppa}, Fiorenzo and {Smartt}, Stephen J.},
+        title = "{SNID─SAGE: a modern framework for interactive supernova classification and spectral analysis}",
+      journal = {\mnras},
+     keywords = {methods: data analysis, methods: statistical, techniques: spectroscopic, surveys, software: development, (stars:) supernovae: general, Instrumentation and Methods for Astrophysics},
+         year = 2026,
+        month = jul,
+       volume = {549},
+       number = {4},
+          eid = {stag1066},
+        pages = {stag1066},
+          doi = {10.1093/mnras/stag1066},
+archivePrefix = {arXiv},
+       eprint = {2603.28741},
+ primaryClass = {astro-ph.IM},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2026MNRAS.549g1066S},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 }
 ```
 
