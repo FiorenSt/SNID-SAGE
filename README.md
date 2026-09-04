@@ -1,4 +1,4 @@
-# SNID SAGE - Advanced Supernova Spectral Analysis
+# SNID-SAGE - Advanced Supernova Spectral Analysis
 
 [![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -6,7 +6,7 @@
 
 <img src="docs/images/5.MatchTemplateFlux.png" alt="Match Template Flux" style="border: 2px solid #333; border-radius: 4px;">
 
-**SNID SAGE** (SuperNova IDentification – Spectral Analysis and Guided Exploration) is your go-to tool for analyzing supernova spectra. It combines an intuitive PySide6/Qt graphical interface with the original SNID (Blondin & Tonry 2007) cross-correlation techniques, enhanced with modern clustering for classification choice, high-performance plotting via `pyqtgraph`, and LLM-powered analysis summaries and interactive chat assistance.
+**SNID-SAGE** (SuperNova IDentification – Spectral Analysis and Guided Exploration) is your go-to tool for analyzing supernova spectra. It combines an intuitive PySide6/Qt graphical interface with the original SNID (Blondin & Tonry 2007) cross-correlation techniques, enhanced with modern clustering for classification choice, high-performance plotting via `pyqtgraph`, and LLM-powered analysis summaries and interactive chat assistance.
 
 
 
@@ -85,7 +85,7 @@ sage batch --list-csv "data/spectra_list.csv" -o results/
 
 ## Research & Citation
 
-If you use SNID SAGE in your research, please cite the SNID-SAGE paper:
+If you use SNID-SAGE in your research, please cite the SNID-SAGE paper:
 
 - Stoppa, F. and Smartt, S. J., 2026, MNRAS, 549, stag1066 ([doi:10.1093/mnras/stag1066](https://doi.org/10.1093/mnras/stag1066), [ADS](https://ui.adsabs.harvard.edu/abs/2026MNRAS.549g1066S))
 
