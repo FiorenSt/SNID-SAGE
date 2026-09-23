@@ -2,6 +2,12 @@
 
 All notable changes to SNID SAGE will be documented in this file.
 
+## [1.2.5] - 2026-09-23
+
+### Bug Fixes
+
+- PyPI wheel now includes namespace packages that lacked `__init__.py` (`shared.utils.paths`, `shared.profiles`, and a few GUI/template-manager folders). The 1.2.4 wheel dropped them, so the GUI failed with a misleading `PySide6 not available: No module named 'snid_sage.shared.utils.paths'` even when PySide6 was installed.
+
 ## [1.2.4] - 2026-09-02
 
 ### Bug Fixes
